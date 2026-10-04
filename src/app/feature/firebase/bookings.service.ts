@@ -1,5 +1,5 @@
 import { Service, inject } from '@angular/core';
-import { addDoc, collection, doc, onSnapshot, serverTimestamp, updateDoc, type DocumentData } from 'firebase/firestore';
+import { addDoc, collection, doc, onSnapshot, serverTimestamp, Timestamp, updateDoc, type DocumentData } from 'firebase/firestore';
 import { FirebaseService } from './firebase.service';
 
 export type BookingStatus = 'pending' | 'confirmed' | 'checkedin' | 'checkedout' | 'cancelled';
@@ -30,6 +30,7 @@ export interface BookingRecord extends BookingInput {
 	lateCheckoutHour: number | null;
 	/** Check-out as originally booked, set when an early check-out shortened the stay. */
 	plannedCheckOut?: string;
+	createdAt: Date | null;
 }
 
 export interface BookingPatch {
@@ -68,7 +69,30 @@ function toBooking(id: string, data: DocumentData): BookingRecord {
 		submissionId: str(data['submissionId']) || undefined,
 		lateCheckoutHour: typeof data['lateCheckoutHour'] === 'number' ? data['lateCheckoutHour'] : null,
 		plannedCheckOut: str(data['plannedCheckOut']) || undefined,
+		createdAt: (data['createdAt'] as Timestamp | undefined)?.toDate() ?? null,
 	};
+}
+
+/** `YYYY-MM-DD` plus `days` days (calendar days, no time zone). */
+export function isoAddDays(date: string, days: number): string {
+	const d = new Date(date + 'T00:00:00Z');
+	d.setUTCDate(d.getUTCDate() + days);
+	return d.toISOString().slice(0, 10);
+}
+
+/**
+ * What checking a guest out today changes. Leaving before the booked departure shortens the stay
+ * (the room is free from today, never earlier than the day after check-in) and keeps the booked
+ * date in `plannedCheckOut`. `early` is the new check-out date, or null when nothing is shortened.
+ */
+export function checkOutPatch(
+	booking: { checkIn: string; checkOut: string; plannedCheckOut?: string },
+	today: string,
+): { patch: BookingPatch; early: string | null } {
+	const earliest = isoAddDays(booking.checkIn, 1);
+	const end = today > earliest ? today : earliest;
+	if (end >= booking.checkOut) return { patch: { status: 'checkedout' }, early: null };
+	return { patch: { status: 'checkedout', checkOut: end, plannedCheckOut: booking.plannedCheckOut ?? booking.checkOut }, early: end };
 }
 
 /**

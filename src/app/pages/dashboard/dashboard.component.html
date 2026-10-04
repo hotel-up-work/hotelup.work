@@ -1,3 +1,230 @@
+@if (live) {
+	<app-shell activeNav="overview" greetingTitle="Огляд" [greetingSubtitle]="hotelSubtitle()">
+		<div class="page-heading">
+			<div>
+				<div class="breadcrumb">Робочий простір <span>/</span> Огляд</div>
+				<h1>Сьогодні в готелі</h1>
+				<p><app-icon name="calendar" />{{ todayLabel }}</p>
+			</div>
+			<div class="page-actions">
+				<a class="button secondary" routerLink="/calendar"><app-icon name="calendar" />Відкрити календар</a>
+				<a class="button primary" routerLink="/new-booking"><app-icon name="plus" />Нове бронювання</a>
+			</div>
+		</div>
+
+		@if (loadError()) {
+			<section class="card empty-state">
+				<h2>Огляд не завантажився</h2>
+				<p role="alert">{{ loadError() }}</p>
+			</section>
+		} @else if (loading()) {
+			<section class="card empty-state"><p>Завантажуємо огляд…</p></section>
+		} @else if (!liveRooms().length) {
+			<section class="card empty-state">
+				<div class="empty-icon"><app-icon name="hotel" /></div>
+				<span class="empty-label">НОВИЙ ПОЧАТОК</span>
+				<h2>Додайте номери</h2>
+				<p>Огляд показує заїзди, виїзди та зайнятість. Створіть номерний фонд, а потім перші бронювання в календарі.</p>
+				<div class="empty-actions">
+					<a class="button primary" routerLink="/rooms">Додати номери</a>
+				</div>
+			</section>
+		} @else {
+			<div class="dashboard-grid">
+				<section class="kpis" aria-label="Показники сьогодні">
+					@for (k of lKpis(); track k.label) {
+						<button class="kpi" [class.kpi-warning]="k.warning" (click)="go(k.link)" [attr.aria-label]="k.label + ': ' + k.value">
+							<div class="kpi-top"><span>{{ k.label }}</span><app-icon [name]="k.icon" /></div>
+							<div class="kpi-value">{{ k.value }}</div>
+							<div class="kpi-sub">{{ k.sub }}</div>
+							@if (k.progress) {
+								<div class="kpi-progress"><span [style.width.%]="lOccupiedPercent()"></span></div>
+							}
+						</button>
+					}
+				</section>
+
+				<section class="card arrivals-card">
+					<div class="card-heading">
+						<h2><app-icon name="arrival" />Заїзди сьогодні <span class="count">{{ lArrivals().length }}</span></h2>
+						<a class="text-action" routerLink="/calendar">Календар <span>↗</span></a>
+					</div>
+					<div class="table-wrap">
+						<table>
+							<thead>
+								<tr>
+									<th>Гість</th><th>Номер</th><th>Гості</th><th>Проживання</th>
+									@if (showFinance) {
+										<th>Оплата</th>
+									}
+									<th>Статус</th><th><span class="sr-only">Дії</span></th>
+								</tr>
+							</thead>
+							<tbody>
+								@for (b of lArrivals(); track b.id) {
+									<tr>
+										<td class="guest-cell"><span class="guest-initials">{{ initials(b.guestName) }}</span>{{ b.guestName }}</td>
+										<td class="room-cell">{{ roomNumber(b) }}</td>
+										<td class="guest-count-cell">{{ b.guests }}</td>
+										<td class="stay-cell">{{ stay(b) }}</td>
+										@if (showFinance) {
+											<td class="payment-cell" [class.paid]="balanceOf(b) === 0" [class.balance]="balanceOf(b) > 0">
+												{{ balanceOf(b) === 0 ? 'Оплачено' : money(balanceOf(b)) + ' залишок' }}
+											</td>
+										}
+										<td class="status-cell"><span class="pill" [class.ready]="b.status === 'checkedin'">{{ bookingStatusLabel(b) }}</span></td>
+										<td class="arrow-cell">
+											@if (canChange && b.status !== 'checkedin') {
+												<button class="text-action" [disabled]="saving()" (click)="checkInLive(b)">Відмітити заїзд</button>
+											}
+										</td>
+									</tr>
+								} @empty {
+									<tr><td [attr.colspan]="showFinance ? 7 : 6" class="table-empty">Сьогодні заїздів немає.</td></tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				</section>
+
+				<section class="card attention-card">
+					<div class="card-heading">
+						<h2><span class="gold-icon"><app-icon name="attention" /></span>Потребує уваги <span class="count gold-count">{{ lIssues().length }}</span></h2>
+						<span class="subtle">Сьогодні</span>
+					</div>
+					@if (lIssues().length) {
+						@for (issue of lIssues(); track $index) {
+							<article class="attention-item">
+								<span class="alert-mark"><app-icon [name]="issue.icon" /></span>
+								<div>
+									<h3>{{ issue.title }}</h3>
+									<p>{{ issue.body }}</p>
+									<button class="text-action" (click)="go(issue.link)">{{ issue.action }} →</button>
+								</div>
+							</article>
+						}
+					} @else {
+						<div class="attention-success">✓<h3>Все під контролем</h3><p>На сьогодні немає критичних задач.</p></div>
+					}
+				</section>
+
+				<section class="card arrivals-card">
+					<div class="card-heading">
+						<h2><app-icon name="departure" />Виїзди сьогодні <span class="count">{{ lDepartures().length }}</span></h2>
+						<a class="text-action" routerLink="/calendar">Календар <span>↗</span></a>
+					</div>
+					<div class="table-wrap">
+						<table>
+							<thead>
+								<tr><th>Гість</th><th>Номер</th><th>Проживання</th><th>Статус</th><th><span class="sr-only">Дії</span></th></tr>
+							</thead>
+							<tbody>
+								@for (b of lDepartures(); track b.id) {
+									<tr>
+										<td class="guest-cell"><span class="guest-initials">{{ initials(b.guestName) }}</span>{{ b.guestName }}</td>
+										<td class="room-cell">{{ roomNumber(b) }}</td>
+										<td class="stay-cell">{{ stay(b) }}</td>
+										<td class="status-cell"><span class="pill" [class.ready]="b.status === 'checkedout'">{{ b.status === 'checkedout' ? 'Виїхав' : 'У номері' }}</span></td>
+										<td class="arrow-cell">
+											@if (canChange && b.status === 'checkedin') {
+												<button class="text-action" [disabled]="saving()" (click)="checkOutLive(b)">Відмітити виїзд</button>
+											}
+										</td>
+									</tr>
+								} @empty {
+									<tr><td colspan="5" class="table-empty">Сьогодні виїздів немає.</td></tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				</section>
+
+				<section class="card rooms-card">
+					<div class="card-heading"><h2>Номери</h2><a class="text-action" routerLink="/rooms">Відкрити номери ↗</a></div>
+					<div class="room-summary">
+						@for (s of lRoomSummary(); track s.label) {
+							<div [class.summary-gold]="s.gold"><b>{{ s.count }}</b><span>{{ s.label }}</span></div>
+						}
+					</div>
+					<div class="room-list">
+						@for (r of lRoomList(); track r.number) {
+							<div class="room-row" role="button" tabindex="0" [attr.aria-label]="'Номер ' + r.number" (click)="go('/rooms')" (keydown.enter)="go('/rooms')">
+								<span class="room-number">{{ r.number }}</span>
+								<div class="room-info"><b>{{ statusLabel(r.state) }}</b><small>{{ r.note }}</small></div>
+								<span class="pill" [class.gold]="r.state === 'cleaning'">{{ r.state === 'cleaning' ? 'У роботі' : r.state === 'unavailable' ? 'Заблоковано' : 'Очікує' }}</span>
+							</div>
+						} @empty {
+							<p class="section-subtitle">Усі номери готові до заселення.</p>
+						}
+					</div>
+				</section>
+
+				<section class="card bookings-card">
+					<div class="card-heading"><h2>Нові бронювання</h2><a class="text-action" routerLink="/calendar">Календар ↗</a></div>
+					<div>
+						@for (b of lNewBookings(); track b.id) {
+							<div class="booking-row">
+								<span class="guest-initials">{{ initials(b.guestName) }}</span>
+								<div><h3>{{ b.guestName }}</h3><p>{{ stay(b) }} · Номер {{ roomNumber(b) }}</p>@if (b.source) {<span class="source-tag">{{ b.source }}</span>}</div>
+								<div class="booking-amount">
+									@if (showFinance) {
+										<b>{{ money(b.total) }}</b>
+									}
+									<small>{{ createdLabel(b) }}</small>
+								</div>
+							</div>
+						} @empty {
+							<p class="section-subtitle">Бронювань ще немає. Створіть перше в календарі.</p>
+						}
+					</div>
+				</section>
+
+				<section class="card occupancy-card">
+					<div class="card-heading"><h2>Завантаження</h2><a class="text-action" routerLink="/calendar">Календар ↗</a></div>
+					<p class="section-subtitle">Наступні 7 днів</p>
+					<div class="occupancy-chart">
+						@for (d of lOccupancy(); track d.date) {
+							<div class="occupancy-day" [class.today]="$index === 0" [attr.aria-label]="d.date + ', ' + d.value + '%'">
+								<b>{{ d.value }}%</b>
+								<div class="occupancy-track"><span [style.height.%]="d.value"></span></div>
+								<span>{{ d.day }}</span>
+								<small>{{ d.label }}</small>
+							</div>
+						}
+					</div>
+				</section>
+
+				@if (showSalesCard && lSources().length) {
+					<section class="card sales-card">
+						<div class="card-heading"><h2>Джерела бронювань</h2><span class="period">Цей місяць</span></div>
+						<div class="sources">
+							@for (s of lSources(); track s.name) {
+								<div class="source-row">
+									<div><span>{{ s.name }}</span><b>{{ s.value }}%</b></div>
+									<div class="source-bar"><span [style.width.%]="s.value"></span></div>
+								</div>
+							}
+						</div>
+					</section>
+				}
+
+				<section class="card quick-card">
+					<div class="card-heading"><h2>Швидкі дії</h2></div>
+					<div class="quick-grid">
+						<a routerLink="/new-booking"><app-icon name="plus" />Нове бронювання</a>
+						<a routerLink="/submissions"><app-icon name="send" />Заявки з сайтів</a>
+						<a routerLink="/rooms"><app-icon name="hotel" />Номери</a>
+						<a routerLink="/calendar"><app-icon name="calendar" />Відкрити календар</a>
+					</div>
+				</section>
+			</div>
+		}
+	</app-shell>
+
+	@if (toastMessage()) {
+		<div class="toast" role="status">{{ toastMessage() }}</div>
+	}
+} @else {
 <app-shell
 	activeNav="overview"
 	[housekeepingBadge]="cleanCount()"
@@ -561,4 +788,5 @@
 
 @if (toastMessage()) {
 	<div class="toast" role="status">{{ toastMessage() }}</div>
+}
 }

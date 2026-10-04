@@ -100,7 +100,7 @@ Rules:
 ## Live pages — what a real account sees
 
 A real, Firebase-signed-in account (`isLiveSession()`) sees only pages backed by real data:
-`LIVE_PAGES` in `src/app/shared/role.ts`, currently **`submissions`**, **`calendar`** and **`rooms`**.
+`LIVE_PAGES` in `src/app/shared/role.ts`, currently **`dashboard`** (the home page after login), **`submissions`**, **`calendar`**, **`new-booking`** and **`rooms`**.
 Everything else in this document describes the demo, which keeps every page (entered via `/demo`).
 
 - Sidebar and mobile nav list only live pages; Team, Settings, AI button, search,
@@ -141,7 +141,7 @@ documents are created manually (console / admin script); there is no self-servic
 
 Not yet decided / not built: role per hotel (today every real account is Owner of all its
 hotels), plan per hotel (plan is still one local demo setting), and whether several hotels
-require Enterprise (pricing says so, not enforced). Only Submissions and Rooms read real hotel
+require Enterprise (pricing says so, not enforced). Only Dashboard, Submissions, Calendar and Rooms read real hotel
 data today.
 
 ## Intended rules — take precedence over the page inventory
@@ -304,6 +304,29 @@ in one view.
 | Quick actions grid                            | Same as page |
 | New-hotel empty-state / setup checklist        | Same as page (demo-only path) |
 
+**Real hotels** see a live Dashboard built from the active hotel's rooms, bookings and website
+requests (the demo keeps the seeded one above). Nothing is stored for it; every figure is computed
+from those collections, so it follows the Calendar and Rooms exactly:
+
+- **KPIs:** arrivals today (with how many already checked in), departures today (how many left),
+  rooms occupied (a guest checked in) of all rooms, rooms needing cleaning (and being cleaned),
+  amount outstanding (`guestBill` roles: sum of `total − paid` over non-cancelled bookings), and
+  new website requests. There is no receipts KPI until a payments ledger exists.
+- **Arrivals / departures tables:** "Відмітити заїзд" and "Відмітити виїзд" need `changeBooking`.
+  Check-in is refused unless the room is ready (not dirty, being cleaned, blocked, or still
+  occupied by another guest); check-out uses the Calendar's rules (early departure shortens the
+  stay; the room goes to `needs-cleaning`).
+- **Needs attention:** a guest past their check-out day, an arrival whose room is not ready, a
+  guest who has not arrived after their arrival day, an arrival with a balance (`guestBill`),
+  bookings still `pending`. All link to Calendar or Rooms.
+- **Rooms card** (counts and the rooms waiting for cleaning, being cleaned or blocked), **new
+  bookings** (latest 3 by creation time; amount for `guestBill` roles), **7-day occupancy**
+  (share of rooms with a non-cancelled stay each night), **booking sources** (`salesAnalytics`
+  only; bookings created this month, by `source`).
+- Hidden for real hotels: the AI insight panel, "Додати гостя", messages, payments and
+  housekeeping shortcuts, the new-hotel checklist and demo strip. "Нове бронювання" opens the
+  desk booking form (`/new-booking`).
+
 ### `calendar` — Booking calendar / availability grid
 
 Purpose: see room availability by date, manage bookings, move/extend stays, quick check-ins.
@@ -381,6 +404,30 @@ Calendar. Submissions contain no payment data.
   so the link scrolls to the start of that section.
   Submissions without `site` show the ID as plain text.
 - Live sites: `kleopatra.webart.work` → `kp-kleopatra`, form `stay-request`.
+
+### `new-booking` — Desk booking form (real hotels)
+
+Purpose: the daily "a guest calls or walks in" booking, as fast as possible. A route for real
+hotels only: the demo still has its old seeded form (not reachable by any role today). It is in the
+sidebar next to Calendar and is the primary "Нове бронювання" button on Dashboard and Calendar.
+
+| Section | Extra access rule |
+| --- | --- |
+| 1. Dates and guests: check-in, nights (stepper and 1/2/3/5/7 chips), check-out, guests | Same as page |
+| 2. Rooms: only rooms free for the whole stay, big enough and not blocked, cheapest first, the first one preselected; type filter | Same as page |
+| 3. Guest: phone (focused on open), name, source chips, optional email and notes; a returning guest (phone found in earlier bookings) can be filled in with one click | Same as page |
+| **Payment now (none / 50% / full)** | **`collectPayment` + `guestBill`** — others book with nothing paid |
+| Summary: dates, room, editable total (nights × price by default), create button | Same as page |
+
+- Enter in any field creates the booking; after saving, "Нове бронювання" returns a clean form that
+  keeps the dates and source so several guests can be booked in a row; "Відкрити календар" shows it.
+- Writes the same `hotels/{hotelId}/bookings` document as the Calendar (see Booking data contract),
+  with status `confirmed` for roles with `changeBooking` and `pending` (a hold) for the others.
+  Availability uses the same rule as the Calendar, plus a re-check at save time.
+- Prefill through the URL: `/new-booking?room=101&start=2026-10-05&end=2026-10-07&guests=2`.
+  Rooms' "+ Нове бронювання" uses `?room=`.
+- Not covered yet: split stays across rooms, extras/services, taxes, a guest database (a returning
+  guest is matched from past bookings only).
 
 ### `guests` — Guest CRM
 
@@ -674,6 +721,10 @@ Added with live Calendar bookings on 2 October 2026 (not yet verified in the run
     for guest details, and `paid` is a plain amount (no payments ledger, refunds or reminders).
 26. **Group requests**: a booking holds one room and at most that room's capacity, so a request
     for many guests needs several bookings ("Додати ще одне бронювання" on the request).
+27. **Dashboard figures are unverified**: the live Dashboard (4 October 2026) has not been checked in
+    the running app against real data. It loads all rooms, bookings and requests of the hotel, like
+    the Calendar (gap 24); "Потребує уваги" has no "my tasks" or approval items, and there are no
+    receipts until Payments is live.
 
 ## Where implementation lives (for implementers)
 

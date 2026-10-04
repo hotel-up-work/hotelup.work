@@ -1,0 +1,193 @@
+<app-shell activeNav="new-booking" greetingTitle="Нове бронювання" [greetingSubtitle]="hotelSubtitle()">
+	<div class="page-heading">
+		<div class="breadcrumb"><a routerLink="/calendar">Календар</a> <span>/</span> Нове бронювання</div>
+		<h1>Нове бронювання</h1>
+		<p>Дзвінок або гість на рецепції: оберіть дати, номер зʼявиться сам. Enter створює бронювання.</p>
+	</div>
+
+	@if (loadError()) {
+		<section class="card empty-state">
+			<h2>Не вдалося завантажити дані</h2>
+			<p role="alert">{{ loadError() }}</p>
+		</section>
+	} @else if (loading()) {
+		<section class="card empty-state"><p>Завантажуємо номери та бронювання…</p></section>
+	} @else if (!rooms().length) {
+		<section class="card empty-state">
+			<h2>Спершу додайте номери</h2>
+			<p>Бронювання створюється на конкретний номер. Створіть номерний фонд, і форма запрацює.</p>
+			<a class="button primary" routerLink="/rooms">Перейти до номерів</a>
+		</section>
+	} @else if (created(); as c) {
+		<section class="card success" role="status">
+			<span class="success-mark"><app-icon name="check" /></span>
+			<h2>{{ c.pending ? 'Бронювання очікує підтвердження' : 'Бронювання створено' }}</h2>
+			<p class="success-guest">{{ c.guest }}</p>
+			<div class="success-facts">
+				<div><small>Номер</small><b>{{ c.room }}</b></div>
+				<div><small>Проживання</small><b>{{ shortDate(c.start) }} – {{ shortDate(c.end) }}</b></div>
+				<div><small>Сума</small><b>{{ money(c.total) }}</b></div>
+			</div>
+			<div class="success-actions">
+				<button class="button primary" type="button" autofocus (click)="another()"><app-icon name="plus" />Нове бронювання</button>
+				<a class="button secondary" routerLink="/calendar">Відкрити календар</a>
+			</div>
+		</section>
+	} @else {
+		<form class="qb" (ngSubmit)="submit()" autocomplete="off">
+			<div class="qb-main">
+				<section class="card">
+					<h2><span class="step">1</span>Дати та гості</h2>
+					<div class="stay-grid">
+						<label class="field">
+							Заїзд
+							<input name="start" type="date" required [ngModel]="start()" (ngModelChange)="setStart($event)" />
+						</label>
+						<div class="field">
+							<span id="nights-label">Ночей</span>
+							<div class="stepper" role="group" aria-labelledby="nights-label">
+								<button type="button" aria-label="Менше ночей" [disabled]="nights() <= 1" (click)="stepNights(-1)">−</button>
+								<output>{{ nights() }}</output>
+								<button type="button" aria-label="Більше ночей" (click)="stepNights(1)">+</button>
+							</div>
+						</div>
+						<label class="field">
+							Виїзд
+							<input name="end" type="date" required [min]="start()" [ngModel]="end()" (ngModelChange)="setEnd($event)" />
+						</label>
+						<div class="field">
+							<span id="guests-label">Гостей</span>
+							<div class="stepper" role="group" aria-labelledby="guests-label">
+								<button type="button" aria-label="Менше гостей" [disabled]="guests() <= 1" (click)="stepGuests(-1)">−</button>
+								<output>{{ guests() }}</output>
+								<button type="button" aria-label="Більше гостей" (click)="stepGuests(1)">+</button>
+							</div>
+						</div>
+					</div>
+					<div class="chips" role="group" aria-label="Швидкий вибір ночей">
+						@for (n of NIGHT_CHOICES; track n) {
+							<button type="button" class="chip" [class.on]="nights() === n" [attr.aria-pressed]="nights() === n" (click)="setNights(n)">{{ nightsLabel(n) }}</button>
+						}
+					</div>
+				</section>
+
+				<section class="card">
+					<h2><span class="step">2</span>Номер <small>{{ freeRooms().length ? 'Вільні на ці дати: ' + freeRooms().length : '' }}</small></h2>
+					@if (types().length > 1) {
+						<div class="chips" role="group" aria-label="Тип номера">
+							<button type="button" class="chip" [class.on]="typeFilter() === 'all'" [attr.aria-pressed]="typeFilter() === 'all'" (click)="typeFilter.set('all')">Усі типи</button>
+							@for (t of types(); track t) {
+								<button type="button" class="chip" [class.on]="typeFilter() === t" [attr.aria-pressed]="typeFilter() === t" (click)="typeFilter.set(t)">{{ t }}</button>
+							}
+						</div>
+					}
+					@if (freeRooms().length) {
+						<div class="room-grid" role="radiogroup" aria-label="Вільні номери">
+							@for (r of freeRooms(); track r.id) {
+								<label class="room-option" [class.selected]="r.id === roomId()">
+									<input type="radio" class="sr-only" name="room" [value]="r.id" [ngModel]="roomId()" (ngModelChange)="roomId.set($event)" />
+									<span class="room-num">{{ r.number }}</span>
+									<span class="room-type">{{ r.type }} · до {{ guestsLabel(r.capacity) }}</span>
+									<span class="room-price">{{ money(r.price) }} <small>/ ніч</small></span>
+									<span class="room-total">{{ money(r.price * nights()) }} за {{ nightsLabel(nights()) }}</span>
+								</label>
+							}
+						</div>
+						@if (hiddenCount() > 0) {
+							<p class="hint">Ще {{ hiddenCount() }} {{ hiddenCount() === 1 ? 'номер не показано' : 'номерів не показано' }}: зайняті, заблоковані або замалі для {{ guestsLabel(guests()) }}.</p>
+						}
+					} @else {
+						<div class="no-rooms" role="status">
+							<b>Вільних номерів немає</b>
+							<span>На ці дати для {{ guestsLabel(guests()) }} усе зайнято, заблоковано або замале. Змініть дати, кількість гостей чи тип номера.</span>
+						</div>
+					}
+				</section>
+
+				<section class="card">
+					<h2><span class="step">3</span>Гість</h2>
+					<div class="guest-grid">
+						<label class="field">
+							Телефон
+							<input #phoneInput name="phone" type="tel" inputmode="tel" maxlength="40" placeholder="+380 …" [ngModel]="phone()" (ngModelChange)="phone.set($event)" />
+						</label>
+						<label class="field">
+							Імʼя
+							<input name="name" maxlength="200" placeholder="Імʼя та прізвище" [ngModel]="name()" (ngModelChange)="name.set($event)" />
+						</label>
+					</div>
+					@if (knownGuest(); as known) {
+						@if (known.name !== name().trim()) {
+							<button type="button" class="known" (click)="useKnownGuest()">
+								<span><b>{{ known.name }}</b> вже бронював(ла) · {{ known.stays }} {{ known.stays === 1 ? 'бронювання' : 'бронювань' }}</span>
+								<span class="known-action">Підставити →</span>
+							</button>
+						}
+					}
+					<div class="field">
+						<span id="source-label">Звідки гість</span>
+						<div class="chips" role="group" aria-labelledby="source-label">
+							@for (s of SOURCES; track s) {
+								<button type="button" class="chip" [class.on]="source() === s" [attr.aria-pressed]="source() === s" (click)="source.set(s)">{{ s }}</button>
+							}
+						</div>
+					</div>
+					@if (canCollect) {
+						<div class="field">
+							<span id="payment-label">Оплата зараз</span>
+							<div class="chips" role="group" aria-labelledby="payment-label">
+								<button type="button" class="chip" [class.on]="payment() === 'none'" [attr.aria-pressed]="payment() === 'none'" (click)="payment.set('none')">Без оплати</button>
+								<button type="button" class="chip" [class.on]="payment() === 'half'" [attr.aria-pressed]="payment() === 'half'" (click)="payment.set('half')">Передоплата 50%</button>
+								<button type="button" class="chip" [class.on]="payment() === 'full'" [attr.aria-pressed]="payment() === 'full'" (click)="payment.set('full')">Оплачено повністю</button>
+							</div>
+						</div>
+					}
+					<details class="more">
+						<summary>Email і нотатки</summary>
+						<div class="guest-grid">
+							<label class="field">
+								Email
+								<input name="email" type="email" maxlength="200" [ngModel]="email()" (ngModelChange)="email.set($event)" />
+							</label>
+							<label class="field full">
+								Нотатки
+								<textarea name="notes" maxlength="1000" placeholder="Час прибуття, побажання…" [ngModel]="notes()" (ngModelChange)="notes.set($event)"></textarea>
+							</label>
+						</div>
+					</details>
+				</section>
+			</div>
+
+			<aside class="qb-summary" aria-label="Підсумок бронювання">
+				<div class="card">
+					<h2>Підсумок</h2>
+					<dl>
+						<dt>Заїзд</dt>
+						<dd>{{ shortDate(start()) }}</dd>
+						<dt>Виїзд</dt>
+						<dd>{{ shortDate(end()) }}</dd>
+						<dt>Ночей / гостей</dt>
+						<dd>{{ nights() }} / {{ guests() }}</dd>
+						<dt>Номер</dt>
+						<dd>{{ room() ? room()!.number + ' · ' + room()!.type : '—' }}</dd>
+					</dl>
+					<label class="field total">
+						Сума, ₴
+						<input name="total" type="number" min="0" inputmode="numeric" [ngModel]="total()" (ngModelChange)="setTotal($event)" />
+						<small>{{ nightsLabel(nights()) }} × {{ money(room()?.price ?? 0) }}</small>
+					</label>
+					@if (canCollect && paidNow() > 0) {
+						<p class="paid-note">Оплата зараз: <b>{{ money(paidNow()) }}</b> · залишок {{ money(total() - paidNow()) }}</p>
+					}
+					@if (!canChange) {
+						<p class="hint">Бронювання буде створено зі статусом «Очікує підтвердження».</p>
+					}
+					@if (error()) {
+						<p class="error" role="alert">{{ error() }}</p>
+					}
+					<button class="button primary full" type="submit" [disabled]="saving() || !room()">{{ saving() ? 'Зберігаємо…' : 'Створити бронювання' }}</button>
+				</div>
+			</aside>
+		</form>
+	}
+</app-shell>

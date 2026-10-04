@@ -31,6 +31,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
 	{ key: 'overview', href: '/dashboard', icon: 'overview', label: 'Огляд' },
 	{ key: 'calendar', href: '/calendar', icon: 'calendar', label: 'Календар' },
+	{ key: 'new-booking', href: '/new-booking', icon: 'plus', label: 'Нове бронювання' },
 	{ key: 'submissions', href: '/submissions', icon: 'send', label: 'Заявки' },
 	{ key: 'guests', href: '/guests', icon: 'guests', label: 'Гості' },
 	{ key: 'rooms', href: '/rooms', icon: 'hotel', label: 'Номери' },
@@ -172,7 +173,7 @@ export class AppShellComponent {
 		const page = (key: string) => PAGE_LABEL[key] ?? key;
 		let text: string;
 		if (params['soon']) {
-			text = `Розділ «${page(params['soon'])}» ще не підключено до реальних даних вашого готелю. Поки що працюють заявки з сайтів, календар і номери.`;
+			text = `Розділ «${page(params['soon'])}» ще не підключено до реальних даних вашого готелю. Поки що працюють огляд, заявки з сайтів, календар і номери.`;
 		} else if (params['locked']) {
 			const needed = planForPage(params['locked']);
 			text = `Розділ «${page(params['locked'])}» входить у тариф ${needed ? PLANS[needed].name : 'вищого рівня'}. Ваш готель зараз на тарифі ${this.planName()}.`;

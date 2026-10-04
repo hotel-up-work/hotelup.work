@@ -1,9 +1,14 @@
-import { Component, computed, ElementRef, signal, viewChild, effect } from '@angular/core';
+import { Component, computed, ElementRef, inject, signal, viewChild, effect } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AppShellComponent } from '../../layouts/app-shell/app-shell.component';
+import { BookingRecord, BookingsService, checkOutPatch } from '../../feature/firebase/bookings.service';
+import { HotelService } from '../../feature/firebase/hotel.service';
+import { RoomRecord, RoomsService, RoomStatus } from '../../feature/firebase/rooms.service';
+import { SubmissionsService } from '../../feature/firebase/submissions.service';
 import { IconComponent } from '../../shared/icon/icon.component';
-import { canCurrent } from '../../shared/role';
+import { canCurrent, isLiveSession } from '../../shared/role';
+import { arrivalsOn, balanceOf, departuresOn, lateArrivals, occupancyOn, occupiedRoomIds, overstays, sourceShares, weekFrom } from './dashboard-live';
 
 interface Booking {
 	id: number;
@@ -126,6 +131,35 @@ function seedRooms(): Room[] {
 
 const OCCUPANCY_BASE = [79, 86, 93, 93, 71, 64, 68];
 
+/** `YYYY-MM-DD` in the browser's time zone. */
+const localDate = (date: Date) => new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+
+const ROOM_STATUS_LABEL: Record<RoomStatus, string> = {
+	ready: 'Готовий',
+	occupied: 'Зайнятий',
+	'needs-cleaning': 'Потребує прибирання',
+	cleaning: 'Прибирається',
+	unavailable: 'Недоступний',
+};
+
+interface LiveKpi {
+	icon: string;
+	value: string;
+	label: string;
+	sub: string;
+	link: string;
+	warning: boolean;
+	progress: boolean;
+}
+
+interface LiveIssue {
+	icon: string;
+	title: string;
+	body: string;
+	action: string;
+	link: string;
+}
+
 @Component({
 	selector: 'app-dashboard',
 	imports: [AppShellComponent, IconComponent, FormsModule, RouterLink],
@@ -139,6 +173,37 @@ export class DashboardComponent {
 	protected readonly money = money;
 	protected readonly initials = initials;
 	protected readonly dates = dates;
+
+	private readonly _router = inject(Router);
+	private readonly _hotel = inject(HotelService);
+	private readonly _roomsService = inject(RoomsService);
+	private readonly _bookingsService = inject(BookingsService);
+	private readonly _submissionsService = inject(SubmissionsService);
+
+	/** Real account: today's picture from the active hotel's rooms, bookings and website requests. */
+	protected readonly live = isLiveSession();
+	protected readonly canChange = canCurrent('changeBooking');
+	protected readonly showFinance = canCurrent('guestBill');
+	protected readonly hotelId = this._hotel.activeHotelId;
+	protected readonly hotelSubtitle = computed(() => {
+		const hotel = this._hotel.activeHotel();
+		if (!hotel) return "Grand Hotel · Кам'янець-Подільський";
+		return hotel.city ? `${hotel.name} · ${hotel.city}` : hotel.name;
+	});
+	protected readonly today = localDate(new Date());
+	protected readonly todayLabel = (() => {
+		const text = new Intl.DateTimeFormat('uk-UA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
+		return text.charAt(0).toUpperCase() + text.slice(1);
+	})();
+
+	protected readonly liveRooms = signal<RoomRecord[]>([]);
+	protected readonly liveBookings = signal<BookingRecord[]>([]);
+	protected readonly newSubmissions = signal(0);
+	protected readonly saving = signal(false);
+	protected readonly loadError = signal('');
+	private readonly _roomsLoaded = signal(!this.live);
+	private readonly _bookingsLoaded = signal(!this.live);
+	protected readonly loading = computed(() => !this._roomsLoaded() || !this._bookingsLoaded());
 
 	protected readonly bookings = signal<Booking[]>(SEED_BOOKINGS.map((b) => ({ ...b })));
 	protected readonly rooms = signal<Room[]>(seedRooms());
@@ -348,7 +413,222 @@ export class DashboardComponent {
 		);
 	});
 
+	/** A room's state now: a guest in the house wins, then the stored status (a stale hand-set "occupied" counts as ready). */
+	private _roomState(room: RoomRecord): RoomStatus {
+		if (room.status === 'unavailable') return 'unavailable';
+		if (occupiedRoomIds(this.liveBookings()).has(room.id)) return 'occupied';
+		return room.status === 'occupied' ? 'ready' : room.status;
+	}
+
+	protected roomNumber(b: BookingRecord): string {
+		return this.liveRooms().find((r) => r.id === b.roomId)?.number ?? b.roomNumber;
+	}
+
+	protected stay(b: BookingRecord): string {
+		return b.checkIn.slice(0, 7) === b.checkOut.slice(0, 7)
+			? `${Number(b.checkIn.slice(-2))}–${shortDate(b.checkOut)}`
+			: shortDate(b.checkIn) + ' – ' + shortDate(b.checkOut);
+	}
+
+	protected readonly statusLabel = (status: RoomStatus) => ROOM_STATUS_LABEL[status];
+	protected readonly balanceOf = balanceOf;
+
+	protected bookingStatusLabel(b: BookingRecord): string {
+		return { pending: 'Очікує', confirmed: 'Підтверджено', checkedin: 'Заїхав', checkedout: 'Виїхав', cancelled: 'Скасовано' }[b.status];
+	}
+
+	protected readonly lArrivals = computed(() => arrivalsOn(this.liveBookings(), this.today));
+	protected readonly lDepartures = computed(() => departuresOn(this.liveBookings(), this.today));
+	protected readonly lStates = computed(() => this.liveRooms().map((room) => ({ room, state: this._roomState(room) })));
+	protected readonly lUnpaid = computed(() => this.liveBookings().filter((b) => b.status !== 'cancelled' && balanceOf(b) > 0));
+
+	protected readonly lKpis = computed<LiveKpi[]>(() => {
+		const states = this.lStates();
+		const occupied = states.filter((x) => x.state === 'occupied').length;
+		const arrivals = this.lArrivals();
+		const departures = this.lDepartures();
+		const kpis: LiveKpi[] = [
+			{ icon: 'arrival', value: String(arrivals.length), label: 'Заїздів сьогодні', sub: `${arrivals.filter((b) => b.status === 'checkedin').length} вже заїхали`, link: '/calendar', warning: false, progress: false },
+			{ icon: 'departure', value: String(departures.length), label: 'Виїздів сьогодні', sub: `${departures.filter((b) => b.status === 'checkedout').length} вже виїхали`, link: '/calendar', warning: false, progress: false },
+			{ icon: 'hotel', value: `${occupied} / ${states.length}`, label: 'Номерів зайнято', sub: `${states.length ? Math.round((occupied / states.length) * 100) : 0}% зараз`, link: '/rooms', warning: false, progress: true },
+			{ icon: 'clean', value: String(states.filter((x) => x.state === 'needs-cleaning').length), label: 'Потребують прибирання', sub: `${states.filter((x) => x.state === 'cleaning').length} зараз прибирається`, link: '/rooms', warning: true, progress: false },
+		];
+		if (this.showFinance) {
+			const total = this.lUnpaid().reduce((sum, b) => sum + balanceOf(b), 0);
+			kpis.push({ icon: 'wallet', value: money(total), label: 'Очікується оплата', sub: `${this.lUnpaid().length} бронювання`, link: '/calendar', warning: false, progress: false });
+		}
+		kpis.push({ icon: 'send', value: String(this.newSubmissions()), label: 'Нові заявки', sub: 'Чекають на відповідь', link: '/submissions', warning: this.newSubmissions() > 0, progress: false });
+		return kpis;
+	});
+
+	/** Share of rooms with a guest in the house, for the occupancy KPI's progress bar. */
+	protected readonly lOccupiedPercent = computed(() => {
+		const states = this.lStates();
+		return states.length ? Math.round((states.filter((x) => x.state === 'occupied').length / states.length) * 100) : 0;
+	});
+
+	protected readonly lIssues = computed<LiveIssue[]>(() => {
+		const issues: LiveIssue[] = [];
+		const bookings = this.liveBookings();
+		const states = new Map(this.lStates().map((x) => [x.room.id, x.state]));
+		for (const b of overstays(bookings, this.today)) {
+			issues.push({ icon: 'attention', title: 'Гість не виїхав вчасно', body: `${b.guestName} · номер ${this.roomNumber(b)} · виїзд мав бути ${shortDate(b.checkOut)}`, action: 'Відкрити календар', link: '/calendar' });
+		}
+		for (const b of this.lArrivals().filter((x) => x.status !== 'checkedin')) {
+			const state = states.get(b.roomId);
+			if (state && state !== 'ready') {
+				issues.push({ icon: 'clean', title: `Номер ${this.roomNumber(b)} не готовий до заїзду`, body: `${b.guestName} · Заїзд сьогодні · ${ROOM_STATUS_LABEL[state]}`, action: 'Відкрити номери', link: '/rooms' });
+			}
+		}
+		for (const b of lateArrivals(bookings, this.today)) {
+			issues.push({ icon: 'arrival', title: 'Гість ще не заїхав', body: `${b.guestName} · номер ${this.roomNumber(b)} · заїзд був ${shortDate(b.checkIn)}`, action: 'Відкрити календар', link: '/calendar' });
+		}
+		if (this.showFinance) {
+			for (const b of this.lArrivals().filter((x) => balanceOf(x) > 0)) {
+				issues.push({ icon: 'wallet', title: 'Не отримано оплату', body: `${b.guestName} · номер ${this.roomNumber(b)} · Залишок ${money(balanceOf(b))}`, action: 'Відкрити календар', link: '/calendar' });
+			}
+		}
+		const waiting = bookings.filter((b) => b.status === 'pending' && b.checkOut >= this.today).length;
+		if (waiting) {
+			issues.push({ icon: 'attention', title: 'Бронювання очікують підтвердження', body: `Не підтверджено: ${waiting}`, action: 'Відкрити календар', link: '/calendar' });
+		}
+		return issues;
+	});
+
+	protected readonly lRoomSummary = computed(() => {
+		const states = this.lStates();
+		const count = (status: RoomStatus) => states.filter((x) => x.state === status).length;
+		return [
+			{ count: count('ready'), label: 'Готові', gold: false },
+			{ count: count('needs-cleaning'), label: 'Потребують прибирання', gold: true },
+			{ count: count('cleaning'), label: 'Прибирається', gold: true },
+			{ count: count('occupied'), label: 'Зайняті', gold: false },
+		];
+	});
+
+	/** Rooms that need someone's attention: waiting for cleaning, being cleaned, or blocked. */
+	protected readonly lRoomList = computed(() =>
+		this.lStates()
+			.filter((x) => x.state === 'needs-cleaning' || x.state === 'cleaning' || x.state === 'unavailable')
+			.slice(0, 4)
+			.map((x) => ({
+				number: x.room.number,
+				state: x.state,
+				note: x.state === 'unavailable' ? (x.room.block?.reason ?? '') : x.state === 'cleaning' ? 'Прибирання розпочато' : 'Гість виїхав',
+			})),
+	);
+
+	protected readonly lNewBookings = computed(() =>
+		[...this.liveBookings()]
+			.filter((b) => b.status !== 'cancelled')
+			.sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0))
+			.slice(0, 3),
+	);
+
+	protected createdLabel(b: BookingRecord): string {
+		if (!b.createdAt) return '';
+		const day = localDate(b.createdAt);
+		if (day === this.today) return 'Сьогодні';
+		return day === localDate(new Date(Date.now() - 86_400_000)) ? 'Вчора' : `${day.slice(8, 10)}.${day.slice(5, 7)}`;
+	}
+
+	protected readonly lOccupancy = computed(() =>
+		weekFrom(this.today).map((d) => ({ ...d, value: occupancyOn(this.liveBookings(), this.liveRooms(), d.date) })),
+	);
+	protected readonly lSources = computed(() => sourceShares(this.liveBookings(), this.today.slice(0, 7)));
+
+	protected go(url: string): void {
+		this._router.navigateByUrl(url);
+	}
+
+	protected async checkInLive(b: BookingRecord): Promise<void> {
+		const hotelId = this.hotelId();
+		const room = this.liveRooms().find((r) => r.id === b.roomId);
+		if (!hotelId || !room || !this.canChange || this.saving()) return;
+		const state = this._roomState(room);
+		if (state === 'occupied') return this.toast(`У номері ${room.number} ще проживає гість`);
+		if (state !== 'ready') return this.toast(`Спочатку підготуйте номер ${room.number}: ${ROOM_STATUS_LABEL[state].toLowerCase()}`);
+		this.saving.set(true);
+		try {
+			await this._bookingsService.update(hotelId, b.id, { status: 'checkedin' });
+			this.toast(`Заїзд відмічено · номер ${room.number}`);
+		} catch (error) {
+			console.error('Check-in failed', error);
+			this.toast('Не вдалося відмітити заїзд. Перевірте зʼєднання та спробуйте ще раз.');
+		} finally {
+			this.saving.set(false);
+		}
+	}
+
+	protected async checkOutLive(b: BookingRecord): Promise<void> {
+		const hotelId = this.hotelId();
+		const room = this.liveRooms().find((r) => r.id === b.roomId);
+		if (!hotelId || !this.canChange || this.saving()) return;
+		this.saving.set(true);
+		try {
+			await this._bookingsService.update(hotelId, b.id, checkOutPatch(b, this.today).patch);
+		} catch (error) {
+			console.error('Check-out failed', error);
+			this.saving.set(false);
+			return this.toast('Не вдалося відмітити виїзд. Перевірте зʼєднання та спробуйте ще раз.');
+		}
+		let roomMarked = true;
+		if (room && room.status !== 'unavailable') {
+			try {
+				await this._roomsService.updateRoom(hotelId, room.id, { status: 'needs-cleaning' });
+			} catch (error) {
+				console.error('Room status update failed', error);
+				roomMarked = false;
+			}
+		}
+		this.saving.set(false);
+		this.toast(roomMarked ? 'Виїзд відмічено · номер потребує прибирання' : 'Виїзд відмічено, але статус номера не змінено. Позначте його на сторінці «Номери».');
+	}
+
 	constructor() {
+		// Re-subscribe whenever the sidebar switches hotel; the previous hotel's listeners are dropped.
+		effect((onCleanup) => {
+			const hotelId = this.hotelId();
+			if (!this.live || !hotelId) return;
+			this.liveRooms.set([]);
+			this.liveBookings.set([]);
+			this.newSubmissions.set(0);
+			this._roomsLoaded.set(false);
+			this._bookingsLoaded.set(false);
+			this.loadError.set('');
+			const onError = (error: Error) => {
+				console.error('Dashboard listener failed', error);
+				this.loadError.set('Не вдалося завантажити огляд. Оновіть сторінку; якщо не допоможе, зверніться до адміністратора.');
+			};
+			const stopRooms = this._roomsService.listenRooms(
+				hotelId,
+				(rooms) => {
+					this.liveRooms.set(rooms);
+					this._roomsLoaded.set(true);
+				},
+				onError,
+			);
+			const stopBookings = this._bookingsService.listen(
+				hotelId,
+				(bookings) => {
+					this.liveBookings.set(bookings);
+					this._bookingsLoaded.set(true);
+				},
+				onError,
+			);
+			// Website requests are a bonus tile: a failure here must not hide the rest.
+			const stopSubmissions = this._submissionsService.listen(
+				hotelId,
+				(submissions) => this.newSubmissions.set(submissions.filter((x) => x.status === 'new').length),
+				(error) => console.error('Dashboard submissions listener failed', error),
+			);
+			onCleanup(() => {
+				stopRooms();
+				stopBookings();
+				stopSubmissions();
+			});
+		});
+
 		effect(() => {
 			const dialog = this.dialogRef()?.nativeElement;
 			if (!dialog) return;

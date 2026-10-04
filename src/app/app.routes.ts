@@ -297,8 +297,11 @@ export const routes: Routes = [
 				robots: 'noindex, nofollow',
 			},
 		},
+		// Real hotels get the fast desk form on live data; the demo keeps the seeded one.
 		loadComponent: () =>
-			import('./pages/new-booking/new-booking.component').then((m) => m.NewBookingComponent),
+			isLiveSession()
+				? import('./pages/new-booking/quick-booking.component').then((m) => m.QuickBookingComponent)
+				: import('./pages/new-booking/new-booking.component').then((m) => m.NewBookingComponent),
 	},
 	{
 		path: 'booking',

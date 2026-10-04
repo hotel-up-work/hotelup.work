@@ -297,7 +297,7 @@
 				}
 				@if (showGuestAndFinance) {
 					@if (live) {
-						<a class="button primary" routerLink="/calendar">+ Нове бронювання</a>
+						<a class="button primary" routerLink="/new-booking" [queryParams]="{ room: r.number }">+ Нове бронювання</a>
 					} @else {
 						<a class="button primary" href="/new-booking/">+ Нове бронювання</a>
 					}

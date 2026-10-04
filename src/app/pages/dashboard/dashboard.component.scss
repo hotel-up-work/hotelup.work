@@ -2291,3 +2291,10 @@ dialog {
 		transition: none !important;
 	}
 }
+
+.table-empty {
+	text-align: center;
+	color: var(--muted);
+	font-size: 12px;
+	padding: 24px 16px;
+}

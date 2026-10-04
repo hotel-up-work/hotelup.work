@@ -4,7 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { FirebaseError } from 'firebase/app';
 import { AuthService } from '../../feature/firebase/auth.service';
 import { HotelService } from '../../feature/firebase/hotel.service';
-import { setRealRole } from '../../shared/role';
+import { LIVE_PAGES, setRealRole } from '../../shared/role';
 
 type Screen = 'login' | 'forgot' | 'checkEmail';
 
@@ -91,7 +91,7 @@ export class LoginComponent {
 			// This is intentionally separate from demo_role (see role.ts) — most pages
 			// don't read it yet, that wiring is follow-up work.
 			setRealRole('owner');
-			this._router.navigateByUrl('/submissions');
+			this._router.navigateByUrl('/' + LIVE_PAGES[0]);
 		} catch (error) {
 			this.loginError.set(authErrorMessage(error));
 		} finally {

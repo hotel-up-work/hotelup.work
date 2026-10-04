@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AppShellComponent } from '../../layouts/app-shell/app-shell.component';
-import { BookingInput, BookingPatch, BookingRecord, BookingsService, BookingStatus } from '../../feature/firebase/bookings.service';
+import { BookingInput, BookingPatch, BookingRecord, BookingsService, BookingStatus, checkOutPatch } from '../../feature/firebase/bookings.service';
 import { HotelService } from '../../feature/firebase/hotel.service';
 import { RoomRecord, RoomsService, RoomStatus } from '../../feature/firebase/rooms.service';
 import { SubmissionRecord, SubmissionsService } from '../../feature/firebase/submissions.service';
@@ -150,7 +150,6 @@ const money = (n: number) => new Intl.NumberFormat('uk-UA').format(n) + ' ₴';
 const statusLabel = (s: Status) =>
 	({ confirmed: 'Підтверджено', pending: 'Очікує підтвердження', checkedin: 'Заїхав', checkedout: 'Виїхав', cancelled: 'Скасовано' })[s];
 const paymentLabel = (b: Booking) => (b.paid <= 0 ? 'Не оплачено' : b.paid < b.total ? 'Частково оплачено' : 'Оплачено');
-const max2 = (a: string, b: string) => (a > b ? a : b);
 /** `YYYY-MM-DD` in the browser's time zone. */
 const localDate = (date: Date) => new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
 
@@ -894,10 +893,13 @@ export class CalendarComponent {
 		this.saving.set(true);
 		// Checking out before the booked departure frees the remaining nights; the booked date is kept.
 		const b = this.booking(id);
-		const earlyEnd = status === 'checkedout' && b ? max2(this.TODAY, addDays(b.start, 1)) : '';
-		const early = !!b && !!earlyEnd && earlyEnd < b.end;
-		const patch: BookingPatch = early ? { status, checkOut: earlyEnd, plannedCheckOut: b.plannedCheckOut ?? b.end } : { status };
-		const local: Partial<Booking> = early ? { status, end: earlyEnd, plannedCheckOut: b.plannedCheckOut ?? b.end } : { status };
+		const out = status === 'checkedout' && b ? checkOutPatch({ checkIn: b.start, checkOut: b.end, plannedCheckOut: b.plannedCheckOut }, this.TODAY) : null;
+		const earlyEnd = out?.early ?? '';
+		const early = !!out?.early;
+		const patch: BookingPatch = out ? out.patch : { status };
+		const local: Partial<Booking> = out
+			? { status, ...(out.early ? { end: out.early, plannedCheckOut: out.patch.plannedCheckOut } : {}) }
+			: { status };
 		const saved = await this._save(id, patch, local);
 		let roomMarked = true;
 		if (saved && status === 'checkedout') roomMarked = await this._markRoomForCleaning(id);
