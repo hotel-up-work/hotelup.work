@@ -2,7 +2,7 @@ import { Service, inject } from '@angular/core';
 import { addDoc, collection, doc, onSnapshot, serverTimestamp, updateDoc, type DocumentData } from 'firebase/firestore';
 import { FirebaseService } from './firebase.service';
 
-export type BookingStatus = 'pending' | 'confirmed' | 'checkedin' | 'cancelled';
+export type BookingStatus = 'pending' | 'confirmed' | 'checkedin' | 'checkedout' | 'cancelled';
 
 /** Fields a booking is created with (`hotels/{hotelId}/bookings/{bookingId}`, see firestore.rules). */
 export interface BookingInput {
@@ -28,6 +28,8 @@ export interface BookingInput {
 export interface BookingRecord extends BookingInput {
 	id: string;
 	lateCheckoutHour: number | null;
+	/** Check-out as originally booked, set when an early check-out shortened the stay. */
+	plannedCheckOut?: string;
 }
 
 export interface BookingPatch {
@@ -39,9 +41,10 @@ export interface BookingPatch {
 	status?: BookingStatus;
 	notes?: string;
 	lateCheckoutHour?: number | null;
+	plannedCheckOut?: string;
 }
 
-const BOOKING_STATUSES: BookingStatus[] = ['pending', 'confirmed', 'checkedin', 'cancelled'];
+const BOOKING_STATUSES: BookingStatus[] = ['pending', 'confirmed', 'checkedin', 'checkedout', 'cancelled'];
 
 const str = (value: unknown): string => (typeof value === 'string' ? value : '');
 const num = (value: unknown, fallback: number): number => (typeof value === 'number' ? value : fallback);
@@ -64,6 +67,7 @@ function toBooking(id: string, data: DocumentData): BookingRecord {
 		notes: str(data['notes']),
 		submissionId: str(data['submissionId']) || undefined,
 		lateCheckoutHour: typeof data['lateCheckoutHour'] === 'number' ? data['lateCheckoutHour'] : null,
+		plannedCheckOut: str(data['plannedCheckOut']) || undefined,
 	};
 }
 

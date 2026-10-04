@@ -5,7 +5,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AppShellComponent } from '../../layouts/app-shell/app-shell.component';
 import { BookingInput, BookingPatch, BookingRecord, BookingsService, BookingStatus } from '../../feature/firebase/bookings.service';
 import { HotelService } from '../../feature/firebase/hotel.service';
-import { RoomRecord, RoomsService } from '../../feature/firebase/rooms.service';
+import { RoomRecord, RoomsService, RoomStatus } from '../../feature/firebase/rooms.service';
 import { SubmissionRecord, SubmissionsService } from '../../feature/firebase/submissions.service';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { limitRoomsToPlan } from '../../shared/plan';
@@ -19,6 +19,8 @@ interface Room {
 	cap: string;
 	capacity: number;
 	price: number;
+	/** Stored status; `unavailable` is a technical block. */
+	status: RoomStatus;
 }
 
 type Status = BookingStatus;
@@ -41,6 +43,8 @@ interface Booking {
 	notes: string;
 	lateCheckoutHour?: number;
 	submissionId?: string;
+	/** Check-out as booked, when an early check-out shortened the stay. */
+	plannedCheckOut?: string;
 }
 
 interface Blocked {
@@ -144,8 +148,9 @@ const initials = (n: string) =>
 		.join('');
 const money = (n: number) => new Intl.NumberFormat('uk-UA').format(n) + ' ₴';
 const statusLabel = (s: Status) =>
-	({ confirmed: 'Підтверджено', pending: 'Очікує підтвердження', checkedin: 'Заїхав', cancelled: 'Скасовано' })[s];
+	({ confirmed: 'Підтверджено', pending: 'Очікує підтвердження', checkedin: 'Заїхав', checkedout: 'Виїхав', cancelled: 'Скасовано' })[s];
 const paymentLabel = (b: Booking) => (b.paid <= 0 ? 'Не оплачено' : b.paid < b.total ? 'Частково оплачено' : 'Оплачено');
+const max2 = (a: string, b: string) => (a > b ? a : b);
 /** `YYYY-MM-DD` in the browser's time zone. */
 const localDate = (date: Date) => new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
 
@@ -166,11 +171,12 @@ function demoRooms(): Room[] {
 		cap: r.cap,
 		capacity: Number(r.cap.match(/(\d)(?!.*\d)/)?.[1] ?? 2),
 		price: BASE_PRICE[r.type],
+		status: 'ready',
 	}));
 }
 
 function toRoom(r: RoomRecord): Room {
-	return { id: r.id, number: r.number, type: r.type, cap: guestsLabel(r.capacity), capacity: r.capacity, price: r.price };
+	return { id: r.id, number: r.number, type: r.type, cap: guestsLabel(r.capacity), capacity: r.capacity, price: r.price, status: r.status };
 }
 
 function toBooking(r: BookingRecord): Booking {
@@ -191,6 +197,7 @@ function toBooking(r: BookingRecord): Booking {
 		notes: r.notes,
 		lateCheckoutHour: r.lateCheckoutHour ?? undefined,
 		submissionId: r.submissionId,
+		plannedCheckOut: r.plannedCheckOut,
 	};
 }
 
@@ -260,7 +267,7 @@ export class CalendarComponent {
 	protected readonly viewStart = signal(this.TODAY);
 	protected readonly viewDays = signal(14);
 	protected readonly search = signal('');
-	protected readonly statusFilter = signal(new Set<Status>(['confirmed', 'pending', 'checkedin', 'cancelled']));
+	protected readonly statusFilter = signal(new Set<Status>(['confirmed', 'pending', 'checkedin', 'checkedout', 'cancelled']));
 	protected readonly hiddenTypes = signal(new Set<string>());
 	protected readonly filtersOpen = signal(false);
 	protected readonly mobileDate = signal(this.TODAY);
@@ -529,7 +536,7 @@ export class CalendarComponent {
 	}
 
 	protected resetFilters(): void {
-		this.statusFilter.set(new Set<Status>(['confirmed', 'pending', 'checkedin', 'cancelled']));
+		this.statusFilter.set(new Set<Status>(['confirmed', 'pending', 'checkedin', 'checkedout', 'cancelled']));
 		this.hiddenTypes.set(new Set());
 	}
 
@@ -885,9 +892,38 @@ export class CalendarComponent {
 	protected async setStatus(id: string, status: Status): Promise<void> {
 		if (!this.canChange || this.saving()) return;
 		this.saving.set(true);
-		const saved = await this._save(id, { status }, { status });
+		// Checking out before the booked departure frees the remaining nights; the booked date is kept.
+		const b = this.booking(id);
+		const earlyEnd = status === 'checkedout' && b ? max2(this.TODAY, addDays(b.start, 1)) : '';
+		const early = !!b && !!earlyEnd && earlyEnd < b.end;
+		const patch: BookingPatch = early ? { status, checkOut: earlyEnd, plannedCheckOut: b.plannedCheckOut ?? b.end } : { status };
+		const local: Partial<Booking> = early ? { status, end: earlyEnd, plannedCheckOut: b.plannedCheckOut ?? b.end } : { status };
+		const saved = await this._save(id, patch, local);
+		let roomMarked = true;
+		if (saved && status === 'checkedout') roomMarked = await this._markRoomForCleaning(id);
 		this.saving.set(false);
-		if (saved) this.toast(status === 'checkedin' ? 'Заїзд відмічено' : 'Бронювання підтверджено');
+		if (!saved) return;
+		if (!roomMarked) {
+			this.toast('Виїзд відмічено, але статус номера не змінено. Позначте номер як «Потребує прибирання» на сторінці «Номери».');
+		} else {
+			this.toast(
+				{ checkedin: 'Заїзд відмічено', checkedout: early ? `Виїзд відмічено · номер вільний з ${shortDate(earlyEnd)}, потребує прибирання` : 'Виїзд відмічено · номер потребує прибирання', pending: '', confirmed: 'Бронювання підтверджено', cancelled: '' }[status],
+			);
+		}
+	}
+
+	/** After check-out the room waits for cleaning (a blocked room stays blocked). Real hotels only; the demo has no room statuses here. */
+	private async _markRoomForCleaning(bookingId: string): Promise<boolean> {
+		const hotelId = this.hotelId();
+		const room = this.rooms().find((r) => r.number === this.booking(bookingId)?.room);
+		if (!this.live || !hotelId || !room || room.status === 'unavailable') return true;
+		try {
+			await this._roomsService.updateRoom(hotelId, room.id, { status: 'needs-cleaning' });
+			return true;
+		} catch (error) {
+			console.error('Room status update failed', error);
+			return false;
+		}
 	}
 
 	protected requestRoomChange(): void {

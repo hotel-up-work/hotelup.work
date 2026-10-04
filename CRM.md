@@ -109,9 +109,10 @@ Everything else in this document describes the demo, which keeps every page (ent
   the shell explains the section is not connected to real data yet.
 - Inside Submissions, demo-only parts are hidden too: "Підключити сайт" dialog and the
   "Перша відповідь" tile.
-- Inside Rooms, everything that depends on bookings or staff is hidden: current guest,
-  checkout, next arrival, "Створити/Відкрити бронювання", "+ Нове бронювання", the date
-  timeline, links to Calendar/Housekeeping, weekend/extra-guest prices and the AI strip.
+- Inside Rooms, what depends on staff or demo data is hidden: the date timeline, links to
+  Housekeeping, weekend/extra-guest prices and the AI strip. Current guest, stay dates, payment
+  status and next arrival come from the hotel's bookings (still hidden for `maintenance`);
+  "Створити/Відкрити бронювання" and "+ Нове бронювання" open the Calendar.
   Cleaning is "Почати прибирання" → "Завершити прибирання" (no assignee yet).
 - Plan room/staff limits are not applied to real hotels: plan per hotel is not built yet.
 - Inside Calendar, demo-only parts are hidden: "Відкрити бронювання" and "Надіслати повідомлення"
@@ -325,8 +326,8 @@ write; roles per hotel are not built yet.
   renumbered), `roomNumber` (display copy), `guestName` (1–200; the phone when no name was given),
   `checkIn`, `checkOut` (`YYYY-MM-DD`, `checkOut > checkIn`; the room is free for the next stay from
   the check-out day), `guests` (int 1–50, ≤ the room's capacity, checked in the client), `total`
-  and `paid` (`0 ≤ paid ≤ total`), `status` (`pending | confirmed | checkedin | cancelled`), optional
-  `phone`, `email`, `source`, `notes` (≤1000), `submissionId`, `lateCheckoutHour` (12–23),
+  and `paid` (`0 ≤ paid ≤ total`), `status` (`pending | confirmed | checkedin | checkedout | cancelled`), optional
+  `phone`, `email`, `source`, `notes` (≤1000), `submissionId`, `plannedCheckOut` (original check-out after an early departure), `lateCheckoutHour` (12–23),
   `createdAt`, `updatedAt` (server time on every write). Bookings are never deleted.
 - Overlaps are prevented in the client (other active bookings and room blocks; a block's last day
   is inclusive). Rules cannot query, so two people booking the same room at the same moment can
@@ -336,7 +337,11 @@ write; roles per hotel are not built yet.
 - Who does what: everyone who opens Calendar can create a booking. Only `changeBooking`
   (owner, manager, reception) chooses the status, confirms, checks in, moves (drag), extends and
   cancels; Sales creates `pending` holds. Payment fields need `collectPayment` + `guestBill`.
-  Cancelling asks for confirmation and keeps the record.
+  Cancelling asks for confirmation and keeps the record. "Відмітити заїзд" /
+  "Відмітити виїзд" (`changeBooking`) move a booking to `checkedin` / `checkedout`; An early
+  check-out shortens the stay: `checkOut` becomes today (at least the day after check-in), the
+  room is free for sale from then, and the booked date is kept in `plannedCheckOut`. `total` and
+  `paid` are not changed; settle any refund by hand until the Payments page is live.
 
 ### `submissions` — Website form submissions (free, Start plan)
 
@@ -423,7 +428,15 @@ write; roles per hotel are not built yet.
   `amenities[]`, `block` (`{reason, start, end, note}` with ISO dates, end ≥ start; set only
   while `unavailable`), `lastCleanedAt` (set when cleaning finishes or status goes back to
   ready), `createdAt`, `updatedAt` (server time on every write).
-- Until bookings exist, `status` is set by hand; later "occupied" will be derived from bookings.
+- **Occupancy comes from bookings (real hotels).** A room shows "occupied" while a booking in it
+  is `checkedin` (even past its planned check-out, until "Відмітити виїзд" in the Calendar);
+  a block (`unavailable`) always wins; a leftover stored `occupied` without a stay shows as
+  ready. "Зайнятий" cannot be picked by hand, and any other status change on an occupied room is
+  refused. Checking a guest out sets the room to `needs-cleaning` (unless it is blocked).
+  The demo still sets `occupied` by hand.
+- **A room with active bookings cannot be deleted** (pending/confirmed with a check-out after
+  today, or a guest in the house); the error asks to cancel or move them in the Calendar. Past
+  and cancelled bookings stay in Firestore but no longer show in the Calendar.
 - A room's type is always picked from the hotel's room types (a select). Types are created in
   "Типи номерів", or from the room form's "+ Новий тип" link, which opens the type form and then
   returns to the room form with the new type selected (number and floor already typed are kept).
@@ -650,10 +663,11 @@ Added with plans on 29 September 2026 (not yet verified in the running app):
 
 Added with live Calendar bookings on 2 October 2026 (not yet verified in the running app):
 
-22. **Deleting a room does not check its bookings**: the bookings stay in Firestore but vanish from
-    the Calendar. Rooms should refuse (or ask) when a room has active bookings.
-23. **Rooms `status` is still set by hand**: `occupied` is not derived from bookings, and Rooms
-    still hides current guest, next arrival and the booking links for real hotels.
+22. **Deleting a room with bookings** — fixed 4 October 2026 (active bookings block the delete).
+    Not yet verified in the running app.
+23. **Rooms `status` was set by hand** — fixed 4 October 2026 for real hotels: occupancy, current
+    guest and next arrival come from bookings; Calendar has check-in/check-out. Early check-out
+    frees the remaining nights (see Booking data contract). Not yet verified in the running app.
 24. **The Calendar loads every booking of the hotel** (no date window), and double-booking by two
     people at the same moment is not prevented (see Booking data contract).
 25. **Booking edits are limited**: dates and room change only by dragging; there is no edit form

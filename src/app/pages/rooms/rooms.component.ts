@@ -1,8 +1,9 @@
 import { Component, DestroyRef, computed, effect, inject, signal, type Type } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { ModalService, type Modal } from '@wawjs/ngx-ui';
 import { AppShellComponent } from '../../layouts/app-shell/app-shell.component';
+import { BookingRecord, BookingsService } from '../../feature/firebase/bookings.service';
 import { HotelService } from '../../feature/firebase/hotel.service';
 import { RoomPatch, RoomRecord, RoomsService } from '../../feature/firebase/rooms.service';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -141,6 +142,41 @@ function dayMonth(value: string | undefined): string {
 	return /^\d{4}-\d{2}-\d{2}$/.test(value) ? DAY_MONTH.format(new Date(value + 'T00:00')) : value;
 }
 
+const paymentLabel = (b: BookingRecord) => (b.paid <= 0 ? 'Не оплачено' : b.paid < b.total ? 'Частково оплачено' : 'Оплачено');
+
+/** A booking that still holds its room: waiting, or the guest is in the house (even past the planned check-out). */
+const holdsRoom = (b: BookingRecord, today: string) =>
+	b.status === 'checkedin' || ((b.status === 'confirmed' || b.status === 'pending') && b.checkOut > today);
+
+/**
+ * Real hotels: the room list as stored plus what the bookings say. A room is occupied while a guest is
+ * checked in (CRM.md → Shared operational definitions); a technical block always wins, and a leftover
+ * hand-set "occupied" without a stay shows as ready. The next arrival is the earliest waiting booking.
+ */
+function withStays(records: RoomRecord[], bookings: BookingRecord[], today: string): Room[] {
+	return records.map((record) => {
+		const room = toRoom(record);
+		if (record.status === 'unavailable') return room;
+		const mine = bookings.filter((b) => b.roomId === record.id && holdsRoom(b, today));
+		const current = mine.find((b) => b.status === 'checkedin');
+		const next = mine.filter((b) => b !== current).sort((a, b) => a.checkIn.localeCompare(b.checkIn))[0];
+		if (next) Object.assign(room, { nextGuest: next.guestName, nextStart: dayMonth(next.checkIn), nextEnd: dayMonth(next.checkOut), nextArrival: dayMonth(next.checkIn) });
+		if (current) {
+			Object.assign(room, {
+				status: 'occupied',
+				guest: current.guestName,
+				checkin: dayMonth(current.checkIn),
+				checkout: dayMonth(current.checkOut),
+				nights: Math.round((Date.parse(current.checkOut) - Date.parse(current.checkIn)) / 86_400_000),
+				payment: paymentLabel(current),
+			});
+		} else if (record.status === 'occupied') {
+			room.status = 'ready';
+		}
+		return room;
+	});
+}
+
 function toRoom(r: RoomRecord): Room {
 	return {
 		id: r.id,
@@ -180,6 +216,8 @@ const sameText = (a: string, b: string) => a.trim().toLocaleLowerCase('uk-UA') =
 })
 export class RoomsComponent {
 	private readonly _roomsService = inject(RoomsService);
+	private readonly _bookingsService = inject(BookingsService);
+	private readonly _router = inject(Router);
 	private readonly _hotel = inject(HotelService);
 	private readonly _modal = inject(ModalService);
 	/** ngx-ui modals opened by this page; closed when the page is left. */
@@ -211,6 +249,9 @@ export class RoomsComponent {
 	protected readonly today = this.live ? localDate(new Date()) : DEMO_TODAY;
 
 	protected readonly rooms = signal<Room[]>(this.live ? [] : limitRoomsToPlan(buildRooms()));
+	/** Real hotels: rooms as stored and the hotel's bookings; `rooms` is these two combined (withStays). */
+	private readonly _storedRooms = signal<RoomRecord[]>([]);
+	private readonly _bookings = signal<BookingRecord[]>([]);
 	protected readonly types = signal<RoomType[]>(this.live ? [] : DEMO_TYPES);
 	protected readonly loading = signal(this.live);
 	protected readonly loadError = signal('');
@@ -322,7 +363,8 @@ export class RoomsComponent {
 		effect((onCleanup) => {
 			if (!this.live) return;
 			const hotelId = this.hotelId();
-			this.rooms.set([]);
+			this._storedRooms.set([]);
+			this._bookings.set([]);
 			this.types.set([]);
 			this.selectedRoomNumber.set(null);
 			this.loadError.set('');
@@ -331,6 +373,9 @@ export class RoomsComponent {
 				return;
 			}
 			this.loading.set(true);
+			let roomsLoaded = false;
+			let bookingsLoaded = false;
+			const loaded = () => this.loading.set(!(roomsLoaded && bookingsLoaded));
 			const onError = (error: Error) => {
 				console.error('Rooms listener failed', error);
 				this.loading.set(false);
@@ -339,16 +384,31 @@ export class RoomsComponent {
 			const stopRooms = this._roomsService.listenRooms(
 				hotelId,
 				(rooms) => {
-					this.loading.set(false);
-					this.rooms.set(rooms.map(toRoom));
+					roomsLoaded = true;
+					this._storedRooms.set(rooms);
+					loaded();
+				},
+				onError,
+			);
+			const stopBookings = this._bookingsService.listen(
+				hotelId,
+				(bookings) => {
+					bookingsLoaded = true;
+					this._bookings.set(bookings);
+					loaded();
 				},
 				onError,
 			);
 			const stopTypes = this._roomsService.listenTypes(hotelId, (types) => this.types.set(types), onError);
 			onCleanup(() => {
 				stopRooms();
+				stopBookings();
 				stopTypes();
 			});
+		});
+
+		effect(() => {
+			if (this.live) this.rooms.set(withStays(this._storedRooms(), this._bookings(), this.today));
 		});
 	}
 
@@ -495,7 +555,9 @@ export class RoomsComponent {
 			ConfirmComponent,
 			{
 				title: `Видалити номер ${number}?`,
-				text: 'Номер зникне з номерного фонду. Цю дію не можна скасувати.',
+				text: this.live
+					? 'Номер зникне з номерного фонду, а його минулі бронювання — з календаря. Цю дію не можна скасувати.'
+					: 'Номер зникне з номерного фонду. Цю дію не можна скасувати.',
 				confirmText: 'Видалити',
 				confirm: () => this.deleteRoom(number),
 			},
@@ -543,6 +605,10 @@ export class RoomsComponent {
 	}
 
 	protected quickBook(): void {
+		if (this.live) {
+			this._router.navigateByUrl('/calendar');
+			return;
+		}
 		this.toast('Перехід до створення бронювання · Демо');
 	}
 
@@ -573,6 +639,10 @@ export class RoomsComponent {
 	}
 
 	protected openBooking(): void {
+		if (this.live) {
+			this._router.navigateByUrl('/calendar');
+			return;
+		}
 		this.toast('Перехід до бронювання · Демо');
 	}
 
@@ -632,6 +702,9 @@ export class RoomsComponent {
 	private async changeStatus(number: string, status: RoomStatus): Promise<string | null> {
 		const room = this.room(number);
 		if (!room) return 'Номер не знайдено. Можливо, його вже видалили.';
+		if (this.live && room.status === 'occupied' && status !== 'unavailable') {
+			return 'Номер зайнятий: гостя заселено. Спершу відмітьте виїзд у календарі.';
+		}
 		// Blocking needs dates and a reason, so it continues in the block modal.
 		if (status === 'unavailable' && room.status !== 'unavailable') {
 			this.openBlockRoom(number);
@@ -664,6 +737,10 @@ export class RoomsComponent {
 		const room = this.room(number);
 		if (!room) return null;
 		if (this.live) {
+			const active = this._bookings().filter((b) => b.roomId === room.id && holdsRoom(b, this.today));
+			if (active.length) {
+				return `У номері ${number} є активні бронювання (${active.length}). Спершу скасуйте їх або перенесіть в інший номер у календарі.`;
+			}
 			const error = await this._write(() => this._roomsService.deleteRoom(this.hotelId()!, room.id), `Номер ${number} видалено`);
 			if (error) return error;
 		} else {

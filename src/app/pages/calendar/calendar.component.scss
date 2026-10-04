@@ -492,6 +492,7 @@ dialog {
 	}
 
 	.lg-confirmed,
+	.lg-checkedout,
 	.lg-cancelled {
 		background: var(--white);
 		border: 1px solid var(--line);
@@ -677,6 +678,12 @@ dialog {
 		background: var(--gold-bg);
 		border-color: var(--gold);
 		color: #6d5324;
+	}
+
+	&.status-checkedout {
+		background: var(--surface);
+		color: #75767e;
+		border-color: var(--line);
 	}
 
 	&.status-cancelled {

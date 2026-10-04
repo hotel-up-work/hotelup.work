@@ -22,13 +22,15 @@ const STATUS_OPTIONS: { value: RoomStatus; label: string }[] = [
 					Статус
 					<select #statusSelect name="status">
 						@for (option of options; track option.value) {
+							@if (!live || option.value !== 'occupied') {
 							<option [value]="option.value" [selected]="option.value === room?.status">{{ option.label }}</option>
+							}
 						}
 					</select>
 				</label>
 				<p class="full crm-note">
 					@if (live) {
-						Поки бронювання не підключено, статус «Зайнятий» ставиться вручну. «Недоступний» відкриває форму блокування.
+						Статус «Зайнятий» встановлюється автоматично, коли в календарі відмічено заїзд гостя. «Недоступний» відкриває форму блокування.
 					} @else {
 						Статус «Зайнятий» встановлюється автоматично при заїзді гостя.
 					}

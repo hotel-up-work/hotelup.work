@@ -33,7 +33,7 @@
 	</div>
 	<p class="card-sub kpi-note">
 		@if (live) {
-			Статуси нижче показують стан номерів зараз і змінюються вручну. Коли підключимо бронювання, зайнятість оновлюватиметься автоматично.
+			Статус «Зайнятий» береться з бронювань: номер зайнятий, поки гостя заселено в календарі. Прибирання та блокування змінюються тут.
 		} @else {
 			Статуси нижче показують стан номерів зараз, а не на конкретні дати. Щоб перевірити наявність на певні дати заїзду/виїзду, відкрийте
 			<a routerLink="/calendar">Календар</a>.
@@ -181,7 +181,7 @@
 											<div class="rc-sub">{{ r.assigned }} · з {{ r.startedAt }}</div>
 										}
 										@if (r.nextArrival) {
-											<div class="rc-warning">До заїзду о {{ r.nextArrival }}</div>
+											<div class="rc-warning">До заїзду {{ live ? ': ' : 'о ' }}{{ r.nextArrival }}</div>
 										}
 									}
 									@case ('unavailable') {
@@ -194,7 +194,7 @@
 								<div class="rc-actions">
 									@switch (r.status) {
 										@case ('ready') {
-											@if (showGuestAndFinance && !live) {
+											@if (showGuestAndFinance) {
 												<button (click)="quickBook(); $event.stopPropagation()">Створити бронювання</button>
 											}
 										}
@@ -218,7 +218,7 @@
 											}
 										}
 										@default {
-											@if (showGuestAndFinance && !live) {
+											@if (showGuestAndFinance) {
 												<button (click)="openBooking(); $event.stopPropagation()">Відкрити бронювання</button>
 											}
 										}
@@ -241,13 +241,9 @@
 							<th>Місткість</th>
 							@if (showGuestAndFinance) {
 								<th>Ціна</th>
-								@if (!live) {
-									<th>Поточний гість</th>
-								}
+								<th>Поточний гість</th>
 							}
-							@if (!live) {
-								<th>Наступний заїзд</th>
-							}
+							<th>Наступний заїзд</th>
 							<th>Прибирання</th>
 							<th>Статус</th>
 							<th></th>
@@ -261,13 +257,9 @@
 								<td>{{ r.capacity }} гості</td>
 								@if (showGuestAndFinance) {
 									<td><b>{{ money(r.price) }}</b></td>
-									@if (!live) {
-										<td>{{ r.status === 'occupied' ? r.guest : '-' }}</td>
-									}
+									<td>{{ r.status === 'occupied' ? r.guest : '-' }}</td>
 								}
-								@if (!live) {
-									<td>{{ r.status === 'ready' && r.nextArrival ? r.nextArrival : r.status === 'occupied' && r.nextGuest ? r.nextStart : '-' }}</td>
-								}
+								<td>{{ r.status === 'ready' && r.nextArrival ? r.nextArrival : r.status === 'occupied' && r.nextGuest ? r.nextStart : '-' }}</td>
 								<td>{{ r.status === 'cleaning' ? 'Прибирається' : r.status === 'needs-cleaning' ? 'Потребує прибирання' : '-' }}</td>
 								<td><span class="status-tag" [class]="r.status">{{ statusLabel(r.status) }}</span></td>
 								<td class="row-menu-wrap">
@@ -303,8 +295,12 @@
 				@if (canEditInventory) {
 					<button class="button secondary" (click)="openEditRoom(r.number)">Редагувати</button>
 				}
-				@if (showGuestAndFinance && !live) {
-					<a class="button primary" href="/new-booking/">+ Нове бронювання</a>
+				@if (showGuestAndFinance) {
+					@if (live) {
+						<a class="button primary" routerLink="/calendar">+ Нове бронювання</a>
+					} @else {
+						<a class="button primary" href="/new-booking/">+ Нове бронювання</a>
+					}
 				}
 			</div>
 
@@ -357,7 +353,7 @@
 				}
 				@if (r.nextGuest) {
 					<h5>Наступне бронювання</h5>
-					<p class="plain">{{ r.nextStart }}–{{ r.nextEnd }}<br /><b>{{ r.nextGuest }}</b> · Заїзд: {{ r.nextArrival }}</p>
+					<p class="plain">{{ r.nextStart }}–{{ r.nextEnd }}<br /><b>{{ r.nextGuest }}</b>{{ live ? '' : ' · Заїзд: ' + r.nextArrival }}</p>
 					<button class="text-action side-link" (click)="openBooking()">Відкрити бронювання →</button>
 				}
 			}

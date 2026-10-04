@@ -2,6 +2,7 @@
 	<div class="topbar-legend" topbar-center aria-label="Умовні позначення">
 		<span><i class="lg-confirmed"></i>Підтверджено</span>
 		<span><i class="lg-checkedin"></i>Заїхав</span>
+		<span><i class="lg-checkedout"></i>Виїхав</span>
 		<span><i class="lg-pending"></i>Очікує</span>
 		<span><i class="lg-cancelled"></i>Скасовано</span>
 		<span><i class="lg-blocked"></i>Недоступно</span>
@@ -33,7 +34,7 @@
 					<div class="filters-panel">
 						<section>
 							<h4>Статус бронювання</h4>
-							@for (s of [['confirmed','Підтверджено'],['pending','Очікує'],['checkedin','Заїхав'],['cancelled','Скасовано']]; track s[0]) {
+							@for (s of [['confirmed','Підтверджено'],['pending','Очікує'],['checkedin','Заїхав'],['checkedout','Виїхав'],['cancelled','Скасовано']]; track s[0]) {
 								<label>
 									<input
 										type="checkbox"
@@ -215,6 +216,9 @@
 				<p>
 					Заїзд: <b>{{ shortDate(b.start) }}, після 14:00</b><br />
 					Виїзд: <b>{{ shortDate(b.end) }}, до {{ checkoutLabel(b) }}</b>
+						@if (b.plannedCheckOut) {
+							<br /><small class="form-note">Раніше за план: заплановано до {{ shortDate(b.plannedCheckOut) }}</small>
+						}
 					@if (b.lateCheckoutHour) {
 						<span class="pill gold">Пізній виїзд</span>
 					}
@@ -240,6 +244,9 @@
 					}
 					@if (canChange && b.status === 'confirmed') {
 						<button class="button primary" [disabled]="saving()" (click)="setStatus(b.id, 'checkedin')">Відмітити заїзд</button>
+					}
+					@if (canChange && b.status === 'checkedin') {
+						<button class="button primary" [disabled]="saving()" (click)="setStatus(b.id, 'checkedout')">Відмітити виїзд</button>
 					}
 					@if (canExtendStay(b)) {
 						<button class="button secondary" (click)="openExtendStay(b.id)">Пізній виїзд</button>
