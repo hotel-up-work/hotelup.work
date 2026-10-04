@@ -142,7 +142,11 @@ export const routes: Routes = [
 				robots: 'noindex, nofollow',
 			},
 		},
-		loadComponent: () => import('./pages/payments/payments.component').then((m) => m.PaymentsComponent),
+		// Real hotels get the payment journal on live data; the demo keeps the seeded list.
+		loadComponent: () =>
+			isLiveSession()
+				? import('./pages/payments/payments-live.component').then((m) => m.PaymentsLiveComponent)
+				: import('./pages/payments/payments.component').then((m) => m.PaymentsComponent),
 	},
 	{
 		path: 'housekeeping',

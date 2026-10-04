@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { AppShellComponent } from '../../layouts/app-shell/app-shell.component';
 import { BookingRecord, BookingsService, checkOutPatch } from '../../feature/firebase/bookings.service';
 import { HotelService } from '../../feature/firebase/hotel.service';
+import { PaymentRecord, PaymentsService } from '../../feature/firebase/payments.service';
 import { RoomRecord, RoomsService, RoomStatus } from '../../feature/firebase/rooms.service';
 import { SubmissionsService } from '../../feature/firebase/submissions.service';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -179,11 +180,14 @@ export class DashboardComponent {
 	private readonly _roomsService = inject(RoomsService);
 	private readonly _bookingsService = inject(BookingsService);
 	private readonly _submissionsService = inject(SubmissionsService);
+	private readonly _paymentsService = inject(PaymentsService);
 
 	/** Real account: today's picture from the active hotel's rooms, bookings and website requests. */
 	protected readonly live = isLiveSession();
 	protected readonly canChange = canCurrent('changeBooking');
 	protected readonly showFinance = canCurrent('guestBill');
+	/** Hotel-wide receipts; other roles see only what they recorded themselves (CRM.md → Data visibility). */
+	protected readonly financeReports = canCurrent('financeReports');
 	protected readonly hotelId = this._hotel.activeHotelId;
 	protected readonly hotelSubtitle = computed(() => {
 		const hotel = this._hotel.activeHotel();
@@ -199,6 +203,7 @@ export class DashboardComponent {
 	protected readonly liveRooms = signal<RoomRecord[]>([]);
 	protected readonly liveBookings = signal<BookingRecord[]>([]);
 	protected readonly newSubmissions = signal(0);
+	private readonly _livePayments = signal<PaymentRecord[]>([]);
 	protected readonly saving = signal(false);
 	protected readonly loadError = signal('');
 	private readonly _roomsLoaded = signal(!this.live);
@@ -455,7 +460,12 @@ export class DashboardComponent {
 		];
 		if (this.showFinance) {
 			const total = this.lUnpaid().reduce((sum, b) => sum + balanceOf(b), 0);
-			kpis.push({ icon: 'wallet', value: money(total), label: 'Очікується оплата', sub: `${this.lUnpaid().length} бронювання`, link: '/calendar', warning: false, progress: false });
+			const uid = this._paymentsService.recorder().uid;
+			const received = this._livePayments()
+				.filter((p) => p.occurredOn === this.today && (this.financeReports || p.recordedByUid === uid))
+				.reduce((sum, p) => sum + p.amount, 0);
+			kpis.push({ icon: 'chart', value: money(received), label: this.financeReports ? 'Надходження сьогодні' : 'Зібрано вами сьогодні', sub: 'За журналом оплат', link: '/payments', warning: false, progress: false });
+			kpis.push({ icon: 'wallet', value: money(total), label: 'Очікується оплата', sub: `${this.lUnpaid().length} бронювання`, link: '/payments', warning: false, progress: false });
 		}
 		kpis.push({ icon: 'send', value: String(this.newSubmissions()), label: 'Нові заявки', sub: 'Чекають на відповідь', link: '/submissions', warning: this.newSubmissions() > 0, progress: false });
 		return kpis;
@@ -593,6 +603,7 @@ export class DashboardComponent {
 			this.liveRooms.set([]);
 			this.liveBookings.set([]);
 			this.newSubmissions.set(0);
+			this._livePayments.set([]);
 			this._roomsLoaded.set(false);
 			this._bookingsLoaded.set(false);
 			this.loadError.set('');
@@ -622,10 +633,17 @@ export class DashboardComponent {
 				(submissions) => this.newSubmissions.set(submissions.filter((x) => x.status === 'new').length),
 				(error) => console.error('Dashboard submissions listener failed', error),
 			);
+			// Receipts are a bonus tile too.
+			const stopPayments = this._paymentsService.listen(
+				hotelId,
+				(payments) => this._livePayments.set(payments),
+				(error) => console.error('Dashboard payments listener failed', error),
+			);
 			onCleanup(() => {
 				stopRooms();
 				stopBookings();
 				stopSubmissions();
+				stopPayments();
 			});
 		});
 

@@ -6,6 +6,7 @@ import { AppShellComponent } from '../../layouts/app-shell/app-shell.component';
 import { BookingInput, BookingRecord, BookingsService, isoAddDays } from '../../feature/firebase/bookings.service';
 import { GuestRecord, GuestsService, phoneKey } from '../../feature/firebase/guests.service';
 import { HotelService } from '../../feature/firebase/hotel.service';
+import { PAYMENT_METHODS, PaymentMethod, PaymentsService } from '../../feature/firebase/payments.service';
 import { RoomRecord, RoomsService } from '../../feature/firebase/rooms.service';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { nightsBetween, roomIsFree } from '../../shared/booking-rules';
@@ -55,6 +56,8 @@ export class QuickBookingComponent {
 	private readonly _roomsService = inject(RoomsService);
 	private readonly _bookingsService = inject(BookingsService);
 	private readonly _guestsService = inject(GuestsService);
+	private readonly _paymentsService = inject(PaymentsService);
+	protected readonly PAYMENT_METHODS = PAYMENT_METHODS;
 	private readonly _hotel = inject(HotelService);
 	private readonly _route = inject(ActivatedRoute);
 
@@ -100,6 +103,7 @@ export class QuickBookingComponent {
 	protected readonly notes = signal('');
 	protected readonly source = signal(SOURCES[0]);
 	protected readonly payment = signal<Payment>('none');
+	protected readonly method = signal<PaymentMethod>('cash');
 
 	protected readonly saving = signal(false);
 	protected readonly error = signal('');
@@ -331,7 +335,7 @@ export class QuickBookingComponent {
 			console.error('Guest lookup failed', error);
 		}
 		try {
-			await this._bookingsService.add(hotelId, input);
+			await this._bookingsService.add(hotelId, input, input.paid > 0 ? { method: this.method(), recorder: this._paymentsService.recorder() } : undefined);
 		} catch (error) {
 			console.error('Booking create failed', error);
 			this.saving.set(false);

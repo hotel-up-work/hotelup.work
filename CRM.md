@@ -100,7 +100,7 @@ Rules:
 ## Live pages — what a real account sees
 
 A real, Firebase-signed-in account (`isLiveSession()`) sees only pages backed by real data:
-`LIVE_PAGES` in `src/app/shared/role.ts`, currently **`dashboard`** (the home page after login), **`submissions`**, **`calendar`**, **`new-booking`**, **`guests`** and **`rooms`**.
+`LIVE_PAGES` in `src/app/shared/role.ts`, currently **`dashboard`** (the home page after login), **`submissions`**, **`calendar`**, **`new-booking`**, **`guests`**, **`payments`** and **`rooms`**.
 Everything else in this document describes the demo, which keeps every page (entered via `/demo`).
 
 - Sidebar and mobile nav list only live pages; Team, Settings, AI button, search,
@@ -141,7 +141,7 @@ documents are created manually (console / admin script); there is no self-servic
 
 Not yet decided / not built: role per hotel (today every real account is Owner of all its
 hotels), plan per hotel (plan is still one local demo setting), and whether several hotels
-require Enterprise (pricing says so, not enforced). Only Dashboard, Submissions, Calendar, New booking, Guests and Rooms read real hotel
+require Enterprise (pricing says so, not enforced). Only Dashboard, Submissions, Calendar, New booking, Guests, Payments and Rooms read real hotel
 data today.
 
 ## Intended rules — take precedence over the page inventory
@@ -311,7 +311,7 @@ from those collections, so it follows the Calendar and Rooms exactly:
 - **KPIs:** arrivals today (with how many already checked in), departures today (how many left),
   rooms occupied (a guest checked in) of all rooms, rooms needing cleaning (and being cleaned),
   amount outstanding (`guestBill` roles: sum of `total − paid` over non-cancelled bookings), and
-  new website requests. There is no receipts KPI until a payments ledger exists.
+  receipts today (`financeReports` roles: hotel-wide "Надходження сьогодні"; others: "Зібрано вами сьогодні", only what they recorded; from the payment journal), and new website requests.
 - **Arrivals / departures tables:** "Відмітити заїзд" and "Відмітити виїзд" need `changeBooking`.
   Check-in is refused unless the room is ready (not dirty, being cleaned, blocked, or still
   occupied by another guest); check-out uses the Calendar's rules (early departure shortens the
@@ -543,6 +543,36 @@ Purpose: track payments received, outstanding balances, refunds, and reminders.
 | **Payment side panel: refund / reassign** (status `success`) | **`refundPayment` only** (owner, manager, accountant). `reception` gets "Запросити погодження" buttons that show a pending state instead |
 | Add payment / refund / reassign / note / reminder dialogs | Same as page |
 
+**Real hotels** see a live Payments page (the demo keeps the seeded one above): the payment journal and the
+bookings that still owe money. This first version records money and shows it; **refunds, reassigning a payment
+to another booking, approval requests, reminders and the monthly chart are not built yet.**
+
+**Payment data contract** (live; enforced by `firestore.rules`, written by `PaymentsService` in
+`src/app/feature/firebase/payments.service.ts`). Only the hotel's owners (`ownerUids`) can read or write.
+
+- `hotels/{hotelId}/payments/{id}`: `bookingId`, `guestName` and `roomNumber` (copies, so an entry reads on its
+  own), `amount` (> 0), `type` (only `payment` for now), `method` (`cash | card | transfer | online | other`),
+  `occurredOn` (`YYYY-MM-DD`, the day the money was received; today or earlier), optional `note` (≤300),
+  `recordedBy` (name or email) and `recordedByUid`, `createdAt` (server time).
+- **Entries are never edited or deleted.** A mistake will be corrected with another entry (refunds, later).
+- **A booking's `paid` is the running total of its entries.** Recording a payment writes the entry and adds the
+  amount to the booking with `increment()` in one batch; money taken when a booking is created (Calendar form,
+  New booking page, with a method) is written in the same batch as the booking. The amount cannot exceed the
+  booking balance. Rules do not cross-check the two writes yet (gap 29).
+- Methods are the same everywhere (Готівка, Картка, Банківський переказ, Онлайн, Інше).
+- **Older money:** bookings made before the journal can show `paid` with no entries. A banner (roles with
+  `collectPayment`) offers "Додати до журналу", which writes one `other` entry per booking for the difference,
+  dated the day the booking was created, without changing `paid`.
+
+| Section | Extra access rule |
+| --- | --- |
+| KPI strip: received today, outstanding, received this month | Same as page, but **`financeReports` roles see hotel-wide figures; other roles see only the entries they recorded** |
+| **Today by method; Export CSV** | **`financeReports` only** |
+| "Очікують оплати": bookings with a balance (not cancelled), soonest arrival first | Same as page (every role here holds `guestBill`) |
+| Payment journal: period (today / 7 days / month / all), method, search | Same as page, scoped as above |
+| **Add payment** (from the header or a row) | **`collectPayment`** (owner, manager, reception, accountant) |
+| Refund, reassign, approval requests | Not built (see above) |
+
 ### `housekeeping` — Cleaning operations
 
 Purpose: coordinate which rooms need cleaning, assignment, priority, and task completion.
@@ -725,7 +755,7 @@ Found while rewriting the Gemini Gem knowledge on 23 September 2026 (code read, 
 15. **Sales: "Експорт" is shown to the `sales` role**, and "Середній чек" is computed from
     received payments. Decide whether a sales-scoped export and a booking-value average are
     intended; hotel-wide financial exports are finance-roles only.
-16. **Payments: method names are inconsistent** between the add-payment form ("Карта",
+16. **Payments: method names are inconsistent** (the live Payments page, Calendar and New booking now share one list; the demo still has the old names) between the add-payment form ("Карта",
     "Онлайн") and filters ("Картка на місці", "Оплата онлайн").
 17. **Calendar mobile cards showed payment status to `sales`** — fixed 2 October 2026 (gated by
     `showFinance`). Not yet verified in the running app.
@@ -757,13 +787,17 @@ Added with live Calendar bookings on 2 October 2026 (not yet verified in the run
     for many guests needs several bookings ("Додати ще одне бронювання" on the request).
 27. **Dashboard figures are unverified**: the live Dashboard (4 October 2026) has not been checked in
     the running app against real data. It loads all rooms, bookings and requests of the hotel, like
-    the Calendar (gap 24); "Потребує уваги" has no "my tasks" or approval items, and there are no
-    receipts until Payments is live.
+    the Calendar (gap 24); "Потребує уваги" has no "my tasks" or approval items.
 28. **Guests (4 October 2026) are unverified in the running app.** Open points: two people booking
     the same new guest at once can create two profiles (merge fixes it); a phone shared by several
     people (a company line) collapses them into one guest; deleting a guest leaves its bookings unlinked
     until "Створити профілі з бронювань" is run again (which recreates the guest); Guests reads all
     bookings of the hotel, like the Calendar (gap 24).
+29. **Payments (4 October 2026) are unverified in the running app.** Open points: rules check each entry but not
+    that it matches the booking's `paid` (both are written in one batch by the client); the Calendar booking
+    panel does not list a booking's payments; no refunds or corrections yet; a role without hotel-wide finance
+    sees only its own entries, so a colleague's payment on the same booking is not visible to it; "Зібрано вами"
+    counts by day, not by shift (shifts are not modelled).
 
 ## Where implementation lives (for implementers)
 

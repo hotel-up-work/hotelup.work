@@ -355,6 +355,16 @@
 								<option value="full">Оплачено повністю</option>
 							</select>
 						</label>
+						@if (f.payment !== 'none') {
+							<label class="full">
+								Спосіб оплати
+								<select name="method" [ngModel]="f.method" (ngModelChange)="patchForm({ method: $event })">
+									@for (m of PAYMENT_METHODS; track m.value) {
+										<option [value]="m.value">{{ m.label }}</option>
+									}
+								</select>
+							</label>
+						}
 					}
 					<label class="full">
 						Нотатки
@@ -431,8 +441,16 @@
 				@if (b) {
 					<h2>Додати оплату</h2>
 					<p>{{ b.name }} · Залишок {{ money(b.total - b.paid) }}</p>
-					<form class="demo-form" (ngSubmit)="submitPayment(b.id, amountInput.valueAsNumber)">
+					<form class="demo-form" (ngSubmit)="submitPayment(b.id, amountInput.valueAsNumber, $any(methodSelect.value))">
 						<label class="full">Сума, ₴<input #amountInput name="amount" type="number" required min="1" [max]="b.total - b.paid" [value]="b.total - b.paid" /></label>
+						<label class="full">
+							Спосіб оплати
+							<select #methodSelect name="method">
+								@for (m of PAYMENT_METHODS; track m.value) {
+									<option [value]="m.value">{{ m.label }}</option>
+								}
+							</select>
+						</label>
 						<button class="button primary full" type="submit">Підтвердити оплату</button>
 					</form>
 				}

@@ -1,6 +1,7 @@
 import { Service, inject } from '@angular/core';
-import { addDoc, collection, doc, onSnapshot, serverTimestamp, Timestamp, updateDoc, type DocumentData } from 'firebase/firestore';
+import { collection, doc, onSnapshot, serverTimestamp, Timestamp, updateDoc, writeBatch, type DocumentData } from 'firebase/firestore';
 import { FirebaseService } from './firebase.service';
+import { localDay, paymentFields, type PaymentMethod, type Recorder } from './payments.service';
 
 export type BookingStatus = 'pending' | 'confirmed' | 'checkedin' | 'checkedout' | 'cancelled';
 
@@ -117,18 +118,34 @@ export class BookingsService {
 		);
 	}
 
-	/** Creates a booking and returns its document id. */
-	async add(hotelId: string, booking: BookingInput): Promise<string> {
+	/**
+	 * Creates a booking and returns its document id. Money taken at booking time (`booking.paid` above zero) is
+	 * written to the payment journal in the same batch, so the booking and the journal never disagree.
+	 */
+	async add(hotelId: string, booking: BookingInput, payment?: { method: PaymentMethod; recorder: Recorder }): Promise<string> {
 		const firestore = this._firebase.firestore;
 		if (!firestore) throw new Error('Firestore is not available');
 		const { submissionId, guestId, ...fields } = booking;
-		const ref = await addDoc(collection(firestore, 'hotels', hotelId, 'bookings'), {
+		const ref = doc(collection(firestore, 'hotels', hotelId, 'bookings'));
+		const batch = writeBatch(firestore);
+		batch.set(ref, {
 			...fields,
 			...(submissionId ? { submissionId } : {}),
 			...(guestId ? { guestId } : {}),
 			createdAt: serverTimestamp(),
 			updatedAt: serverTimestamp(),
 		});
+		if (payment && booking.paid > 0) {
+			batch.set(
+				doc(collection(firestore, 'hotels', hotelId, 'payments')),
+				paymentFields(
+					{ id: ref.id, guestName: booking.guestName, roomNumber: booking.roomNumber },
+					{ amount: booking.paid, method: payment.method, note: 'Оплата при бронюванні', occurredOn: localDay(new Date()) },
+					payment.recorder,
+				),
+			);
+		}
+		await batch.commit();
 		return ref.id;
 	}
 

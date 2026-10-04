@@ -1,0 +1,138 @@
+<app-shell activeNav="payments" greetingTitle="Оплати" [greetingSubtitle]="hotelSubtitle()">
+	<div class="page-heading">
+		<div>
+			<div class="breadcrumb">Робочий простір <span>/</span> Оплати</div>
+			<h1>Оплати</h1>
+			<p>{{ isFinance ? 'Журнал отриманих оплат і бронювання, за які ще треба заплатити.' : 'Ваші записані оплати та бронювання, за які ще треба заплатити.' }}</p>
+		</div>
+		<div class="page-actions">
+			@if (isFinance) {
+				<button class="button secondary" type="button" [disabled]="!ready() || !list().length" (click)="exportCsv()">Експорт CSV</button>
+			}
+			@if (canCollect) {
+				<button class="button primary" type="button" [disabled]="!ready()" (click)="openAdd()">+ Додати оплату</button>
+			}
+		</div>
+	</div>
+
+	@if (loadError()) {
+		<section class="empty-state">
+			<h2>Оплати не завантажились</h2>
+			<p role="alert">{{ loadError() }}</p>
+		</section>
+	} @else if (loading()) {
+		<section class="empty-state"><p>Завантажуємо оплати…</p></section>
+	} @else {
+		@if (canCollect && unjournaled().length) {
+			<div class="import-banner" role="status">
+				<span>
+					У <b>{{ bookingsLabel(unjournaled().length) }}</b> відмічено оплату на {{ money(unjournaledSum()) }}, якої немає в журналі (внесена раніше). Додайте її до журналу, щоб суми збігалися.
+				</span>
+				<button class="button primary" type="button" [disabled]="saving()" (click)="backfill()">Додати до журналу</button>
+			</div>
+		}
+
+		<div class="kpis">
+			<div class="kpi"><small>{{ isFinance ? 'Надходження сьогодні' : 'Зібрано вами сьогодні' }}</small><b>{{ money(kpis().today) }}</b><span>{{ kpis().todayCount }} {{ kpis().todayCount === 1 ? 'оплата' : 'оплат' }}</span></div>
+			<div class="kpi"><small>Очікується оплата</small><b>{{ money(kpis().owing) }}</b><span>{{ bookingsLabel(kpis().owingCount) }}</span></div>
+			<div class="kpi"><small>{{ isFinance ? 'Надходження за місяць' : 'Зібрано вами за місяць' }}</small><b>{{ money(kpis().month) }}</b><span>за календарний місяць</span></div>
+			@if (isFinance) {
+				<div class="kpi methods">
+					<small>Сьогодні за способом</small>
+					@for (m of kpis().byMethod; track m.value) {
+						<span class="method-row"><span>{{ m.label }}</span><b>{{ money(m.amount) }}</b></span>
+					} @empty {
+						<span>Оплат сьогодні ще не було</span>
+					}
+				</div>
+			}
+		</div>
+
+		<section class="card">
+			<div class="card-heading">
+				<h2>Очікують оплати <span class="count">{{ outstanding().length }}</span></h2>
+			</div>
+			@if (outstanding().length) {
+				<ul class="owing-list">
+					@for (b of outstandingShown(); track b.id) {
+						<li>
+							<span class="owing-main"><b>{{ b.guestName }}</b><small>№{{ b.roomNumber }} · {{ stay(b) }}</small></span>
+							<span class="owing-amount">{{ money(balanceOf(b)) }}<small>із {{ money(b.total) }}</small></span>
+							@if (canCollect) {
+								<button class="button secondary" type="button" [disabled]="saving()" (click)="openAdd(b.id)">Додати оплату</button>
+							}
+						</li>
+					}
+				</ul>
+				@if (outstandingHidden() > 0 && !showAllOutstanding()) {
+					<button class="text-action" type="button" (click)="showAllOutstanding.set(true)">Показати ще {{ outstandingHidden() }}</button>
+				}
+			} @else {
+				<p class="card-empty">Усі бронювання оплачені.</p>
+			}
+		</section>
+
+		<section class="card">
+			<div class="card-heading">
+				<h2>Журнал оплат</h2>
+				<span class="subtle">Разом за вибране: <b>{{ money(listTotal()) }}</b></span>
+			</div>
+			<div class="segments" role="group" aria-label="Період">
+				<button type="button" [class.active]="period() === 'today'" (click)="period.set('today')">Сьогодні</button>
+				<button type="button" [class.active]="period() === 'week'" (click)="period.set('week')">7 днів</button>
+				<button type="button" [class.active]="period() === 'month'" (click)="period.set('month')">Цей місяць</button>
+				<button type="button" [class.active]="period() === 'all'" (click)="period.set('all')">Увесь час</button>
+			</div>
+			<div class="toolbar-row">
+				<div class="search-wrap">
+					<app-icon name="search" />
+					<input type="search" [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Гість або номер" aria-label="Пошук по гостю або номеру" />
+				</div>
+				<select class="plain" [ngModel]="methodFilter()" (ngModelChange)="methodFilter.set($event)" aria-label="Спосіб оплати">
+					<option value="all">Усі способи</option>
+					@for (m of METHODS; track m.value) {
+						<option [value]="m.value">{{ m.label }}</option>
+					}
+				</select>
+			</div>
+
+			@if (list().length) {
+				<div class="table-wrap">
+					<table>
+						<thead>
+							<tr><th>Дата</th><th>Гість</th><th>Номер</th><th>Спосіб</th><th class="num">Сума</th><th>Записав</th><th>Примітка</th></tr>
+						</thead>
+						<tbody>
+							@for (p of list(); track p.id) {
+								<tr>
+									<td>{{ fmt(p.occurredOn) }}</td>
+									<td class="name-cell">{{ p.guestName }}</td>
+									<td>{{ p.roomNumber || '—' }}</td>
+									<td>{{ methodLabel(p.method) }}</td>
+									<td class="num"><b>{{ money(p.amount) }}</b></td>
+									<td>{{ p.recordedBy }}</td>
+									<td class="note-cell">{{ p.note || '—' }}</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+				<ul class="pay-cards">
+					@for (p of list(); track p.id) {
+						<li>
+							<span class="pc-top"><b>{{ p.guestName }}</b><b>{{ money(p.amount) }}</b></span>
+							<span class="pc-sub">{{ fmt(p.occurredOn) }} · №{{ p.roomNumber || '—' }} · {{ methodLabel(p.method) }}</span>
+							<span class="pc-sub">{{ p.recordedBy }}{{ p.note ? ' · ' + p.note : '' }}</span>
+						</li>
+					}
+				</ul>
+			} @else {
+				<p class="card-empty">За вибраний період оплат немає.</p>
+			}
+		</section>
+	}
+</app-shell>
+
+@if (toastMessage()) {
+	<div class="toast" role="status">{{ toastMessage() }}</div>
+}

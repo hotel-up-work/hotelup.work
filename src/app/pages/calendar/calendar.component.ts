@@ -6,6 +6,7 @@ import { AppShellComponent } from '../../layouts/app-shell/app-shell.component';
 import { BookingInput, BookingPatch, BookingRecord, BookingsService, BookingStatus, checkOutPatch } from '../../feature/firebase/bookings.service';
 import { GuestsService } from '../../feature/firebase/guests.service';
 import { HotelService } from '../../feature/firebase/hotel.service';
+import { localDay, PAYMENT_METHODS, PaymentMethod, PaymentsService } from '../../feature/firebase/payments.service';
 import { RoomRecord, RoomsService, RoomStatus } from '../../feature/firebase/rooms.service';
 import { SubmissionRecord, SubmissionsService } from '../../feature/firebase/submissions.service';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -79,6 +80,8 @@ interface BookingForm {
 	total: number | null;
 	source: string;
 	payment: 'none' | 'half' | 'full';
+	/** How the money taken at booking time is received. */
+	method: PaymentMethod;
 	status: 'confirmed' | 'pending';
 	notes: string;
 	/** Website request this booking is created from. */
@@ -212,6 +215,8 @@ export class CalendarComponent {
 	private readonly _bookingsService = inject(BookingsService);
 	private readonly _submissionsService = inject(SubmissionsService);
 	private readonly _guestsService = inject(GuestsService);
+	private readonly _paymentsService = inject(PaymentsService);
+	protected readonly PAYMENT_METHODS = PAYMENT_METHODS;
 	private readonly _hotel = inject(HotelService);
 	private readonly _route = inject(ActivatedRoute);
 	private readonly _router = inject(Router);
@@ -558,6 +563,7 @@ export class CalendarComponent {
 			total: null,
 			source: this.live ? 'Пряме бронювання' : SOURCES[0],
 			payment: 'none',
+			method: 'cash',
 			status: this.canChange ? 'confirmed' : 'pending',
 			notes: '',
 			submission: null,
@@ -793,7 +799,7 @@ export class CalendarComponent {
 			}
 			let id: string;
 			try {
-				id = await this._bookingsService.add(hotelId, input);
+				id = await this._bookingsService.add(hotelId, input, paid > 0 ? { method: f.method, recorder: this._paymentsService.recorder() } : undefined);
 			} catch (error) {
 				console.error('Booking create failed', error);
 				this.saving.set(false);
@@ -865,11 +871,25 @@ export class CalendarComponent {
 		return true;
 	}
 
-	protected async submitPayment(id: string, amount: number): Promise<void> {
+	protected async submitPayment(id: string, amount: number, method: PaymentMethod): Promise<void> {
 		const b = this.booking(id);
 		if (!b || !this.canCollect || !(amount > 0) || amount > b.total - b.paid || this.saving()) return;
 		this.saving.set(true);
-		const saved = await this._save(id, { paid: b.paid + amount }, { paid: b.paid + amount });
+		let saved: boolean;
+		const hotelId = this.hotelId();
+		if (this.live && hotelId) {
+			// Live: an entry in the payment journal, which also adds the amount to the booking's paid.
+			try {
+				await this._paymentsService.record(hotelId, { id, guestName: b.name, roomNumber: b.room }, { amount, method, note: '', occurredOn: localDay(new Date()) });
+				saved = true;
+			} catch (error) {
+				console.error('Payment record failed', error);
+				this.toast('Не вдалося записати оплату. Перевірте зʼєднання та спробуйте ще раз.');
+				saved = false;
+			}
+		} else {
+			saved = await this._save(id, { paid: b.paid + amount }, { paid: b.paid + amount });
+		}
 		this.saving.set(false);
 		if (!saved) return;
 		this.closeDialog();

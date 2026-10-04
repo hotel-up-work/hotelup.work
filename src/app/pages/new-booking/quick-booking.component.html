@@ -141,6 +141,16 @@
 								<button type="button" class="chip" [class.on]="payment() === 'full'" [attr.aria-pressed]="payment() === 'full'" (click)="payment.set('full')">Оплачено повністю</button>
 							</div>
 						</div>
+						@if (payment() !== 'none') {
+							<div class="field">
+								<span id="method-label">Спосіб оплати</span>
+								<div class="chips" role="group" aria-labelledby="method-label">
+									@for (m of PAYMENT_METHODS; track m.value) {
+										<button type="button" class="chip" [class.on]="method() === m.value" [attr.aria-pressed]="method() === m.value" (click)="method.set(m.value)">{{ m.label }}</button>
+									}
+								</div>
+							</div>
+						}
 					}
 					<details class="more">
 						<summary>Email і нотатки</summary>

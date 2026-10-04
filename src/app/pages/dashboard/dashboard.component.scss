@@ -2298,3 +2298,7 @@ dialog {
 	font-size: 12px;
 	padding: 24px 16px;
 }
+
+.kpis-live {
+	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}

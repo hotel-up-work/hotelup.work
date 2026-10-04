@@ -114,6 +114,32 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      // Payment journal (Payments page): money received for a booking. Entries are never edited or deleted;
+      // a mistake is corrected with another entry. A booking's paid is the running total of its entries (the
+      // client adds both in one batch; rules do not cross-check it yet).
+      match /payments/{paymentId} {
+        function payment() { return request.resource.data; }
+
+        allow read: if isHotelOwner();
+        allow create: if isHotelOwner()
+          && payment().keys().hasAll(['bookingId', 'guestName', 'roomNumber', 'amount', 'type', 'method', 'occurredOn',
+                                      'recordedBy', 'recordedByUid', 'createdAt'])
+          && payment().keys().hasOnly(['bookingId', 'guestName', 'roomNumber', 'amount', 'type', 'method', 'note', 'occurredOn',
+                                       'recordedBy', 'recordedByUid', 'createdAt'])
+          && payment().bookingId is string && payment().bookingId.size() >= 1 && payment().bookingId.size() <= 40
+          && payment().guestName is string && payment().guestName.size() >= 1 && payment().guestName.size() <= 200
+          && payment().roomNumber is string && payment().roomNumber.size() <= 8
+          && payment().amount is number && payment().amount > 0 && payment().amount <= 10000000
+          && payment().type == 'payment'
+          && payment().method in ['cash', 'card', 'transfer', 'online', 'other']
+          && isDate(payment().occurredOn)
+          && optText(payment(), 'note', 300)
+          && payment().recordedBy is string && payment().recordedBy.size() <= 100
+          && payment().recordedByUid is string && payment().recordedByUid.size() <= 40
+          && payment().createdAt == request.time;
+        allow update, delete: if false;
+      }
+
       // Guests (Guests page): the people who stay. A booking keeps its own copy of the guest's name and
       // contacts and points here with guestId, so deleting or merging a guest never erases booking history.
       // phoneKey is the last 9 digits of the phone ('' when none), nameKey the lower-cased name: both are

@@ -31,7 +31,7 @@
 			</section>
 		} @else {
 			<div class="dashboard-grid">
-				<section class="kpis" aria-label="Показники сьогодні">
+				<section class="kpis kpis-live" aria-label="Показники сьогодні">
 					@for (k of lKpis(); track k.label) {
 						<button class="kpi" [class.kpi-warning]="k.warning" (click)="go(k.link)" [attr.aria-label]="k.label + ': ' + k.value">
 							<div class="kpi-top"><span>{{ k.label }}</span><app-icon [name]="k.icon" /></div>
