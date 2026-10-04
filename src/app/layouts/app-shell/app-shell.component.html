@@ -129,11 +129,15 @@
 		>
 			<app-icon name="menu" />
 		</button>
+		@if (greetingTitle()) {
 		<div class="greeting">
 			<b>{{ greetingTitle() }} <span class="greeting-spark">✦</span></b>
 			<span>{{ greetingSubtitle() }}</span>
 		</div>
+		}
+		<ng-content select="[topbar-center]" />
 		<div class="top-actions">
+			<ng-content select="[topbar-actions]" />
 			@if (!live) {
 				<a class="icon-button" aria-label="Пошук" routerLink="/search"><app-icon name="search" /></a>
 				<a class="icon-button notification-button" aria-label="Сповіщення, 4 нових" routerLink="/notifications">

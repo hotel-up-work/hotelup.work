@@ -3,7 +3,8 @@
 	"version": "22.0.1",
 	"scripts": {
 		"start": "ng serve",
-		"build": "ng build --configuration=production && node tools/seo/generate-static-seo.mjs"
+		"build": "ng build --configuration=production && node tools/seo/generate-static-seo.mjs",
+		"rules": "firebase deploy --only firestore:rules --project hotel-upwork"
 	},
 	"dependencies": {
 		"@angular/common": "22.1.2",

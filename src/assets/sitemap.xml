@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 	<url>
-		<loc>https://hotelupwork.webart.work/</loc>
+		<loc>https://hotelup.work/</loc>
 		<changefreq>weekly</changefreq>
 		<priority>1.0</priority>
 	</url>
 	<url>
-		<loc>https://hotelupwork.webart.work/pricing</loc>
+		<loc>https://hotelup.work/pricing</loc>
 		<changefreq>weekly</changefreq>
 		<priority>0.8</priority>
 	</url>
 	<url>
-		<loc>https://hotelupwork.webart.work/privacy</loc>
+		<loc>https://hotelup.work/privacy</loc>
 		<changefreq>yearly</changefreq>
 		<priority>0.3</priority>
 	</url>
 	<url>
-		<loc>https://hotelupwork.webart.work/cookies</loc>
+		<loc>https://hotelup.work/cookies</loc>
 		<changefreq>yearly</changefreq>
 		<priority>0.3</priority>
 	</url>

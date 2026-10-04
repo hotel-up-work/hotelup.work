@@ -1,14 +1,14 @@
-<app-shell activeNav="calendar" greetingTitle="Календар" [greetingSubtitle]="hotelSubtitle()">
-	<div class="page-heading">
-		<div>
-			<div class="breadcrumb">Робочий простір <span>/</span> Календар</div>
-			<h1>Календар</h1>
-			<p>Усі номери, бронювання та вільні дати в одному місці.</p>
-		</div>
-		<div class="page-actions">
-			<button class="button secondary" (click)="goToday()">Сьогодні</button>
-			<button class="button primary" [disabled]="!ready() || !rooms().length" (click)="openQuickBooking(null, TODAY)"><app-icon name="plus" />Нове бронювання</button>
-		</div>
+<app-shell activeNav="calendar" greetingTitle="" greetingSubtitle="">
+	<div class="topbar-legend" topbar-center aria-label="Умовні позначення">
+		<span><i class="lg-confirmed"></i>Підтверджено</span>
+		<span><i class="lg-checkedin"></i>Заїхав</span>
+		<span><i class="lg-pending"></i>Очікує</span>
+		<span><i class="lg-cancelled"></i>Скасовано</span>
+		<span><i class="lg-blocked"></i>Недоступно</span>
+	</div>
+	<div class="topbar-buttons" topbar-actions>
+		<button class="button secondary" (click)="goToday()">Сьогодні</button>
+		<button class="button primary" aria-label="Нове бронювання" [disabled]="!ready() || !rooms().length" (click)="openQuickBooking(null, TODAY)"><app-icon name="plus" /><span class="btn-label">Нове бронювання</span></button>
 	</div>
 
 	<div class="cal-toolbar cal-desktop">
@@ -77,14 +77,6 @@
 			<a class="button primary" routerLink="/rooms">Перейти до номерів</a>
 		</div>
 	} @else {
-	<div class="legend cal-desktop">
-		<span><i class="lg-confirmed"></i>Підтверджено</span>
-		<span><i class="lg-checkedin"></i>Заїхав</span>
-		<span><i class="lg-pending"></i>Очікує</span>
-		<span><i class="lg-cancelled"></i>Скасовано</span>
-		<span><i class="lg-blocked"></i>Недоступно</span>
-	</div>
-
 	<div class="cal-wrap cal-desktop">
 		<div class="cal-grid" [style.grid-template-columns]="'170px repeat(' + dateRange().length + ', minmax(88px,1fr))'">
 			<div class="cal-head-room">НОМЕР</div>
