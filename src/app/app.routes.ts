@@ -112,7 +112,11 @@ export const routes: Routes = [
 				robots: 'noindex, nofollow',
 			},
 		},
-		loadComponent: () => import('./pages/guests/guests.component').then((m) => m.GuestsComponent),
+		// Real hotels get their guest database on live data; the demo keeps the seeded list.
+		loadComponent: () =>
+			isLiveSession()
+				? import('./pages/guests/guests-live.component').then((m) => m.GuestsLiveComponent)
+				: import('./pages/guests/guests.component').then((m) => m.GuestsComponent),
 	},
 	{
 		path: 'rooms',

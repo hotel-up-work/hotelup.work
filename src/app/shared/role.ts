@@ -54,7 +54,7 @@ export const PAGE_LABEL: Record<string, string> = {
  * Pages backed by real data (CRM.md → Live pages). A signed-in Firebase account sees only these;
  * every other page stays demo-only until it is wired to Firestore. Add a path here when it goes live.
  */
-export const LIVE_PAGES: string[] = ['dashboard', 'submissions', 'calendar', 'new-booking', 'rooms'];
+export const LIVE_PAGES: string[] = ['dashboard', 'submissions', 'calendar', 'new-booking', 'guests', 'rooms'];
 
 /** True for a real, Firebase-authenticated session; false in the demo. */
 export function isLiveSession(): boolean {

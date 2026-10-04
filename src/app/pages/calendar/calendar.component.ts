@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AppShellComponent } from '../../layouts/app-shell/app-shell.component';
 import { BookingInput, BookingPatch, BookingRecord, BookingsService, BookingStatus, checkOutPatch } from '../../feature/firebase/bookings.service';
+import { GuestsService } from '../../feature/firebase/guests.service';
 import { HotelService } from '../../feature/firebase/hotel.service';
 import { RoomRecord, RoomsService, RoomStatus } from '../../feature/firebase/rooms.service';
 import { SubmissionRecord, SubmissionsService } from '../../feature/firebase/submissions.service';
@@ -210,6 +211,7 @@ export class CalendarComponent {
 	private readonly _roomsService = inject(RoomsService);
 	private readonly _bookingsService = inject(BookingsService);
 	private readonly _submissionsService = inject(SubmissionsService);
+	private readonly _guestsService = inject(GuestsService);
 	private readonly _hotel = inject(HotelService);
 	private readonly _route = inject(ActivatedRoute);
 	private readonly _router = inject(Router);
@@ -782,6 +784,13 @@ export class CalendarComponent {
 		const hotelId = this.hotelId();
 		if (this.live && hotelId) {
 			this.saving.set(true);
+			// Link the booking to the guest's profile (found by phone, or created). A failure here must not lose the booking:
+			// Guests → "Створити профілі з бронювань" links it later.
+			try {
+				input.guestId = await this._guestsService.ensure(hotelId, { name: input.guestName, phone: input.phone, email: input.email });
+			} catch (error) {
+				console.error('Guest lookup failed', error);
+			}
 			let id: string;
 			try {
 				id = await this._bookingsService.add(hotelId, input);

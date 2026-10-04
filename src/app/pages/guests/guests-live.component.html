@@ -1,0 +1,219 @@
+<app-shell activeNav="guests" greetingTitle="Гості" [greetingSubtitle]="hotelSubtitle()">
+	<div class="page-heading">
+		<div>
+			<div class="breadcrumb">Робочий простір <span>/</span> Гості</div>
+			<h1>Гості</h1>
+			<p>Усі гості та історія їхніх проживань в одному місці.</p>
+		</div>
+		<div class="page-actions">
+			@if (canBulk) {
+				<button class="button secondary" type="button" [disabled]="!ready() || !filtered().length" (click)="exportCsv()">Експорт CSV</button>
+			}
+			<button class="button primary" type="button" [disabled]="!ready()" (click)="openAdd()">+ Додати гостя</button>
+		</div>
+	</div>
+
+	@if (loadError()) {
+		<section class="empty-state">
+			<h2>Гості не завантажились</h2>
+			<p role="alert">{{ loadError() }}</p>
+		</section>
+	} @else if (loading()) {
+		<section class="empty-state"><p>Завантажуємо гостей…</p></section>
+	} @else {
+		@if (unlinkedCount() > 0) {
+			<div class="import-banner" role="status">
+				<span>
+					<b>{{ bookingsLabel(unlinkedCount()) }}</b> ще не привʼязано до гостей. Створіть профілі з імен і телефонів у бронюваннях, щоб бачити історію проживань.
+				</span>
+				<button class="button primary" type="button" [disabled]="saving()" (click)="importFromBookings()">Створити профілі з бронювань</button>
+			</div>
+		}
+
+		<div class="kpis">
+			<div class="kpi"><small>Усього гостей</small><b>{{ kpis().total }}</b><span>у базі готелю</span></div>
+			<div class="kpi"><small>Нових цього місяця</small><b>{{ kpis().newThisMonth }}</b><span>додано в базу</span></div>
+			<div class="kpi"><small>Повторних гостей</small><b>{{ kpis().repeat }}</b><span>{{ kpis().repeatShare }}% бази</span></div>
+			<div class="kpi"><small>Зараз у готелі</small><b>{{ kpis().staying }}</b><span>заселені гості</span></div>
+		</div>
+
+		@if (kpis().total > 0) {
+			<div class="segments" role="group" aria-label="Групи гостей">
+				<button type="button" [class.active]="segment() === 'all'" (click)="segment.set('all')">Усі</button>
+				<button type="button" [class.active]="segment() === 'staying'" title="Гість зараз проживає в готелі" (click)="segment.set('staying')">Зараз у готелі</button>
+				<button type="button" [class.active]="segment() === 'upcoming'" title="Є заплановане майбутнє бронювання" (click)="segment.set('upcoming')">Мають бронювання</button>
+				<button type="button" [class.active]="segment() === 'regular'" title="2 і більше проживань" (click)="segment.set('regular')">Постійні</button>
+				<button type="button" [class.active]="segment() === 'new'" title="Ще немає жодного проживання" (click)="segment.set('new')">Нові</button>
+				<button type="button" [class.active]="segment() === 'away'" title="2+ проживань, останній візит понад 180 днів тому, немає майбутнього бронювання" (click)="segment.set('away')">Давно не були</button>
+			</div>
+
+			<div class="toolbar-row">
+				<div class="search-wrap">
+					<app-icon name="search" />
+					<input type="search" [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Імʼя, телефон або email" aria-label="Пошук гостя" />
+				</div>
+				<select class="plain" [ngModel]="sort()" (ngModelChange)="sort.set($event)" aria-label="Сортування">
+					<option value="activity">Остання активність</option>
+					<option value="name">Імʼя</option>
+					<option value="stays">Найбільше проживань</option>
+					@if (showFinance) {
+						<option value="paid">Найбільше оплат</option>
+					}
+					<option value="visit">Останній візит</option>
+				</select>
+			</div>
+		}
+
+		@if (kpis().total === 0) {
+			<section class="empty-state">
+				<h2>Гостей поки немає</h2>
+				<p>Гості зʼявляються тут автоматично, коли ви створюєте бронювання. Можна й додати гостя вручну.</p>
+				<div class="empty-actions">
+					<a class="button primary" routerLink="/new-booking">Створити бронювання</a>
+					<button class="button secondary" type="button" (click)="openAdd()">+ Додати гостя</button>
+				</div>
+			</section>
+		} @else if (!filtered().length) {
+			<section class="empty-state">
+				<h2>Гостя не знайдено</h2>
+				<p>Перевірте імʼя або номер телефону чи змініть групу.</p>
+				<div class="empty-actions">
+					<button class="button primary" type="button" (click)="openAdd()">+ Створити нового гостя</button>
+				</div>
+			</section>
+		} @else {
+			<div class="table-card">
+				<div class="table-wrap">
+					<table>
+						<thead>
+							<tr>
+								<th>Гість</th>
+								<th>Контакти</th>
+								<th>Проживань</th>
+								<th>Ночей</th>
+								@if (showFinance) {
+									<th>Оплачено</th>
+								}
+								<th>Останній візит</th>
+								<th>Наступне бронювання</th>
+								<th>Статус</th>
+							</tr>
+						</thead>
+						<tbody>
+							@for (v of filtered(); track v.guest.id) {
+								<tr tabindex="0" (click)="open(v.guest.id)" (keydown.enter)="open(v.guest.id)" [class.selected]="selectedId() === v.guest.id">
+									<td class="name-cell">{{ v.guest.name }}@if (v.guest.tags.length) {<small>{{ v.guest.tags.join(' · ') }}</small>}</td>
+									<td class="contacts-cell"><span>{{ v.guest.phone || '—' }}</span>@if (v.guest.email) {<span>{{ v.guest.email }}</span>}</td>
+									<td><b>{{ v.stays }}</b></td>
+									<td><b>{{ v.nights }}</b></td>
+									@if (showFinance) {
+										<td><b>{{ money(v.paid) }}</b></td>
+									}
+									<td>{{ v.lastVisit ? fmt(v.lastVisit) : 'Ще не проживав' }}</td>
+									<td>{{ v.nextBooking ? fmt(v.nextBooking) : '—' }}</td>
+									<td><span class="status-tag" [class]="v.status.key">{{ v.status.label }}</span></td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			</div>
+			<div class="guest-cards">
+				@for (v of filtered(); track v.guest.id) {
+					<button type="button" class="guest-card" (click)="open(v.guest.id)">
+						<span class="gc-top">
+							<span>
+								<b class="gc-name">{{ v.guest.name }}</b>
+								<span class="gc-contact">{{ v.guest.phone || v.guest.email || '—' }}</span>
+							</span>
+							<span class="status-tag" [class]="v.status.key">{{ v.status.label }}</span>
+						</span>
+						<span class="gc-stats">{{ staysLabel(v.stays) }} · {{ v.nights }} ночей@if (showFinance) { · {{ money(v.paid) }}}</span>
+						<span class="gc-visit">Останній візит: {{ v.lastVisit ? fmt(v.lastVisit) : 'ще не проживав' }}</span>
+					</button>
+				}
+			</div>
+		}
+	}
+</app-shell>
+
+<div class="side-scrim" [hidden]="selectedId() === null" (click)="closePanel()"></div>
+<aside class="side-panel" [class.open]="selectedId() !== null" aria-label="Профіль гостя">
+	<div class="side-panel-head">
+		<span class="dialog-label">HOTEL UPWORK <span>· ГІСТЬ</span></span>
+		<button class="icon-button" type="button" aria-label="Закрити" (click)="closePanel()"><app-icon name="close" /></button>
+	</div>
+	<div class="side-panel-body">
+		@if (selected(); as v) {
+			<span class="status-tag" [class]="v.status.key">{{ v.status.label }}</span>
+			<h2>{{ v.guest.name }}</h2>
+			@if (v.guest.tags.length) {
+				<div class="tags">
+					@for (t of v.guest.tags; track t) {
+						<span>{{ t }}</span>
+					}
+				</div>
+			}
+			<div class="panel-actions">
+				<button class="button primary" type="button" (click)="newBooking(v.guest.id)">+ Нове бронювання</button>
+				<button class="button secondary" type="button" (click)="openEdit(v.guest.id)">Редагувати</button>
+			</div>
+
+			<h5>Контакти</h5>
+			<p class="plain">
+				@if (v.guest.phone) {
+					<a [href]="'tel:' + v.guest.phone">{{ v.guest.phone }}</a><br />
+				}
+				@if (v.guest.email) {
+					<a [href]="'mailto:' + v.guest.email">{{ v.guest.email }}</a>
+				}
+				@if (!v.guest.phone && !v.guest.email) {
+					Контактів немає.
+				}
+			</p>
+
+			<h5>Проживання</h5>
+			<div class="detail-grid">
+				<div><small>Проживань</small><b>{{ v.stays }}</b></div>
+				<div><small>Ночей</small><b>{{ v.nights }}</b></div>
+				@if (showFinance) {
+					<div><small>Оплачено</small><b>{{ money(v.paid) }}</b></div>
+				}
+			</div>
+			<p class="plain">
+				Останній візит: <b>{{ v.lastVisit ? fmt(v.lastVisit) : 'ще не проживав' }}</b><br />
+				Наступне бронювання: <b>{{ v.nextBooking ? fmt(v.nextBooking) + (v.nextRoom ? ' · номер ' + v.nextRoom : '') : 'немає' }}</b>
+			</p>
+
+			<h5>Нотатки</h5>
+			<p class="plain notes">{{ v.guest.notes || 'Нотаток немає.' }}</p>
+
+			<h5>Бронювання <span class="count">{{ v.bookings.length }}</span></h5>
+			@if (v.bookings.length) {
+				<ul class="history">
+					@for (b of v.bookings; track b.id) {
+						<li [class.cancelled]="b.status === 'cancelled'">
+							<span><b>Номер {{ b.roomNumber }}</b> · {{ stay(b) }}</span>
+							<span class="history-meta">
+								{{ bookingStatusLabel(b) }}@if (showFinance) { · {{ money(b.total) }}}
+							</span>
+						</li>
+					}
+				</ul>
+			} @else {
+				<p class="plain">Бронювань поки немає.</p>
+			}
+
+			@if (canBulk) {
+				<div class="danger-zone">
+					<button class="button secondary" type="button" (click)="openMerge(v.guest.id)">Обʼєднати дублікати</button>
+					<button class="button secondary destructive" type="button" (click)="openDelete(v.guest.id)">Видалити гостя</button>
+				</div>
+			}
+		}
+	</div>
+</aside>
+
+@if (toastMessage()) {
+	<div class="toast" role="status">{{ toastMessage() }}</div>
+}

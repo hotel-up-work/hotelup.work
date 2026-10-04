@@ -85,7 +85,7 @@ service cloud.firestore {
                                           'total', 'paid', 'status', 'createdAt', 'updatedAt'])
             && booking().keys().hasOnly(['roomId', 'roomNumber', 'guestName', 'phone', 'email', 'checkIn', 'checkOut',
                                          'guests', 'total', 'paid', 'status', 'source', 'notes', 'submissionId',
-                                         'lateCheckoutHour', 'plannedCheckOut', 'createdAt', 'updatedAt'])
+                                         'lateCheckoutHour', 'plannedCheckOut', 'guestId', 'createdAt', 'updatedAt'])
             && booking().roomId is string && booking().roomId.size() >= 1 && booking().roomId.size() <= 40
             && booking().roomNumber is string && booking().roomNumber.size() >= 1 && booking().roomNumber.size() <= 8
             && booking().guestName is string && booking().guestName.size() >= 1 && booking().guestName.size() <= 200
@@ -100,6 +100,7 @@ service cloud.firestore {
             && optText(booking(), 'source', 50)
             && optText(booking(), 'notes', 1000)
             && optText(booking(), 'submissionId', 40)
+            && optText(booking(), 'guestId', 40)
             // Original check-out, kept when an early check-out shortens the stay.
             && (!('plannedCheckOut' in booking()) || (isDate(booking().plannedCheckOut) && booking().plannedCheckOut > booking().checkOut))
             && (!('lateCheckoutHour' in booking()) || booking().lateCheckoutHour == null
@@ -111,6 +112,30 @@ service cloud.firestore {
         allow create: if isHotelOwner() && validBooking() && booking().createdAt == request.time;
         allow update: if isHotelOwner() && validBooking() && booking().createdAt == resource.data.createdAt;
         allow delete: if false;
+      }
+
+      // Guests (Guests page): the people who stay. A booking keeps its own copy of the guest's name and
+      // contacts and points here with guestId, so deleting or merging a guest never erases booking history.
+      // phoneKey is the last 9 digits of the phone ('' when none), nameKey the lower-cased name: both are
+      // used to find an existing guest instead of creating a duplicate.
+      match /guests/{guestId} {
+        function guest() { return request.resource.data; }
+        function validGuest() {
+          return guest().keys().hasAll(['name', 'nameKey', 'phoneKey', 'createdAt', 'updatedAt'])
+            && guest().keys().hasOnly(['name', 'nameKey', 'phone', 'phoneKey', 'email', 'notes', 'tags', 'createdAt', 'updatedAt'])
+            && guest().name is string && guest().name.size() >= 1 && guest().name.size() <= 200
+            && guest().nameKey is string && guest().nameKey.size() <= 200
+            && guest().phoneKey is string && guest().phoneKey.size() <= 9
+            && optText(guest(), 'phone', 40)
+            && optText(guest(), 'email', 200)
+            && optText(guest(), 'notes', 2000)
+            && (!('tags' in guest()) || (guest().tags is list && guest().tags.size() <= 20))
+            && guest().updatedAt == request.time;
+        }
+
+        allow read, delete: if isHotelOwner();
+        allow create: if isHotelOwner() && validGuest() && guest().createdAt == request.time;
+        allow update: if isHotelOwner() && validGuest() && guest().createdAt == resource.data.createdAt;
       }
     }
 

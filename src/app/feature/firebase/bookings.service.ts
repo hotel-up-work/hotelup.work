@@ -23,6 +23,8 @@ export interface BookingInput {
 	notes: string;
 	/** `submissions` document id when the booking was created from a website request. */
 	submissionId?: string;
+	/** `guests` document id; the name and contacts above stay as a copy of the guest at booking time. */
+	guestId?: string;
 }
 
 export interface BookingRecord extends BookingInput {
@@ -67,6 +69,7 @@ function toBooking(id: string, data: DocumentData): BookingRecord {
 		source: str(data['source']),
 		notes: str(data['notes']),
 		submissionId: str(data['submissionId']) || undefined,
+		guestId: str(data['guestId']) || undefined,
 		lateCheckoutHour: typeof data['lateCheckoutHour'] === 'number' ? data['lateCheckoutHour'] : null,
 		plannedCheckOut: str(data['plannedCheckOut']) || undefined,
 		createdAt: (data['createdAt'] as Timestamp | undefined)?.toDate() ?? null,
@@ -118,10 +121,11 @@ export class BookingsService {
 	async add(hotelId: string, booking: BookingInput): Promise<string> {
 		const firestore = this._firebase.firestore;
 		if (!firestore) throw new Error('Firestore is not available');
-		const { submissionId, ...fields } = booking;
+		const { submissionId, guestId, ...fields } = booking;
 		const ref = await addDoc(collection(firestore, 'hotels', hotelId, 'bookings'), {
 			...fields,
 			...(submissionId ? { submissionId } : {}),
+			...(guestId ? { guestId } : {}),
 			createdAt: serverTimestamp(),
 			updatedAt: serverTimestamp(),
 		});

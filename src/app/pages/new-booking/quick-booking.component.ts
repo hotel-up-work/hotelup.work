@@ -4,10 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AppShellComponent } from '../../layouts/app-shell/app-shell.component';
 import { BookingInput, BookingRecord, BookingsService, isoAddDays } from '../../feature/firebase/bookings.service';
+import { GuestRecord, GuestsService, phoneKey } from '../../feature/firebase/guests.service';
 import { HotelService } from '../../feature/firebase/hotel.service';
 import { RoomRecord, RoomsService } from '../../feature/firebase/rooms.service';
 import { IconComponent } from '../../shared/icon/icon.component';
-import { nightsBetween, phoneDigits, roomIsFree } from '../../shared/booking-rules';
+import { nightsBetween, roomIsFree } from '../../shared/booking-rules';
 import { canCurrent } from '../../shared/role';
 
 type Payment = 'none' | 'half' | 'full';
@@ -53,6 +54,7 @@ const guestsLabel = (n: number) => `${n} ${plural(n, 'гість', 'гості',
 export class QuickBookingComponent {
 	private readonly _roomsService = inject(RoomsService);
 	private readonly _bookingsService = inject(BookingsService);
+	private readonly _guestsService = inject(GuestsService);
 	private readonly _hotel = inject(HotelService);
 	private readonly _route = inject(ActivatedRoute);
 
@@ -77,6 +79,7 @@ export class QuickBookingComponent {
 	protected readonly today = localDate(new Date());
 	protected readonly rooms = signal<RoomRecord[]>([]);
 	private readonly _bookings = signal<BookingRecord[]>([]);
+	private readonly _guests = signal<GuestRecord[]>([]);
 	private readonly _roomsLoaded = signal(false);
 	private readonly _bookingsLoaded = signal(false);
 	protected readonly loadError = signal('');
@@ -105,6 +108,7 @@ export class QuickBookingComponent {
 	private readonly _phoneInput = viewChild<ElementRef<HTMLInputElement>>('phoneInput');
 	private readonly _queryParams = toSignal(this._route.queryParamMap);
 	private _prefilled = false;
+	private _pendingGuestId: string | null = null;
 
 	protected readonly end = computed(() => isoAddDays(this.start(), this.nights()));
 
@@ -137,16 +141,14 @@ export class QuickBookingComponent {
 		return this.payment() === 'full' ? total : this.payment() === 'half' ? Math.round(total / 2) : 0;
 	});
 
-	/** A returning guest: the latest booking whose phone contains the digits typed so far (7 or more). */
+	/** A returning guest: the guest whose phone matches what is typed (needs 7 or more digits). */
 	protected readonly knownGuest = computed(() => {
-		const digits = phoneDigits(this.phone());
-		if (digits.length < 7) return null;
-		const matches = this._bookings()
-			.filter((b) => phoneDigits(b.phone).includes(digits))
-			.sort((a, b) => b.checkIn.localeCompare(a.checkIn));
-		if (!matches.length) return null;
-		const latest = matches[0];
-		return { name: latest.guestName, email: latest.email, stays: matches.filter((b) => b.status !== 'cancelled').length };
+		const key = phoneKey(this.phone());
+		if (!key) return null;
+		const guest = this._guests().find((g) => phoneKey(g.phone) === key);
+		if (!guest) return null;
+		const stays = this._bookings().filter((b) => b.guestId === guest.id && b.status !== 'cancelled').length;
+		return { id: guest.id, name: guest.name, email: guest.email, stays };
 	});
 
 	protected readonly ready = computed(() => !!this.hotelId() && !this.loading() && !this.loadError());
@@ -158,6 +160,7 @@ export class QuickBookingComponent {
 			if (!hotelId) return;
 			this.rooms.set([]);
 			this._bookings.set([]);
+			this._guests.set([]);
 			this._roomsLoaded.set(false);
 			this._bookingsLoaded.set(false);
 			this.loadError.set('');
@@ -181,9 +184,16 @@ export class QuickBookingComponent {
 				},
 				onError,
 			);
+			// Guests only help to recognise a returning phone: a failure here must not block booking.
+			const stopGuests = this._guestsService.listen(
+				hotelId,
+				(records) => this._guests.set(records),
+				(error) => console.error('New booking guests listener failed', error),
+			);
 			onCleanup(() => {
 				stopRooms();
 				stopBookings();
+				stopGuests();
 			});
 		});
 
@@ -192,7 +202,23 @@ export class QuickBookingComponent {
 			const params = this._queryParams();
 			if (this._prefilled || !params || !this.ready()) return;
 			this._prefilled = true;
-			untracked(() => this._prefill(params.get('room'), params.get('start'), params.get('end'), params.get('guests')));
+			untracked(() => {
+				this._prefill(params.get('room'), params.get('start'), params.get('end'), params.get('guests'));
+				this._prefillGuest(params.get('guest'));
+			});
+		});
+
+		effect(() => {
+			const guests = this._guests();
+			const id = this._pendingGuestId;
+			const guest = id ? guests.find((g) => g.id === id) : undefined;
+			if (!guest) return;
+			this._pendingGuestId = null;
+			untracked(() => {
+				this.phone.set(guest.phone);
+				this.name.set(guest.name);
+				this.email.set(guest.email);
+			});
 		});
 
 		// Keep the choice valid: when the dates, guests or bookings change and the room is gone, pick the cheapest free one.
@@ -220,6 +246,21 @@ export class QuickBookingComponent {
 			this.guests.update((current) => Math.min(current, room.capacity));
 			this.roomId.set(room.id);
 		}
+	}
+
+	/** ?guest=<id> (from Guests → "Нове бронювання") fills the guest in. The list may arrive a moment after the rooms. */
+	private _prefillGuest(guestId: string | null): void {
+		if (!guestId) return;
+		const fill = () => {
+			const guest = this._guests().find((g) => g.id === guestId);
+			if (!guest) return false;
+			this.phone.set(guest.phone);
+			this.name.set(guest.name);
+			this.email.set(guest.email);
+			return true;
+		};
+		if (fill()) return;
+		this._pendingGuestId = guestId;
 	}
 
 	protected setStart(value: string): void {
@@ -282,6 +323,13 @@ export class QuickBookingComponent {
 		};
 		this.error.set('');
 		this.saving.set(true);
+		// Link the booking to the guest's profile (found by phone, or created). If that fails the booking is still saved;
+		// Guests → "Створити профілі з бронювань" links it later.
+		try {
+			input.guestId = await this._guestsService.ensure(hotelId, { name: input.guestName, phone: input.phone, email: input.email });
+		} catch (error) {
+			console.error('Guest lookup failed', error);
+		}
 		try {
 			await this._bookingsService.add(hotelId, input);
 		} catch (error) {

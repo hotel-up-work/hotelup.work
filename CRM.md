@@ -100,7 +100,7 @@ Rules:
 ## Live pages — what a real account sees
 
 A real, Firebase-signed-in account (`isLiveSession()`) sees only pages backed by real data:
-`LIVE_PAGES` in `src/app/shared/role.ts`, currently **`dashboard`** (the home page after login), **`submissions`**, **`calendar`**, **`new-booking`** and **`rooms`**.
+`LIVE_PAGES` in `src/app/shared/role.ts`, currently **`dashboard`** (the home page after login), **`submissions`**, **`calendar`**, **`new-booking`**, **`guests`** and **`rooms`**.
 Everything else in this document describes the demo, which keeps every page (entered via `/demo`).
 
 - Sidebar and mobile nav list only live pages; Team, Settings, AI button, search,
@@ -141,7 +141,7 @@ documents are created manually (console / admin script); there is no self-servic
 
 Not yet decided / not built: role per hotel (today every real account is Owner of all its
 hotels), plan per hotel (plan is still one local demo setting), and whether several hotels
-require Enterprise (pricing says so, not enforced). Only Dashboard, Submissions, Calendar and Rooms read real hotel
+require Enterprise (pricing says so, not enforced). Only Dashboard, Submissions, Calendar, New booking, Guests and Rooms read real hotel
 data today.
 
 ## Intended rules — take precedence over the page inventory
@@ -350,7 +350,7 @@ write; roles per hotel are not built yet.
   `checkIn`, `checkOut` (`YYYY-MM-DD`, `checkOut > checkIn`; the room is free for the next stay from
   the check-out day), `guests` (int 1–50, ≤ the room's capacity, checked in the client), `total`
   and `paid` (`0 ≤ paid ≤ total`), `status` (`pending | confirmed | checkedin | checkedout | cancelled`), optional
-  `phone`, `email`, `source`, `notes` (≤1000), `submissionId`, `plannedCheckOut` (original check-out after an early departure), `lateCheckoutHour` (12–23),
+  `phone`, `email`, `source`, `notes` (≤1000), `submissionId`, `plannedCheckOut` (original check-out after an early departure), `guestId` (the guest profile, see Guest data contract), `lateCheckoutHour` (12–23),
   `createdAt`, `updatedAt` (server time on every write). Bookings are never deleted.
 - Overlaps are prevented in the client (other active bookings and room blocks; a block's last day
   is inclusive). Rules cannot query, so two people booking the same room at the same moment can
@@ -443,6 +443,40 @@ Purpose: list/search/segment all guests, view profiles, message/tag/manage indiv
 | **Header export, bulk export, row "merge duplicates" and "delete"** | **`guestBulk` only** (owner, manager) — hidden and handler-guarded for `reception` |
 | Guest table/cards + row menu (profile, booking, message, note) | Same as page |
 | Guest preview/add/edit/message/note/delete/bulk dialogs | Same as page |
+
+**Real hotels** see a live Guests page (the demo keeps the seeded list above). Guests are the people
+who stay; companies and agencies that pay for others are a later, separate concept.
+
+**Guest data contract** (live; enforced by `firestore.rules`, written by `GuestsService` in
+`src/app/feature/firebase/guests.service.ts`). Only the hotel's owners (`ownerUids`) can read or write.
+
+- `hotels/{hotelId}/guests/{id}`: `name` (1–200), `phone` (≤40), `email`, `notes` (≤2000), `tags[]` (≤20;
+  presets VIP, Постійний гість, Бізнес, Сім’я), `phoneKey` (last 9 digits of the phone, `""` when there
+  are fewer than 7), `nameKey` (lower-cased name), `createdAt`, `updatedAt`.
+- A booking keeps its own copy of the guest's name, phone and email and points to the profile with
+  `guestId`. Merging or deleting a guest therefore never changes booking history.
+- **A booking links to a guest when it is created** (Calendar form and New booking page): the guest
+  with the same `phoneKey` is used, or — with no phone — the one with the same name and no phone;
+  otherwise a profile is created. Existing guests are not edited by a booking. If the lookup fails the
+  booking is still saved, unlinked.
+- **Stats come from linked bookings, nothing is stored:** stays = bookings checked in or out; nights of
+  those; "Оплачено" = `paid` on non-cancelled bookings (`guestBill` roles only); last visit; next booking
+  (pending or confirmed, not yet departed); "У готелі" = a booking checked in.
+- Segments: Усі, Зараз у готелі, Мають бронювання, Постійні (2+ stays), Нові (0 stays), Давно не були
+  (2+ stays, last visit over 180 days ago, no next booking).
+- **"Створити профілі з бронювань"** (banner, any role on the page) creates guests for bookings with
+  no guest (older ones, or whose guest was deleted), grouped by phone or, without one, name, and links
+  them. It can be run again safely.
+
+| Section | Extra access rule |
+| --- | --- |
+| KPI strip (guests, new this month, repeat, in the hotel), segments, search, sort | Same as page |
+| Guest table/cards and profile panel: contacts, tags, notes, stats, booking history, "Нове бронювання", edit | Same as page; **money (Оплачено, booking totals): `guestBill` only** |
+| **Add guest, edit** | Same as page (routine front-desk edits); a phone or name already used is refused |
+| **Export CSV, merge duplicates, delete** | **`guestBulk` only** (owner, manager) |
+
+Not in the real page yet: bulk tags, messages, "Ask AI about guests", filters by tag or stay count, guest
+preferences, archiving.
 
 ### `rooms` — Room inventory & pricing
 
@@ -725,6 +759,11 @@ Added with live Calendar bookings on 2 October 2026 (not yet verified in the run
     the running app against real data. It loads all rooms, bookings and requests of the hotel, like
     the Calendar (gap 24); "Потребує уваги" has no "my tasks" or approval items, and there are no
     receipts until Payments is live.
+28. **Guests (4 October 2026) are unverified in the running app.** Open points: two people booking
+    the same new guest at once can create two profiles (merge fixes it); a phone shared by several
+    people (a company line) collapses them into one guest; deleting a guest leaves its bookings unlinked
+    until "Створити профілі з бронювань" is run again (which recreates the guest); Guests reads all
+    bookings of the hotel, like the Calendar (gap 24).
 
 ## Where implementation lives (for implementers)
 
