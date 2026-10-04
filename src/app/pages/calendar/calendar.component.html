@@ -1,4 +1,4 @@
-<app-shell activeNav="calendar" greetingTitle="Календар" greetingSubtitle="Grand Hotel · Кам'янець-Подільський">
+<app-shell activeNav="calendar" greetingTitle="Календар" [greetingSubtitle]="hotelSubtitle()">
 	<div class="page-heading">
 		<div>
 			<div class="breadcrumb">Робочий простір <span>/</span> Календар</div>
@@ -7,7 +7,7 @@
 		</div>
 		<div class="page-actions">
 			<button class="button secondary" (click)="goToday()">Сьогодні</button>
-			<button class="button primary" (click)="openQuickBooking(ROOMS[0].number, TODAY)"><app-icon name="plus" />Нове бронювання</button>
+			<button class="button primary" [disabled]="!ready() || !rooms().length" (click)="openQuickBooking(null, TODAY)"><app-icon name="plus" />Нове бронювання</button>
 		</div>
 	</div>
 
@@ -45,9 +45,9 @@
 						</section>
 						<section>
 							<h4>Тип номера</h4>
-							@for (t of GROUP_ORDER; track t) {
+							@for (t of groupOrder(); track t) {
 								<label>
-									<input type="checkbox" [checked]="typeFilter().has(t)" (change)="toggleTypeFilter(t, $any($event.target).checked)" />{{ t }}
+									<input type="checkbox" [checked]="!hiddenTypes().has(t)" (change)="toggleTypeFilter(t, $any($event.target).checked)" />{{ t }}
 								</label>
 							}
 						</section>
@@ -61,6 +61,22 @@
 		</div>
 	</div>
 
+	@if (loadError()) {
+		<div class="empty-state">
+			<h2>Календар не завантажився</h2>
+			<p role="alert">{{ loadError() }}</p>
+		</div>
+	} @else if (loading()) {
+		<div class="empty-state">
+			<p>Завантажуємо календар…</p>
+		</div>
+	} @else if (!rooms().length) {
+		<div class="empty-state">
+			<h2>Спершу додайте номери</h2>
+			<p>Календар показує номери та їхню зайнятість. Створіть номерний фонд, щоб додавати бронювання.</p>
+			<a class="button primary" routerLink="/rooms">Перейти до номерів</a>
+		</div>
+	} @else {
 	<div class="legend cal-desktop">
 		<span><i class="lg-confirmed"></i>Підтверджено</span>
 		<span><i class="lg-checkedin"></i>Заїхав</span>
@@ -106,7 +122,7 @@
 					[class]="'status-' + blk.booking.status"
 					[class.selected]="selectedId() === blk.booking.id"
 					[class.match]="blk.match"
-					[attr.draggable]="blk.booking.status !== 'cancelled'"
+					[attr.draggable]="canChange && blk.booking.status !== 'cancelled'"
 					[style.grid-row]="blk.row"
 					[style.grid-column]="blk.colStart + ' / ' + blk.colEnd"
 					[style.margin-left]="'calc(4px + ' + blk.insetLeft + '%)'"
@@ -136,7 +152,7 @@
 			<b>{{ h.booking.name }}</b>
 			<p>Номер {{ h.booking.room }} · {{ roomOf(h.booking.room)?.type }}</p>
 			<p>{{ shortDate(h.booking.start) }} – {{ shortDate(h.booking.end) }}</p>
-			<p>{{ dayDiff(h.booking.start, h.booking.end) }} ночі · {{ h.booking.guests }} гості</p>
+			<p>{{ nightsLabel(dayDiff(h.booking.start, h.booking.end)) }} · {{ guestsLabel(h.booking.guests) }}</p>
 			@if (showFinance) {
 				<div class="hc-amount">{{ money(h.booking.total) }}</div>
 				<p>{{ paymentLabel(h.booking) }}</p>
@@ -169,8 +185,10 @@
 							</span>
 						</div>
 						<p class="mrc-guest">{{ card.booking.name }}</p>
-						<p>{{ dayNum(card.booking.start) }}–{{ dayNum(card.booking.end) }} вересня</p>
-						<p>{{ paymentLabel(card.booking) }}</p>
+						<p>{{ shortDate(card.booking.start) }} – {{ shortDate(card.booking.end) }}</p>
+						@if (showFinance) {
+							<p>{{ paymentLabel(card.booking) }}</p>
+						}
 					} @else {
 						<div class="mrc-head"><b>{{ card.room.number }}</b><span class="pill ready">Вільний</span></div>
 						<p>{{ card.room.type }} · {{ card.room.cap }}</p>
@@ -180,6 +198,7 @@
 			}
 		</div>
 	</div>
+	}
 </app-shell>
 
 <div class="side-scrim" [hidden]="selectedId() === null" (click)="closeSidePanel()"></div>
@@ -221,17 +240,29 @@
 				<h5>Нотатки</h5>
 				<p>{{ b.notes || 'Нотаток немає.' }}</p>
 				<div class="dialog-actions">
-					<a class="button primary full" href="/booking/">Відкрити бронювання</a>
+					@if (!live) {
+						<a class="button primary full" href="/booking/">Відкрити бронювання</a>
+					}
+					@if (canChange && b.status === 'pending') {
+						<button class="button primary" [disabled]="saving()" (click)="setStatus(b.id, 'confirmed')">Підтвердити бронювання</button>
+					}
+					@if (canChange && b.status === 'confirmed') {
+						<button class="button primary" [disabled]="saving()" (click)="setStatus(b.id, 'checkedin')">Відмітити заїзд</button>
+					}
 					@if (canExtendStay(b)) {
 						<button class="button secondary" (click)="openExtendStay(b.id)">Пізній виїзд</button>
 					}
-					<button class="button secondary" (click)="requestRoomChange()">Змінити номер</button>
-					<button class="button secondary" (click)="dialogView.set({ kind: 'message', bookingId: b.id })">Надіслати повідомлення</button>
-					@if (showFinance && b.paid < b.total && b.status !== 'cancelled') {
+					@if (canChange && b.status !== 'cancelled') {
+						<button class="button secondary" (click)="requestRoomChange()">Змінити номер</button>
+					}
+					@if (!live) {
+						<button class="button secondary" (click)="dialogView.set({ kind: 'message', bookingId: b.id })">Надіслати повідомлення</button>
+					}
+					@if (canCollect && b.paid < b.total && b.status !== 'cancelled') {
 						<button class="button secondary" (click)="dialogView.set({ kind: 'payment', bookingId: b.id })">Додати оплату</button>
 					}
-					@if (b.status !== 'cancelled') {
-						<button class="button secondary" (click)="cancelBooking(b.id)">Скасувати бронювання</button>
+					@if (canChange && b.status !== 'cancelled') {
+						<button class="button secondary" (click)="askCancel(b.id)">Скасувати бронювання</button>
 					}
 				</div>
 			}
@@ -241,7 +272,7 @@
 
 <dialog #dialogEl (click)="onDialogClick($event)" (close)="closeDialog()">
 	<div class="dialog-head">
-		<span class="dialog-label">HOTEL UPWORK <span>· ДЕМО</span></span>
+		<span class="dialog-label">HOTEL UPWORK <span>· {{ live ? 'КАЛЕНДАР' : 'ДЕМО' }}</span></span>
 		<button class="icon-button" aria-label="Закрити вікно" (click)="closeDialog()"><app-icon name="close" /></button>
 	</div>
 	<div id="dialog-content">
@@ -249,55 +280,98 @@
 		@switch (view?.kind) {
 			@case ('quick-booking') {
 				<h2>Нове бронювання</h2>
-				<form
-					class="demo-form"
-					(ngSubmit)="
-						submitQuickBooking(view!, {
-							name: nameInput.value,
-							room: roomSelect.value,
-							guests: guestsInput.valueAsNumber,
-							start: startInput.value,
-							end: endInput.value,
-							total: totalInput.valueAsNumber,
-							source: sourceSelect.value,
-							payment: paymentSelect.value
-						})
-					"
-				>
-					<label class="full">Гість<input #nameInput name="name" required maxlength="70" placeholder="Ім'я або телефон" /></label>
+				@let f = bookingForm();
+				@if (f.submission; as sub) {
+					<div class="sub-banner">
+						<b>З заявки · {{ sub.label }}</b>
+						@if (sub.roomType) {
+							<span>Бажаний тип номера: {{ sub.roomType }}</span>
+						}
+						@if (sub.message) {
+							<span>«{{ sub.message }}»</span>
+						}
+					</div>
+				}
+				<form class="demo-form" (ngSubmit)="submitBooking()">
+					<label class="full">
+						Гість
+						<input name="name" maxlength="200" placeholder="Ім'я" [ngModel]="f.name" (ngModelChange)="patchForm({ name: $event })" />
+					</label>
+					<label>
+						Телефон
+						<input name="phone" type="tel" maxlength="40" placeholder="+380 …" [ngModel]="f.phone" (ngModelChange)="patchForm({ phone: $event })" />
+					</label>
+					<label>
+						Email
+						<input name="email" type="email" maxlength="200" [ngModel]="f.email" (ngModelChange)="patchForm({ email: $event })" />
+					</label>
 					<label>
 						Номер
-						<select #roomSelect name="room">
-							@for (r of ROOMS; track r.number) {
-								<option [value]="r.number" [selected]="r.number === view!.room">{{ r.number }} · {{ r.type }}</option>
+						<select name="room" [ngModel]="f.room" (ngModelChange)="patchForm({ room: $event, total: null })">
+							@for (r of rooms(); track r.id) {
+								<option [value]="r.number">{{ r.number }} · {{ r.type }}</option>
 							}
 						</select>
 					</label>
-					<label>Гостей<input #guestsInput name="guests" type="number" min="1" max="8" value="2" /></label>
-					<label>Заїзд<input #startInput name="start" type="date" required [value]="view!.start" /></label>
-					<label>Виїзд<input #endInput name="end" type="date" required [value]="view!.end" /></label>
-					<label>Ціна, ₴<input #totalInput name="total" type="number" min="1" [value]="basePriceOf(view!.room)" /></label>
+					<label>
+						Гостей
+						<input name="guests" type="number" min="1" [max]="formRoom()?.capacity ?? 50" [ngModel]="f.guests" (ngModelChange)="patchForm({ guests: $event })" />
+					</label>
+					<label>Заїзд<input name="start" type="date" required [ngModel]="f.start" (ngModelChange)="setFormStart($event)" /></label>
+					<label>Виїзд<input name="end" type="date" required [min]="f.start" [ngModel]="f.end" (ngModelChange)="patchForm({ end: $event })" /></label>
+					<label>
+						Сума, ₴
+						<input name="total" type="number" min="0" [ngModel]="formTotal()" (ngModelChange)="patchForm({ total: $event === null || $event === '' ? null : +$event })" />
+						<small class="form-note">{{ nightsLabel(formNights()) }} × {{ money(formRoom()?.price ?? 0) }}</small>
+					</label>
 					<label>
 						Джерело
-						<select #sourceSelect name="source">@for (s of SOURCES; track s) {<option>{{ s }}</option>}</select>
+						<select name="source" [ngModel]="f.source" (ngModelChange)="patchForm({ source: $event })">
+							@for (s of SOURCES; track s) {
+								<option [value]="s">{{ s }}</option>
+							}
+						</select>
 					</label>
+					@if (canChange) {
+						<label [class.full]="!canCollect">
+							Статус
+							<select name="status" [ngModel]="f.status" (ngModelChange)="patchForm({ status: $event })">
+								<option value="confirmed">Підтверджено</option>
+								<option value="pending">Очікує підтвердження</option>
+							</select>
+						</label>
+					} @else {
+						<p class="full form-note">Бронювання буде створено зі статусом «Очікує підтвердження» — його підтверджує адміністратор.</p>
+					}
+					@if (canCollect) {
+						<label [class.full]="!canChange">
+							Оплата
+							<select name="payment" [ngModel]="f.payment" (ngModelChange)="patchForm({ payment: $event })">
+								<option value="none">Не оплачено</option>
+								<option value="half">Передоплата 50%</option>
+								<option value="full">Оплачено повністю</option>
+							</select>
+						</label>
+					}
 					<label class="full">
-						Оплата
-						<select #paymentSelect name="payment"><option value="0">Не оплачено</option><option value="half">Передоплата</option><option value="full">Оплачено</option></select>
+						Нотатки
+						<textarea name="notes" maxlength="1000" [ngModel]="f.notes" (ngModelChange)="patchForm({ notes: $event })"></textarea>
 					</label>
 					@if (formError()) {
 						<p class="full balance" role="alert">{{ formError() }}</p>
 					}
-					<button class="button primary full" type="submit">Створити бронювання</button>
-					<a class="text-action full" style="text-align: center" href="/new-booking/">Відкрити повну форму →</a>
+					<button class="button primary full" type="submit" [disabled]="saving()">{{ saving() ? 'Зберігаємо…' : 'Створити бронювання' }}</button>
+					@if (!live) {
+						<a class="text-action full" style="text-align: center" href="/new-booking/">Відкрити повну форму →</a>
+					}
 				</form>
 			}
 			@case ('conflict') {
 				<h2>Ці дати вже зайняті</h2>
 				<p>Номер {{ view!.room }} недоступний {{ shortDate(view!.start) }} – {{ shortDate(view!.end) }}.</p>
 				<div class="result-list">
-					@for (a of alternativesFor(view!.type, view!.start, view!.end, view!.room); track a.number) {
-						<button class="result-item" (click)="pickAlternative(a.number, view!.start)">
+					@for (a of alternativesFor(view!.type, view!.start, view!.end, view!.room, view!.moveId); track a.number) {
+						<button class="result-item" (click)="pickAlternative(a.number, view!)">
 							<span><b>{{ a.number }} · {{ a.type }}</b><small>{{ a.cap }}</small></span>
 							<span>Обрати →</span>
 						</button>
@@ -305,6 +379,9 @@
 						<p class="form-note">Вільних номерів цього типу немає на ці дати.</p>
 					}
 				</div>
+				@if (!view!.moveId) {
+					<button class="button secondary" (click)="dialogView.set({ kind: 'quick-booking' })">Змінити дати або номер</button>
+				}
 			}
 			@case ('confirm-move') {
 				@let m = pendingMove();
@@ -313,13 +390,25 @@
 					<h2>Перемістити бронювання?</h2>
 					<p>{{ b.name }}</p>
 					<div class="detail-grid">
-						<div><small>Було</small><b>{{ b.room }} · {{ dayNum(b.start) }}–{{ dayNum(b.end) }} вер.</b></div>
-						<div><small>Буде</small><b>{{ m.room }} · {{ dayNum(m.start) }}–{{ dayNum(m.end) }} вер.</b></div>
+						<div><small>Було</small><b>{{ b.room }} · {{ shortDate(b.start) }} – {{ shortDate(b.end) }}</b></div>
+						<div><small>Буде</small><b>{{ m.room }} · {{ shortDate(m.start) }} – {{ shortDate(m.end) }}</b></div>
 						<div><small>Ночей</small><b>{{ dayDiff(b.start, b.end) }}</b></div>
 					</div>
 					<div class="dialog-actions">
-						<button class="button primary" (click)="applyPendingMove()">Підтвердити</button>
+						<button class="button primary" [disabled]="saving()" (click)="applyPendingMove()">Підтвердити</button>
 						<button class="button secondary" (click)="closeDialog()">Скасувати</button>
+					</div>
+				}
+			}
+			@case ('cancel') {
+				@let b = booking(view!.bookingId);
+				@if (b) {
+					<h2>Скасувати бронювання?</h2>
+					<p>{{ b.name }} · Номер {{ b.room }} · {{ shortDate(b.start) }} – {{ shortDate(b.end) }}</p>
+					<p class="form-note">Бронювання залишиться в історії зі статусом «Скасовано», а номер стане вільним на ці дати.</p>
+					<div class="dialog-actions">
+						<button class="button primary" [disabled]="saving()" (click)="cancelBooking(b.id)">Так, скасувати</button>
+						<button class="button secondary" (click)="closeDialog()">Не скасовувати</button>
 					</div>
 				}
 			}

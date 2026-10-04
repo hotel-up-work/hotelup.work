@@ -419,6 +419,12 @@ export class SubmissionsComponent {
 	}
 
 	protected async createBooking(s: Submission): Promise<void> {
+		// A real hotel books in the Calendar, which prefills the form from this request and marks it
+		// "booked" only once the booking is saved. The demo has no bookings to save, so it marks it here.
+		if (this.hotelId()) {
+			this._router.navigate(['/calendar'], { queryParams: { submission: s.id } });
+			return;
+		}
 		if (await this._update(s.id, 'booked', 'Створено бронювання з заявки')) this._router.navigateByUrl('/calendar');
 	}
 

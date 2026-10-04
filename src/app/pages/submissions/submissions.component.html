@@ -235,6 +235,9 @@
 				}
 				@case ('booked') {
 					<p class="form-note">Бронювання створено з цієї заявки.</p>
+					@if (live) {
+						<button class="button secondary" (click)="createBooking(s)">Додати ще одне бронювання</button>
+					}
 				}
 				@case ('closed') {
 					<button class="button secondary" (click)="restore(s)">Повернути в нові</button>

@@ -172,7 +172,7 @@ export class AppShellComponent {
 		const page = (key: string) => PAGE_LABEL[key] ?? key;
 		let text: string;
 		if (params['soon']) {
-			text = `Розділ «${page(params['soon'])}» ще не підключено до реальних даних вашого готелю. Поки що працюють заявки з сайтів і номери.`;
+			text = `Розділ «${page(params['soon'])}» ще не підключено до реальних даних вашого готелю. Поки що працюють заявки з сайтів, календар і номери.`;
 		} else if (params['locked']) {
 			const needed = planForPage(params['locked']);
 			text = `Розділ «${page(params['locked'])}» входить у тариф ${needed ? PLANS[needed].name : 'вищого рівня'}. Ваш готель зараз на тарифі ${this.planName()}.`;

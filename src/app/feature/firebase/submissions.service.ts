@@ -4,6 +4,7 @@ import {
 	arrayUnion,
 	collection,
 	doc,
+	getDoc,
 	onSnapshot,
 	orderBy,
 	query,
@@ -11,6 +12,7 @@ import {
 	Timestamp,
 	updateDoc,
 	where,
+	type DocumentData,
 } from 'firebase/firestore';
 import { environment } from '../../../environments/environment';
 import { FirebaseService } from './firebase.service';
@@ -70,6 +72,32 @@ export interface SubmissionRecord {
 	receivedAt: Date | null;
 }
 
+function toSubmission(id: string, data: DocumentData): SubmissionRecord {
+	const createdAt = data['createdAt'] as Timestamp | undefined;
+	return {
+		id,
+		name: data['name'] ?? '',
+		phone: data['phone'] ?? '',
+		email: data['email'] ?? '',
+		// `form` is the pre-formId field name, kept so older test submissions still show.
+		formId: data['formId'] ?? data['form'] ?? '',
+		formName: data['formName'] ?? '',
+		site: data['site'] ?? '',
+		message: data['message'] ?? '',
+		checkIn: data['checkIn'] ?? '',
+		checkOut: data['checkOut'] ?? '',
+		guests: typeof data['guests'] === 'number' ? data['guests'] : null,
+		roomType: data['roomType'] ?? '',
+		date: data['date'] ?? '',
+		time: data['time'] ?? '',
+		service: data['service'] ?? '',
+		genders: Array.isArray(data['genders']) ? (data['genders'] as Gender[]) : [],
+		status: (data['status'] as SubmissionStatus) ?? 'new',
+		history: (data['history'] as SubmissionHistoryEntry[]) ?? [],
+		receivedAt: createdAt?.toDate() ?? null,
+	};
+}
+
 /**
  * Writes visitor-facing form leads to the shared `submissions` Firestore collection
  * (create-only, see firestore.rules) and, for the CRM, lists/updates a single hotel's
@@ -112,35 +140,19 @@ export class SubmissionsService {
 		);
 
 		return onSnapshot(submissionsQuery, (snapshot) => {
-			onChange(
-				snapshot.docs.map((docSnapshot) => {
-					const data = docSnapshot.data();
-					const createdAt = data['createdAt'] as Timestamp | undefined;
-					return {
-						id: docSnapshot.id,
-						name: data['name'] ?? '',
-						phone: data['phone'] ?? '',
-						email: data['email'] ?? '',
-						// `form` is the pre-formId field name, kept so older test submissions still show.
-						formId: data['formId'] ?? data['form'] ?? '',
-						formName: data['formName'] ?? '',
-						site: data['site'] ?? '',
-						message: data['message'] ?? '',
-						checkIn: data['checkIn'] ?? '',
-						checkOut: data['checkOut'] ?? '',
-						guests: typeof data['guests'] === 'number' ? data['guests'] : null,
-						roomType: data['roomType'] ?? '',
-						date: data['date'] ?? '',
-						time: data['time'] ?? '',
-						service: data['service'] ?? '',
-						genders: Array.isArray(data['genders']) ? (data['genders'] as Gender[]) : [],
-						status: (data['status'] as SubmissionStatus) ?? 'new',
-						history: (data['history'] as SubmissionHistoryEntry[]) ?? [],
-						receivedAt: createdAt?.toDate() ?? null,
-					};
-				}),
-			);
+			onChange(snapshot.docs.map((docSnapshot) => toSubmission(docSnapshot.id, docSnapshot.data())));
 		}, onError);
+	}
+
+	/** One submission, or null when it does not exist or belongs to another hotel. */
+	async get(hotelId: string, id: string): Promise<SubmissionRecord | null> {
+		const firestore = this._firebase.firestore;
+		if (!firestore) return null;
+
+		const snapshot = await getDoc(doc(firestore, 'submissions', id));
+		const data = snapshot.data();
+		if (!data || data['hotelId'] !== hotelId) return null;
+		return toSubmission(snapshot.id, data);
 	}
 
 	async updateStatus(id: string, status: SubmissionStatus, note: string): Promise<void> {

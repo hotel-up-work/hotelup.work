@@ -100,7 +100,7 @@ Rules:
 ## Live pages — what a real account sees
 
 A real, Firebase-signed-in account (`isLiveSession()`) sees only pages backed by real data:
-`LIVE_PAGES` in `src/app/shared/role.ts`, currently **`submissions`** and **`rooms`**.
+`LIVE_PAGES` in `src/app/shared/role.ts`, currently **`submissions`**, **`calendar`** and **`rooms`**.
 Everything else in this document describes the demo, which keeps every page (entered via `/demo`).
 
 - Sidebar and mobile nav list only live pages; Team, Settings, AI button, search,
@@ -114,6 +114,9 @@ Everything else in this document describes the demo, which keeps every page (ent
   timeline, links to Calendar/Housekeeping, weekend/extra-guest prices and the AI strip.
   Cleaning is "Почати прибирання" → "Завершити прибирання" (no assignee yet).
 - Plan room/staff limits are not applied to real hotels: plan per hotel is not built yet.
+- Inside Calendar, demo-only parts are hidden: "Відкрити бронювання" and "Надіслати повідомлення"
+  in the booking panel, "Відкрити повну форму" in the booking dialog. Payment is only the
+  booking's `paid` amount (no payments ledger yet).
 - When a page is wired to Firestore, add its path to `LIVE_PAGES` and record it here.
 
 ## Hotels — one account, several hotels
@@ -314,6 +317,27 @@ Purpose: see room availability by date, manage bookings, move/extend stays, quic
 | **Booking side panel: payment block ("Оплата") + "Додати оплату", unpaid badges** | **`guestBill` only** — hidden for `sales` |
 | Quick-booking / conflict / move / message / payment / extend dialogs | Same as page |
 
+**Booking data contract** (live; enforced by `firestore.rules`, written by `BookingsService` in
+`src/app/feature/firebase/bookings.service.ts`). Only the hotel's owners (`ownerUids`) can read or
+write; roles per hotel are not built yet.
+
+- `hotels/{hotelId}/bookings/{id}`: `roomId` (rooms doc id; the grid follows the room if it is
+  renumbered), `roomNumber` (display copy), `guestName` (1–200; the phone when no name was given),
+  `checkIn`, `checkOut` (`YYYY-MM-DD`, `checkOut > checkIn`; the room is free for the next stay from
+  the check-out day), `guests` (int 1–50, ≤ the room's capacity, checked in the client), `total`
+  and `paid` (`0 ≤ paid ≤ total`), `status` (`pending | confirmed | checkedin | cancelled`), optional
+  `phone`, `email`, `source`, `notes` (≤1000), `submissionId`, `lateCheckoutHour` (12–23),
+  `createdAt`, `updatedAt` (server time on every write). Bookings are never deleted.
+- Overlaps are prevented in the client (other active bookings and room blocks; a block's last day
+  is inclusive). Rules cannot query, so two people booking the same room at the same moment can
+  still double-book.
+- Default total is nights × the room's price; the field is editable. Check-in is after 14:00 and
+  check-out before 11:00 unless `lateCheckoutHour` is set.
+- Who does what: everyone who opens Calendar can create a booking. Only `changeBooking`
+  (owner, manager, reception) chooses the status, confirms, checks in, moves (drag), extends and
+  cancels; Sales creates `pending` holds. Payment fields need `collectPayment` + `guestBill`.
+  Cancelling asks for confirmation and keeps the record.
+
 ### `submissions` — Website form submissions (free, Start plan)
 
 Purpose: one inbox for forms sent from the hotel's websites (booking requests, call-backs,
@@ -327,8 +351,13 @@ questions, group requests). Sites are separate projects that post to the Hotel U
 | Status actions: take into work, create booking, close, mark as spam | Same as page |
 | **"Підключити сайт" dialog: API endpoint, API key, connected sites** | Endpoint/example: same as page. **API key and key rotation: `manageIntegrations` only** (owner, manager) |
 
-"Create booking" marks the submission converted and opens the Calendar; the booking itself is
-created there. Submissions contain no payment data.
+"Create booking" (real hotels) opens `/calendar?submission=<id>`; the Calendar loads the request and
+opens the new-booking form prefilled (guest, phone, email, dates, guests, message as notes, source
+"Сайт", and a free room of the wished type that fits the guests). The submission is marked
+`booked` ("Створено бронювання · номер N") only after the booking is saved, so leaving the form
+leaves the request untouched. A booked request offers "Додати ще одне бронювання" for groups
+that need several rooms. In the demo the button still marks the request booked and opens the
+Calendar. Submissions contain no payment data.
 
 **Submission data contract** (enforced by `firestore.rules`, written by `SubmissionsService` shape):
 
@@ -590,8 +619,9 @@ Verified with a clean `ng build` and in the running app by switching roles:
 
 Found while rewriting the Gemini Gem knowledge on 23 September 2026 (code read, not yet fixed):
 
-11. **Calendar: `sales` can move and cancel any booking.** Intended: Sales changes only its
-    own offers/holds unless granted. "Скасувати бронювання" also has no confirmation step.
+11. **Calendar: `sales` could move and cancel any booking** — fixed 2 October 2026: move, confirm,
+    check in, extend and cancel need `changeBooking`; Sales creates `pending` holds only; cancel
+    asks for confirmation. Not yet verified in the running app.
 12. **Rooms: "Призначити прибирання" is not gated** (any role that opens Rooms can use it,
     and it always assigns the same demo person). Intended: `assignCleaning` only.
 13. **Housekeeping: "+ Додати задачу" lets any role pick an assignee.** Intended: assigning is
@@ -603,8 +633,8 @@ Found while rewriting the Gemini Gem knowledge on 23 September 2026 (code read, 
     intended; hotel-wide financial exports are finance-roles only.
 16. **Payments: method names are inconsistent** between the add-payment form ("Карта",
     "Онлайн") and filters ("Картка на місці", "Оплата онлайн").
-17. **Calendar mobile cards show payment status to `sales`** — the `showFinance` gate is
-    applied on desktop blocks, hover card and side panel, but not on the mobile day cards.
+17. **Calendar mobile cards showed payment status to `sales`** — fixed 2 October 2026 (gated by
+    `showFinance`). Not yet verified in the running app.
 
 Added with plans on 29 September 2026 (not yet verified in the running app):
 
@@ -618,6 +648,19 @@ Added with plans on 29 September 2026 (not yet verified in the running app):
 21. **"Підключити сайт" dialog is demo**: the endpoint, API key and connected-sites list are
     placeholders; real sites write to Firestore directly (see Submission data contract).
 
+Added with live Calendar bookings on 2 October 2026 (not yet verified in the running app):
+
+22. **Deleting a room does not check its bookings**: the bookings stay in Firestore but vanish from
+    the Calendar. Rooms should refuse (or ask) when a room has active bookings.
+23. **Rooms `status` is still set by hand**: `occupied` is not derived from bookings, and Rooms
+    still hides current guest, next arrival and the booking links for real hotels.
+24. **The Calendar loads every booking of the hotel** (no date window), and double-booking by two
+    people at the same moment is not prevented (see Booking data contract).
+25. **Booking edits are limited**: dates and room change only by dragging; there is no edit form
+    for guest details, and `paid` is a plain amount (no payments ledger, refunds or reminders).
+26. **Group requests**: a booking holds one room and at most that room's capacity, so a request
+    for many guests needs several bookings ("Додати ще одне бронювання" on the request).
+
 ## Where implementation lives (for implementers)
 
 - Plans, prices, plan page allowlist: `src/app/shared/plan.ts`
@@ -625,7 +668,7 @@ Added with plans on 29 September 2026 (not yet verified in the running app):
 - Modals: `ModalService` from `@wawjs/ngx-ui` with `panelClass: 'crm-modal'` (CRM palette and
   form/button styles in `src/styles/_crm-modal.scss`). Rooms uses it (`src/app/pages/rooms/dialogs/`);
   other pages still have their own `<dialog>` and move over when they go live.
-- Live data services: `src/app/feature/firebase/` (`submissions.service.ts`, `rooms.service.ts`);
+- Live data services: `src/app/feature/firebase/` (`submissions.service.ts`, `rooms.service.ts`, `bookings.service.ts`);
   access and field validation in `firestore.rules`
 - Account hotels and active hotel: `src/app/feature/firebase/hotel.service.ts`,
   switcher in `src/app/layouts/app-shell/`

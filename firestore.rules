@@ -75,6 +75,41 @@ service cloud.firestore {
           && optArea(roomType())
           && optAmenities(roomType());
       }
+
+      // Bookings (Calendar page). Overlap with other bookings and room blocks is checked in the
+      // client; rules only validate the shape. Never deleted: a cancelled booking keeps its record.
+      match /bookings/{bookingId} {
+        function booking() { return request.resource.data; }
+        function validBooking() {
+          return booking().keys().hasAll(['roomId', 'roomNumber', 'guestName', 'checkIn', 'checkOut', 'guests',
+                                          'total', 'paid', 'status', 'createdAt', 'updatedAt'])
+            && booking().keys().hasOnly(['roomId', 'roomNumber', 'guestName', 'phone', 'email', 'checkIn', 'checkOut',
+                                         'guests', 'total', 'paid', 'status', 'source', 'notes', 'submissionId',
+                                         'lateCheckoutHour', 'createdAt', 'updatedAt'])
+            && booking().roomId is string && booking().roomId.size() >= 1 && booking().roomId.size() <= 40
+            && booking().roomNumber is string && booking().roomNumber.size() >= 1 && booking().roomNumber.size() <= 8
+            && booking().guestName is string && booking().guestName.size() >= 1 && booking().guestName.size() <= 200
+            && isDate(booking().checkIn) && isDate(booking().checkOut)
+            && booking().checkOut > booking().checkIn
+            && booking().guests is int && booking().guests >= 1 && booking().guests <= 50
+            && booking().total is number && booking().total >= 0 && booking().total <= 10000000
+            && booking().paid is number && booking().paid >= 0 && booking().paid <= booking().total
+            && booking().status in ['pending', 'confirmed', 'checkedin', 'cancelled']
+            && optText(booking(), 'phone', 40)
+            && optText(booking(), 'email', 200)
+            && optText(booking(), 'source', 50)
+            && optText(booking(), 'notes', 1000)
+            && optText(booking(), 'submissionId', 40)
+            && (!('lateCheckoutHour' in booking()) || booking().lateCheckoutHour == null
+                || (booking().lateCheckoutHour is int && booking().lateCheckoutHour >= 12 && booking().lateCheckoutHour <= 23))
+            && booking().updatedAt == request.time;
+        }
+
+        allow read: if isHotelOwner();
+        allow create: if isHotelOwner() && validBooking() && booking().createdAt == request.time;
+        allow update: if isHotelOwner() && validBooking() && booking().createdAt == resource.data.createdAt;
+        allow delete: if false;
+      }
     }
 
     // Public lead-capture forms from the hotel websites. Visitors can only CREATE a submission —
