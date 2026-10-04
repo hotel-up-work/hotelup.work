@@ -157,7 +157,22 @@
 		</div>
 	</header>
 	<main id="main" tabindex="-1">
-		@if (deniedNotice(); as n) {
+		@if (live && syncState() !== 'online') {
+				<div class="sync-notice" [class.ok]="syncState() === 'synced'" role="status" aria-live="polite">
+					@switch (syncState()) {
+						@case ('offline') {
+							<b>Немає інтернету.</b> Ви можете працювати далі: зміни збережено на цьому пристрої і відправляться автоматично.
+						}
+						@case ('syncing') {
+							<b>З’єднання відновлено.</b> Синхронізуємо збережені зміни…
+						}
+						@default {
+							<b>Усе синхронізовано.</b>
+						}
+					}
+				</div>
+			}
+			@if (deniedNotice(); as n) {
 			<div class="denied-notice" role="status">
 				<span>{{ n.text }}</span>
 				@if (n.pricing) {

@@ -3,6 +3,7 @@ import { Component, computed, ElementRef, inject, input, signal, viewChild } fro
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../feature/firebase/auth.service';
 import { HotelService } from '../../feature/firebase/hotel.service';
+import { SyncStatusService } from '../../feature/firebase/sync-status.service';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { getStoredPlan, planForPage, planIncludes, PLANS } from '../../shared/plan';
 import {
@@ -63,6 +64,14 @@ export class AppShellComponent {
 	private readonly _router = inject(Router);
 	private readonly _auth = inject(AuthService);
 	private readonly _hotel = inject(HotelService);
+	private readonly _sync = inject(SyncStatusService);
+
+	/** Connection banner: only real hotels write to Firestore, so the demo never shows it. */
+	protected readonly syncState = this._sync.state;
+
+	constructor() {
+		this._sync.start();
+	}
 
 	readonly activeNav = input<string>('');
 	readonly housekeepingBadge = input<number | null>(null);

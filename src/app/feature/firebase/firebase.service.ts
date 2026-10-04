@@ -3,7 +3,7 @@ import { inject, PLATFORM_ID, Service } from '@angular/core';
 import { FirebaseApp, initializeApp } from 'firebase/app';
 import { Analytics, isSupported as isAnalyticsSupported, getAnalytics } from 'firebase/analytics';
 import { Auth, getAuth } from 'firebase/auth';
-import { Firestore, getFirestore } from 'firebase/firestore';
+import { Firestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import { FIREBASE_CONFIG } from './firebase.config';
 
 /** Lazily inits Firebase in the browser only; every getter is a no-op during prerender/SSR. */
@@ -18,7 +18,10 @@ export class FirebaseService {
 
 	get firestore(): Firestore | null {
 		if (!isPlatformBrowser(this._platformId)) return null;
-		this._firestore ??= getFirestore(this._app ??= initializeApp(FIREBASE_CONFIG));
+		// Persistent cache: reads and queued writes survive offline and reloads; shared across tabs.
+		this._firestore ??= initializeFirestore(this._app ??= initializeApp(FIREBASE_CONFIG), {
+			localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+		});
 		return this._firestore;
 	}
 

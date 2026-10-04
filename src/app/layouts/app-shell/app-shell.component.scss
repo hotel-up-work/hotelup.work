@@ -356,6 +356,21 @@ main {
 	font-size: 12px;
 }
 
+.sync-notice {
+	background: var(--gold-bg);
+	border: 1px solid var(--gold-border-soft);
+	color: var(--ink);
+	border-radius: 8px;
+	padding: 10px 14px;
+	margin-bottom: 18px;
+	font-size: 12.5px;
+
+	&.ok {
+		background: var(--green-bg);
+		border-color: var(--green);
+	}
+}
+
 .denied-notice {
 	display: flex;
 	align-items: center;
