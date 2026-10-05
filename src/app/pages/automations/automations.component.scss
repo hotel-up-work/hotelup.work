@@ -97,17 +97,6 @@ p {
 	}
 }
 
-.breadcrumb {
-	font-size: 10px;
-	color: var(--muted);
-	margin-bottom: 14px;
-
-	span {
-		margin: 0 8px;
-		color: #bbb;
-	}
-}
-
 h1 {
 	font-size: 29px;
 	line-height: 1.3;
@@ -879,10 +868,6 @@ dialog {
 		align-items: stretch;
 	}
 
-	.breadcrumb {
-		display: none;
-	}
-
 	h1 {
 		font-size: 24px;
 	}
@@ -930,5 +915,11 @@ dialog {
 @media (prefers-reduced-motion: reduce) {
 	* {
 		transition: none !important;
+	}
+}
+
+@media (max-width: 760px) {
+	.text-action {
+		min-height: 40px;
 	}
 }

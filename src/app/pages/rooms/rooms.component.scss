@@ -109,17 +109,6 @@ p {
 	}
 }
 
-.breadcrumb {
-	font-size: 10px;
-	color: var(--muted);
-	margin-bottom: 14px;
-
-	span {
-		margin: 0 8px;
-		color: #bbb;
-	}
-}
-
 h1 {
 	font-size: 29px;
 	line-height: 1.3;
@@ -969,5 +958,11 @@ tbody tr {
 		span:nth-last-child(2) {
 			display: none;
 		}
+	}
+}
+
+@media (max-width: 760px) {
+	button {
+		min-height: 40px;
 	}
 }

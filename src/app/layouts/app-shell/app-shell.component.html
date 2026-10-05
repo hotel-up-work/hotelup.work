@@ -1,7 +1,7 @@
 <a class="skip" href="#main">Перейти до огляду</a>
 
-<aside class="sidebar" [class.open]="sidebarOpen()" aria-label="Навігація готелю">
-	<a class="logo" routerLink="/" aria-label="Hotel Upwork, головна сторінка"><span class="logo-mark">H</span>Hotel <b>Upwork</b></a>
+<aside class="sidebar" id="sidebar" [class.open]="sidebarOpen()" [class.compact]="compact()" aria-label="Навігація готелю">
+	<a class="logo" routerLink="/dashboard" aria-label="Hotel Upwork, огляд готелю"><span class="logo-mark">H</span><span class="logo-text">Hotel <b>Upwork</b></span></a>
 	<div class="hotel-section">
 		@if (hotels().length > 1) {
 			<div class="hotel-switcher" #hotelSwitcher>
@@ -13,7 +13,7 @@
 					aria-controls="hotel-menu"
 					[attr.aria-expanded]="hotelMenuOpen()"
 					[attr.aria-label]="'Готель: ' + (activeHotel()?.name ?? 'не вибрано') + '. Змінити готель'"
-					(click)="toggleHotelMenu()"
+					(click)="onHotelTrigger()"
 				>
 					<span class="hotel-icon"><app-icon name="hotel" /></span>
 					<span class="hotel-text">
@@ -86,7 +86,7 @@
 				[routerLink]="item.href"
 			>
 				<app-icon [name]="item.icon" />
-				{{ item.label }}
+				<span class="nav-text">{{ item.label }}</span>
 				@if (item.lockedPlan) {
 					<span class="plan-tag" [attr.aria-label]="'Доступно в тарифі ' + item.lockedPlan">{{ item.lockedPlan }}</span>
 				}
@@ -98,12 +98,21 @@
 	</nav>
 	<div class="sidebar-bottom">
 		@if (showTeam()) {
-			<a class="nav-item" routerLink="/team"><app-icon name="guests" />Команда</a>
+			<a class="nav-item" routerLink="/team"><app-icon name="guests" /><span class="nav-text">Команда</span></a>
 		}
 		@if (showSettings()) {
-			<a class="nav-item" routerLink="/settings"><app-icon name="settings" />Налаштування</a>
+			<a class="nav-item" routerLink="/settings"><app-icon name="settings" /><span class="nav-text">Налаштування</span></a>
 		}
-		<button type="button" class="nav-item" (click)="logout()"><app-icon name="logout" />Вийти</button>
+		<button type="button" class="nav-item" (click)="logout()"><app-icon name="logout" /><span class="nav-text">Вийти</span></button>
+		<button
+			type="button"
+			class="nav-item collapse-toggle"
+			[attr.aria-pressed]="compact()"
+			[attr.title]="compact() ? 'Розгорнути меню' : 'Згорнути меню'"
+			(click)="toggleCompact()"
+		>
+			<app-icon [name]="compact() ? 'right' : 'left'" /><span class="nav-text">{{ compact() ? 'Розгорнути меню' : 'Згорнути меню' }}</span>
+		</button>
 		@if (!live) {
 			<div class="plan-note">
 				<span class="plan-dot"></span>
@@ -115,9 +124,9 @@
 </aside>
 <button class="nav-overlay" aria-label="Закрити навігацію" [hidden]="!sidebarOpen()" (click)="closeSidebar()"></button>
 
-<div class="workspace">
+<div class="workspace" [class.compact]="compact()">
 	<header class="topbar">
-		<a class="topbar-logo" routerLink="/" aria-label="Hotel Upwork, головна сторінка">H</a>
+		<a class="topbar-logo" routerLink="/dashboard" aria-label="Hotel Upwork, головна сторінка">H</a>
 		<button
 			class="icon-button mobile-menu"
 			aria-label="Відкрити навігацію"
@@ -133,7 +142,7 @@
 					<b>{{ greetingTitle() }} <span class="greeting-spark">✦</span></b>
 					<span>{{ greetingSubtitle() }}</span>
 				</div>
-				@if (roleLabel()) {
+				@if (roleLabel() && !plainTopbar()) {
 					<div class="role-badge">{{ roleLabel() }}</div>
 				}
 			</div>
@@ -147,9 +156,11 @@
 					<app-icon name="bell" /><i></i>
 				</a>
 			}
-			<button class="icon-button" [attr.aria-label]="isDark() ? 'Увімкнути світлу тему' : 'Увімкнути темну тему'" (click)="toggleTheme()">
-				<app-icon [name]="isDark() ? 'sun' : 'moon'" />
-			</button>
+			@if (!plainTopbar()) {
+				<button class="icon-button" [attr.aria-label]="isDark() ? 'Увімкнути світлу тему' : 'Увімкнути темну тему'" (click)="toggleTheme()">
+					<app-icon [name]="isDark() ? 'sun' : 'moon'" />
+				</button>
+			}
 			<span class="top-divider"></span>
 			@if (showAi()) {
 				<a class="ai-button" routerLink="/ai"><app-icon name="spark" />Hotel AI</a>

@@ -29,8 +29,8 @@ interface NavItem {
 	lockedPlan?: string;
 }
 
+/** The dashboard has no menu entry: the logo opens it. */
 const NAV_ITEMS: NavItem[] = [
-	{ key: 'overview', href: '/dashboard', icon: 'overview', label: 'Огляд' },
 	{ key: 'calendar', href: '/calendar', icon: 'calendar', label: 'Календар' },
 	{ key: 'new-booking', href: '/new-booking', icon: 'plus', label: 'Нове бронювання' },
 	{ key: 'submissions', href: '/submissions', icon: 'send', label: 'Заявки' },
@@ -45,6 +45,7 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 const THEME_KEY = 'hotelup_theme';
+const SIDEBAR_KEY = 'hotelup_sidebar';
 
 /** Above this many hotels the switcher gets a search field. */
 const HOTEL_SEARCH_MIN = 6;
@@ -71,6 +72,10 @@ export class AppShellComponent {
 
 	readonly activeNav = input<string>('');
 	readonly housekeepingBadge = input<number | null>(null);
+	/** A page that needs the room (the booking card) opens the sidebar as icons whatever the saved choice is, without changing it. */
+	readonly forceCompact = input(false);
+	/** Leaves the role badge and theme switch out of the topbar, for pages that use the bar for their own status. */
+	readonly plainTopbar = input(false);
 	readonly greetingTitle = input('Добрий день, Олександре');
 	readonly greetingSubtitle = input('Grand Hotel · Кам’янець-Подільський');
 
@@ -129,10 +134,34 @@ export class AppShellComponent {
 	}
 
 	protected readonly sidebarOpen = signal(false);
+	private readonly _compactSaved = signal(this._readCompact());
+	/** Set by the toggle on a page that forces the sidebar; it lasts until the person leaves the page and is never saved. */
+	private readonly _compactTemporary = signal<boolean | null>(null);
+	protected readonly compact = computed(() => this._compactTemporary() ?? (this.forceCompact() || this._compactSaved()));
 	protected readonly isDark = signal(this._readInitialTheme() === 'dark');
 
 	protected toggleSidebar(): void {
 		this.sidebarOpen.update((open) => !open);
+	}
+
+	protected toggleCompact(): void {
+		const next = !this.compact();
+		if (this.forceCompact()) {
+			this._compactTemporary.set(next);
+			return;
+		}
+		this._compactSaved.set(next);
+		try {
+			localStorage.setItem(SIDEBAR_KEY, next ? 'compact' : 'full');
+		} catch {
+			/* ignore storage errors (private mode, etc.) */
+		}
+	}
+
+	/** The hotel list needs the full width, so an icon-only sidebar opens first. */
+	protected onHotelTrigger(): void {
+		if (this.compact()) this.toggleCompact();
+		this.toggleHotelMenu();
 	}
 
 	protected closeSidebar(): void {
@@ -209,6 +238,14 @@ export class AppShellComponent {
 			/* ignore storage errors (private mode, etc.) */
 		}
 		this._document.documentElement.setAttribute('data-theme', next);
+	}
+
+	private _readCompact(): boolean {
+		try {
+			return localStorage.getItem(SIDEBAR_KEY) === 'compact';
+		} catch {
+			return false;
+		}
 	}
 
 	private _readInitialTheme(): 'dark' | 'light' {

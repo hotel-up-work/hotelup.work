@@ -1,7 +1,11 @@
-<app-shell activeNav="calendar" greetingTitle="Картка бронювання" [greetingSubtitle]="hotelSubtitle()">
-	<div class="page-heading">
-		<div class="breadcrumb"><a routerLink="/calendar">Календар</a> <span>/</span> Бронювання</div>
-	</div>
+<app-shell activeNav="calendar" [forceCompact]="true" [plainTopbar]="true" [greetingTitle]="topTitle()" [greetingSubtitle]="topSubtitle()">
+	@if (booking(); as b) {
+		<div class="top-status" topbar-center>
+			<span class="top-name">{{ topTitle() }}</span>
+			<span class="autosave" role="status" [attr.data-kind]="summary().kind">{{ summary().text }}</span>
+			<span class="pill" [attr.data-status]="b.status">{{ statusLabel[b.status] }}</span>
+		</div>
+	}
 
 	@if (loadError()) {
 		<section class="card empty-state">
@@ -16,20 +20,7 @@
 		</section>
 	} @else if (loading()) {
 		<section class="card empty-state"><p>Завантажуємо бронювання…</p></section>
-	} @else if (booking(); as b) {
-		<header class="head">
-			<div class="head-main">
-				<h1>{{ value('guestName') || 'Гість без імені' }}</h1>
-				<p class="head-meta">
-					<span class="pill" [attr.data-status]="b.status">{{ statusLabel[b.status] }}</span>
-					<span>Номер {{ b.roomNumber }}</span>
-					<span>{{ shortDate(b.checkIn) }} – {{ shortDate(b.checkOut) }}</span>
-					<span>Ночей: {{ nights() }}</span>
-				</p>
-			</div>
-			<p class="autosave" role="status" [attr.data-kind]="summary().kind">{{ summary().text }}</p>
-		</header>
-
+	} @else if (booking()) {
 		<nav class="tabs" aria-label="Розділи картки">
 			<ul>
 				@for (tab of tabs; track tab; let first = $first) {
@@ -37,17 +28,16 @@
 						@if (first) {
 							<span class="tab current" aria-current="page">{{ tab }}</span>
 						} @else {
-							<button class="tab" type="button" disabled title="З’явиться пізніше">{{ tab }}</button>
+							<button class="tab" type="button" disabled title="Скоро">{{ tab }}</button>
 						}
 					</li>
 				}
 			</ul>
 		</nav>
-		<p class="legend">Сірі розділи й поля «Скоро» зʼявляться пізніше. Решта полів зберігається сама.</p>
 
 		@if (readOnly()) {
 			<p class="notice" role="note">
-				{{ b.status === 'cancelled' ? 'Бронювання скасовано: картка доступна лише для перегляду.' : 'Ваша роль дозволяє лише переглядати картку.' }}
+				{{ booking()!.status === 'cancelled' ? 'Бронювання скасовано: картку можна лише переглядати.' : 'Ваша роль дозволяє лише переглядати картку.' }}
 			</p>
 		}
 
@@ -59,21 +49,14 @@
 							<h2 [id]="'s-' + section.id">{{ section.title }}</h2>
 							<div class="fields">
 								@for (f of section.fields; track f.key) {
-									<div class="field" [class.wide]="f.wide" [class.soon]="f.soon" [class.invalid]="fieldError()[f.key]" [class.check]="f.kind === 'check'">
-										<div class="label-row">
-											<label [for]="'f-' + f.key">{{ f.label }}</label>
-											@if (f.soon) {
-												<span class="tag">Скоро</span>
-											} @else {
-												<span class="fs" aria-hidden="true" [attr.data-state]="saveState()[f.key]">
-													@switch (saveState()[f.key]) {
-														@case ('saving') { Зберігаємо… }
-														@case ('saved') { Збережено }
-													}
-												</span>
-											}
-										</div>
-
+									<div
+										class="field"
+										[class.wide]="f.wide"
+										[class.soon]="f.soon"
+										[class.invalid]="fieldError()[f.key]"
+										[class.check]="f.kind === 'check'"
+										[class.lifted]="f.soon || f.kind === 'select' || f.kind === 'date' || f.kind === 'time' || f.kind === 'readonly'"
+									>
 										@switch (f.kind) {
 											@case ('select') {
 												<select
@@ -95,7 +78,8 @@
 													#el
 													[id]="'f-' + f.key"
 													[name]="f.key"
-													rows="3"
+													rows="2"
+													placeholder=" "
 													[disabled]="isOff(f)"
 													[value]="value(f.key)"
 													[attr.aria-invalid]="fieldError()[f.key] ? 'true' : null"
@@ -116,7 +100,7 @@
 												/>
 											}
 											@case ('readonly') {
-												<output class="static" [id]="'f-' + f.key" [class.debt]="f.key === 'balance' && booking()!.total > booking()!.paid">{{ display(f.key) }}</output>
+												<output class="static" [id]="'f-' + f.key">{{ display(f.key) }}</output>
 											}
 											@case ('date') {
 												<input
@@ -155,6 +139,7 @@
 													[attr.step]="f.kind === 'money' ? '0.01' : null"
 													[attr.autocomplete]="f.autocomplete ?? 'off'"
 													[attr.spellcheck]="f.kind === 'email' ? 'false' : null"
+													[attr.placeholder]="f.soon ? 'Скоро' : ' '"
 													[disabled]="isOff(f)"
 													[value]="value(f.key)"
 													[attr.aria-invalid]="fieldError()[f.key] ? 'true' : null"
@@ -164,16 +149,10 @@
 												/>
 											}
 										}
+										<label [for]="'f-' + f.key" [attr.title]="f.label">{{ f.label }}</label>
 
 										@if (fieldError()[f.key]; as message) {
-											<p class="msg error" [id]="'e-' + f.key" role="alert">{{ message }}</p>
-										} @else if (f.hint) {
-											<p class="msg">
-												{{ f.hint }}
-												@if (f.key === 'paid') {
-													<a routerLink="/payments">Відкрити оплати</a>
-												}
-											</p>
+											<p class="msg" [id]="'e-' + f.key" role="alert">{{ message }}</p>
 										}
 									</div>
 								}

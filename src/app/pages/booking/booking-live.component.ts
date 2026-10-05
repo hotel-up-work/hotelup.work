@@ -50,6 +50,13 @@ const STATUS_LABEL: Record<BookingStatus, string> = {
 const money = (n: number) => new Intl.NumberFormat('uk-UA').format(n) + ' ₴';
 const shortDate = (iso: string) => new Intl.DateTimeFormat('uk-UA', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(iso + 'T00:00:00Z'));
 
+/** Ukrainian plural: 1 ніч, 2 ночі, 5 ночей. */
+function nightsLabel(n: number): string {
+	const mod10 = n % 10;
+	const mod100 = n % 100;
+	return `${n} ${mod10 === 1 && mod100 !== 11 ? 'ніч' : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14) ? 'ночі' : 'ночей'}`;
+}
+
 /** `raw` as a whole number between `min` and `max`, or null. */
 function wholeNumber(raw: string, min: number, max: number): number | null {
 	const text = raw.trim();
@@ -86,10 +93,13 @@ export class BookingLiveComponent {
 	private readonly _timers = new Map<string, ReturnType<typeof setTimeout>>();
 
 	protected readonly hotelId = this._hotel.activeHotelId;
-	protected readonly hotelSubtitle = computed(() => {
-		const hotel = this._hotel.activeHotel();
-		if (!hotel) return '';
-		return hotel.city ? `${hotel.name} · ${hotel.city}` : hotel.name;
+
+	/** The topbar says whose booking this is and where and when; the page itself starts with the fields. */
+	protected readonly topTitle = computed(() => this.value('guestName') || (this.booking() ? 'Гість без імені' : 'Картка бронювання'));
+	protected readonly topSubtitle = computed(() => {
+		const b = this.booking();
+		if (!b) return this._hotel.activeHotel()?.name ?? '';
+		return `Номер ${b.roomNumber} · ${shortDate(b.checkIn)} – ${shortDate(b.checkOut)} · ${nightsLabel(this.nights())}`;
 	});
 
 	protected readonly tabs = CARD_TABS;

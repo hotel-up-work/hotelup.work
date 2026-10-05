@@ -100,17 +100,6 @@ p {
 	}
 }
 
-.breadcrumb {
-	font-size: 10px;
-	color: var(--muted);
-	margin-bottom: 14px;
-
-	span {
-		margin: 0 8px;
-		color: #bbb;
-	}
-}
-
 h1 {
 	font-size: 30px;
 	line-height: 1.3;
@@ -1619,10 +1608,6 @@ dialog {
 		justify-content: flex-end;
 	}
 
-	.breadcrumb {
-		margin-bottom: 12px;
-	}
-
 	h1 {
 		font-size: 28px;
 	}
@@ -1805,10 +1790,6 @@ dialog {
 		.primary {
 			order: -1;
 		}
-	}
-
-	.breadcrumb {
-		display: none;
 	}
 
 	h1 {

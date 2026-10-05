@@ -1048,3 +1048,17 @@ dialog {
 		transition: none !important;
 	}
 }
+
+@media (max-width: 760px) {
+	.text-action {
+		min-height: 40px;
+		display: inline-flex;
+		align-items: center;
+	}
+
+	button.primary,
+	.filters button,
+	.tabs button {
+		min-height: 40px;
+	}
+}

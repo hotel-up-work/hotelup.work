@@ -972,3 +972,11 @@ dialog {
 		max-height: calc(100dvh - 30px);
 	}
 }
+
+@media (max-width: 760px) {
+	.conv-filters button {
+		min-height: 38px;
+		font-size: 12px;
+		padding: 8px 14px;
+	}
+}

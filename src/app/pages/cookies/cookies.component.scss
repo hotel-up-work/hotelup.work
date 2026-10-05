@@ -54,13 +54,14 @@ p {
 }
 
 header {
-	height: 88px;
+	min-height: 88px;
+	flex-wrap: wrap;
 	max-width: 1440px;
 	margin: auto;
-	padding: 0 5%;
+	padding: 12px 5%;
 	display: flex;
 	align-items: center;
-	gap: 32px;
+	gap: 8px 32px;
 	border-bottom: 1px solid var(--border);
 }
 
@@ -91,7 +92,8 @@ header {
 
 nav {
 	display: flex;
-	gap: 27px;
+	gap: 4px 27px;
+	flex-wrap: wrap;
 	margin: auto;
 	font-size: 14px;
 	font-weight: 600;

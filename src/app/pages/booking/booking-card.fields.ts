@@ -6,7 +6,6 @@ export interface FieldDef {
 	label: string;
 	kind: FieldKind;
 	options?: string[];
-	hint?: string;
 	/** Not backed by data yet: shown disabled, so the layout matches the desk card and nothing is lost later. */
 	soon?: boolean;
 	/** Spans the whole section width. */
@@ -72,7 +71,7 @@ export const COLUMNS: SectionDef[][] = [
 				{ key: 'adults', label: 'Дорослих', kind: 'number' },
 				{ key: 'children', label: 'Дітей', kind: 'number' },
 				{ key: 'childrenPaid', label: 'Дітей з оплатою', kind: 'number' },
-				{ key: 'extraGuests', label: 'Дод. місця', kind: 'number', hint: 'Люди понад місткість номера' },
+				{ key: 'extraGuests', label: 'Дод. місця', kind: 'number' },
 				{ key: 'byBed', label: 'По місцях', kind: 'check' },
 				{ key: 'bedNumber', label: 'Місце', kind: 'number' },
 				{ key: 'roomProperties', label: 'Властивості кімнат', kind: 'select', soon: true },
@@ -136,7 +135,7 @@ export const COLUMNS: SectionDef[][] = [
 			fields: [
 				{ key: 'price', label: 'Ціна за ніч, ₴', kind: 'money' },
 				{ key: 'total', label: 'Разом за проживання', kind: 'readonly' },
-				{ key: 'paid', label: 'Оплачено', kind: 'readonly', hint: 'Оплати додаються на сторінці «Оплати»' },
+				{ key: 'paid', label: 'Оплачено', kind: 'readonly' },
 				{ key: 'balance', label: 'Баланс', kind: 'readonly' },
 				{ key: 'depositBalance', label: 'Баланс по депозиту, ₴', kind: 'money' },
 				{ key: 'creditLimit', label: 'Кредитний ліміт, ₴', kind: 'money' },

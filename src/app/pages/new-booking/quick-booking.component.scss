@@ -107,21 +107,6 @@ p {
 	}
 }
 
-.breadcrumb {
-	font-size: 10px;
-	color: var(--muted);
-	margin-bottom: 14px;
-
-	span {
-		margin: 0 8px;
-		color: #bbb;
-	}
-
-	a:hover {
-		color: var(--gold-ink);
-	}
-}
-
 .card {
 	background: var(--white);
 	border: 1px solid var(--line);

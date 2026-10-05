@@ -921,3 +921,14 @@ dialog::backdrop {
 		max-height: calc(100dvh - 30px);
 	}
 }
+
+@media (max-width: 760px) {
+	.feedback-row button {
+		min-width: 40px;
+		min-height: 40px;
+	}
+
+	.clear-chat-btn {
+		min-height: 40px;
+	}
+}
