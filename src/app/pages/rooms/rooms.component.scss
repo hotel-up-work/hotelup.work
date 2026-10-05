@@ -131,6 +131,20 @@ h1 {
 .page-actions {
 	display: flex;
 	gap: 10px;
+	margin-left: auto;
+}
+
+.embedded-heading {
+	margin-bottom: 20px;
+
+	.page-actions {
+		flex: 1;
+		align-items: center;
+	}
+
+	.search-wrap {
+		max-width: 360px;
+	}
 }
 
 .button {

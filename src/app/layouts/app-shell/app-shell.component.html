@@ -2,82 +2,80 @@
 
 <aside class="sidebar" [class.open]="sidebarOpen()" aria-label="Навігація готелю">
 	<a class="logo" routerLink="/" aria-label="Hotel Upwork, головна сторінка"><span class="logo-mark">H</span>Hotel <b>Upwork</b></a>
-	@if (hotels().length > 1) {
-		<div class="hotel-switcher" #hotelSwitcher>
-			<button
-				#hotelTrigger
-				type="button"
-				class="hotel"
-				aria-haspopup="true"
-				aria-controls="hotel-menu"
-				[attr.aria-expanded]="hotelMenuOpen()"
-				[attr.aria-label]="'Готель: ' + (activeHotel()?.name ?? 'не вибрано') + '. Змінити готель'"
-				(click)="toggleHotelMenu()"
-			>
-				<span class="hotel-icon"><app-icon name="hotel" /></span>
-				<span class="hotel-text">
-					<b>{{ activeHotel()?.name ?? 'Виберіть готель' }}</b>
-					<small>{{ activeHotel()?.city || hotels().length + ' готелів в акаунті' }}</small>
-				</span>
-				<span class="hotel-chevron" [class.open]="hotelMenuOpen()" aria-hidden="true">⌄</span>
-			</button>
-			@if (hotelMenuOpen()) {
-				<div class="hotel-menu" id="hotel-menu">
-					@if (showHotelSearch()) {
-						<label class="hotel-search">
-							<app-icon name="search" />
-							<input
-								type="search"
-								placeholder="Пошук готелю"
-								aria-label="Пошук готелю"
-								autocomplete="off"
-								[value]="hotelQuery()"
-								(input)="hotelQuery.set($any($event.target).value)"
-							/>
-						</label>
-					}
-					<ul class="hotel-options">
-						@for (hotel of filteredHotels(); track hotel.id) {
-							<li>
-								<button
-									type="button"
-									class="hotel-option"
-									[class.current]="hotel.id === activeHotel()?.id"
-									[attr.aria-current]="hotel.id === activeHotel()?.id ? 'true' : null"
-									(click)="selectHotel(hotel.id)"
-								>
-									<span class="hotel-option-text">
-										<b>{{ hotel.name }}</b>
-										@if (hotel.city) {
-											<small>{{ hotel.city }}</small>
-										}
-									</span>
-									@if (hotel.id === activeHotel()?.id) {
-										<app-icon name="check" />
-									}
-								</button>
-							</li>
-						} @empty {
-							<li class="hotel-empty">Нічого не знайдено</li>
+	<div class="hotel-section">
+		@if (hotels().length > 1) {
+			<div class="hotel-switcher" #hotelSwitcher>
+				<button
+					#hotelTrigger
+					type="button"
+					class="hotel"
+					aria-haspopup="true"
+					aria-controls="hotel-menu"
+					[attr.aria-expanded]="hotelMenuOpen()"
+					[attr.aria-label]="'Готель: ' + (activeHotel()?.name ?? 'не вибрано') + '. Змінити готель'"
+					(click)="toggleHotelMenu()"
+				>
+					<span class="hotel-icon"><app-icon name="hotel" /></span>
+					<span class="hotel-text">
+						<b>{{ activeHotel()?.name ?? 'Виберіть готель' }}</b>
+						<small>{{ activeHotel()?.city || hotels().length + ' готелів в акаунті' }}</small>
+					</span>
+					<span class="hotel-chevron" [class.open]="hotelMenuOpen()" aria-hidden="true">⌄</span>
+				</button>
+				@if (hotelMenuOpen()) {
+					<div class="hotel-menu" id="hotel-menu">
+						@if (showHotelSearch()) {
+							<label class="hotel-search">
+								<app-icon name="search" />
+								<input
+									type="search"
+									placeholder="Пошук готелю"
+									aria-label="Пошук готелю"
+									autocomplete="off"
+									[value]="hotelQuery()"
+									(input)="hotelQuery.set($any($event.target).value)"
+								/>
+							</label>
 						}
-					</ul>
-				</div>
-			}
-		</div>
-	} @else {
-		<div class="hotel">
-			<span class="hotel-icon"><app-icon name="hotel" /></span>
-			@if (activeHotel(); as hotel) {
-				<span class="hotel-text"><b>{{ hotel.name }}</b><small>{{ hotel.city }}</small></span>
-			} @else {
-				<span class="hotel-text"><b>Grand Hotel</b><small>Кам'янець-Подільський</small></span>
-			}
-		</div>
-	}
-	@if (roleLabel()) {
-		<div class="role-badge">{{ roleLabel() }}</div>
-	}
-	<span class="nav-label">РОБОЧИЙ ПРОСТІР</span>
+						<ul class="hotel-options">
+							@for (hotel of filteredHotels(); track hotel.id) {
+								<li>
+									<button
+										type="button"
+										class="hotel-option"
+										[class.current]="hotel.id === activeHotel()?.id"
+										[attr.aria-current]="hotel.id === activeHotel()?.id ? 'true' : null"
+										(click)="selectHotel(hotel.id)"
+									>
+										<span class="hotel-option-text">
+											<b>{{ hotel.name }}</b>
+											@if (hotel.city) {
+												<small>{{ hotel.city }}</small>
+											}
+										</span>
+										@if (hotel.id === activeHotel()?.id) {
+											<app-icon name="check" />
+										}
+									</button>
+								</li>
+							} @empty {
+								<li class="hotel-empty">Нічого не знайдено</li>
+							}
+						</ul>
+					</div>
+				}
+			</div>
+		} @else {
+			<div class="hotel">
+				<span class="hotel-icon"><app-icon name="hotel" /></span>
+				@if (activeHotel(); as hotel) {
+					<span class="hotel-text"><b>{{ hotel.name }}</b><small>{{ hotel.city }}</small></span>
+				} @else {
+					<span class="hotel-text"><b>Grand Hotel</b><small>Кам'янець-Подільський</small></span>
+				}
+			</div>
+		}
+	</div>
 	<nav>
 		@for (item of navItems(); track item.key) {
 			<a
@@ -130,10 +128,15 @@
 			<app-icon name="menu" />
 		</button>
 		@if (greetingTitle()) {
-		<div class="greeting">
-			<b>{{ greetingTitle() }} <span class="greeting-spark">✦</span></b>
-			<span>{{ greetingSubtitle() }}</span>
-		</div>
+			<div class="greeting-row">
+				<div class="greeting">
+					<b>{{ greetingTitle() }} <span class="greeting-spark">✦</span></b>
+					<span>{{ greetingSubtitle() }}</span>
+				</div>
+				@if (roleLabel()) {
+					<div class="role-badge">{{ roleLabel() }}</div>
+				}
+			</div>
 		}
 		<ng-content select="[topbar-center]" />
 		<div class="top-actions">

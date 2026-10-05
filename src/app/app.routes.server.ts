@@ -14,6 +14,7 @@ const PROTECTED_PATHS = [
 	'ai',
 	'team',
 	'settings',
+	'settings/**',
 	'search',
 	'notifications',
 	'profile',

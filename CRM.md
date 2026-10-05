@@ -699,16 +699,19 @@ upload), Security (numbering, legal/company data, data export, change history, d
 | **Editors**                                      | `owner`, `manager` (`EDITOR_ROLES`); any other role would see every section read-only |
 | Danger zone (deactivate Booking Page / deactivate hotel) | Nested inside Security tab → owner-only by inheritance |
 
-**Real hotels** get `SettingsLiveComponent` (the demo keeps the seeded page above), with four tabs, selected by `?tab=general|stay|payments|rooms`:
+**Real hotels** get `SettingsLiveComponent` (the demo keeps the seeded page above), with five tabs, each on its own URL: `/settings/general|stay|payments|booking-types|rooms` (`/settings` opens General; `/rooms` redirects to `/settings/rooms`):
 
 | Tab | What it edits |
 | --- | --- |
 | Загальне та контакти | `name` (required, ≤100), `city`, `phone`, `email`, `address`. Name and city also update the sidebar. |
 | Заселення та виїзд | `checkInTime`, `checkOutTime` (`HH:MM`; default 14:00 / 12:00): the starting times of the New booking form, editable per booking. |
 | Оплати | `paymentMethods` (subset of `cash, card, transfer, online, other`, at least one; an unset hotel offers all) and `bankDetails` (≤500, shown when transfer is on). Only enabled methods appear in New booking, Calendar and the Add payment dialog. |
+| Типи бронювання | `bookingTypes` (≤20): `name` (required), `description` (what is included, ≤300), `extraPrice` (₴ per night added to the room price, ≥0). E.g. room only / with breakfast. Defined here only; not yet selectable in New booking. |
 | Номери | The Rooms page, embedded (see `rooms`). |
 
-- **Hotel data contract** (`hotels/{hotelId}`, `HotelSettingsService`): the document is still created by hand; owners may update only `name`, `city`, `phone`, `email`, `address`, `checkInTime`, `checkOutTime`, `paymentMethods`, `bankDetails` (never `ownerUids`). Every other tab of the demo (booking rules, policies, Booking Page, messages, automations, notifications, sources, AI, security) is not built for real hotels yet.
+- **Hotel data contract** (`hotels/{hotelId}`, `HotelSettingsService`): the document is still created by hand; owners may update only `name`, `city`, `phone`, `email`, `address`, `checkInTime`, `checkOutTime`, `paymentMethods`, `bankDetails`, `bookingTypes` (never `ownerUids`). Every other tab of the demo (booking rules, policies, Booking Page, messages, automations, notifications, sources, AI, security) is not built for real hotels yet.
+- Routing: `/settings` is the `AppSettingsComponent` layout (`src/app/layouts/app-settings/`) with one child route per section; all sections share `SettingsFormService` (draft, validation, autosave). The demo keeps a single `/settings` page.
+- Real-hotel Settings has no Save button: changes autosave ~0.8 s after the person stops typing (validation errors show inline and block the save).
 - Editing needs `editInventory` (Owner, Manager); anyone else sees the tabs read-only.
 
 ## Implementation gaps — verify before marking resolved

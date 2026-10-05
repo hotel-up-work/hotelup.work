@@ -14,7 +14,7 @@ service cloud.firestore {
       allow update: if request.auth != null
         && request.auth.uid in resource.data.ownerUids
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-             ['name', 'city', 'phone', 'email', 'address', 'checkInTime', 'checkOutTime', 'paymentMethods', 'bankDetails'])
+             ['name', 'city', 'phone', 'email', 'address', 'checkInTime', 'checkOutTime', 'paymentMethods', 'bankDetails', 'bookingTypes'])
         && request.resource.data.name is string && request.resource.data.name.size() >= 1 && request.resource.data.name.size() <= 100
         && validHotelProfile(request.resource.data);
 
@@ -28,7 +28,8 @@ service cloud.firestore {
           && optTime(data, 'checkOutTime')
           && (!('paymentMethods' in data)
               || (data.paymentMethods is list && data.paymentMethods.size() >= 1 && data.paymentMethods.size() <= 5
-                  && data.paymentMethods.hasOnly(['cash', 'card', 'transfer', 'online', 'other'])));
+                  && data.paymentMethods.hasOnly(['cash', 'card', 'transfer', 'online', 'other'])))
+          && (!('bookingTypes' in data) || (data.bookingTypes is list && data.bookingTypes.size() <= 20));
       }
 
       function isHotelOwner() {

@@ -142,6 +142,7 @@ html[data-theme='dark'] .crm-modal {
 		display: flex;
 		flex-direction: column;
 		gap: 7px;
+		justify-content: space-between;
 		color: var(--label);
 		font-size: 12px;
 	}

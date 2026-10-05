@@ -7,84 +7,7 @@
 }
 
 <ng-template #content>
-	<div class="page-heading">
-		<div>
-			@if (!embedded()) {
-				<div class="breadcrumb">Робочий простір <span>/</span> Номери</div>
-			}
-			@if (embedded()) {
-				<h2 class="embedded-title">Номерний фонд</h2>
-			} @else {
-				<h1>Номери</h1>
-			}
-			<p>Керуйте номерами, типами, цінами та їхнім поточним станом.</p>
-		</div>
-		@if (canEditInventory) {
-			<div class="page-actions">
-				<button class="button secondary" [disabled]="!ready()" (click)="openRoomTypes()">Типи номерів</button>
-				<button
-					class="button primary"
-					[disabled]="!ready() || roomLimitReached()"
-					[title]="roomLimitReached() ? 'Ліміт номерів на цьому тарифі: ' + roomLimit : ''"
-					(click)="openAddRoom()"
-				>
-					+ Додати номер
-				</button>
-			</div>
-		}
-	</div>
-
-	@if (roomLimitReached()) {
-		<p class="form-note">Досягнуто ліміту номерів на цьому тарифі ({{ roomLimit }}). Перейдіть на вищий тариф, щоб додати більше.</p>
-	}
-
-	<div class="kpis">
-		<div class="kpi"><small>Усього номерів</small><b>{{ counts().total }}</b></div>
-		<div class="kpi"><small>Зайняті</small><b>{{ counts().occupied }}</b><span>{{ counts().total ? Math.round((counts().occupied / counts().total) * 100) : 0 }}%</span></div>
-		<div class="kpi"><small>Вільні</small><b>{{ counts().ready }}</b></div>
-		<div class="kpi"><small>Потребують прибирання</small><b>{{ counts().cleaningKpi }}</b></div>
-		<div class="kpi"><small>Недоступні</small><b>{{ counts().unavailable }}</b></div>
-	</div>
-	<p class="card-sub kpi-note">
-		@if (live) {
-			Статус «Зайнятий» береться з бронювань: номер зайнятий, поки гостя заселено в календарі. Прибирання та блокування змінюються тут.
-		} @else {
-			Статуси нижче показують стан номерів зараз, а не на конкретні дати. Щоб перевірити наявність на певні дати заїзду/виїзду, відкрийте
-			<a routerLink="/calendar">Календар</a>.
-		}
-	</p>
-
-	@if (!live) {
-		<div class="ai-strip">
-			<b><app-icon name="spark" />Запитати AI про номери</b>
-			<button class="ai-q" (click)="askAi('freeToday')">Які номери сьогодні вільні?</button>
-			<button class="ai-q" (click)="askAi('toClean')">Які ще потрібно прибрати?</button>
-			<button class="ai-q" (click)="askAi('freeWeekend')">Які номери вільні на вихідні?</button>
-			<button class="ai-q" (click)="askAi('popular')">Який номер найчастіше бронюють?</button>
-			<button class="ai-q" (click)="askAi('blocked')">Які номери зараз заблоковані?</button>
-		</div>
-		@if (aiAnswerHtml()) {
-			<div class="ai-answer-box"><p [innerHTML]="aiAnswerHtml()"></p></div>
-		}
-	}
-
-	<div class="chips-mobile">
-		<button [class.active]="segment() === 'all'" (click)="setSegment('all')">Усі</button>
-		<button [class.active]="segment() === 'ready'" (click)="setSegment('ready')">Вільні зараз</button>
-		<button [class.active]="segment() === 'occupied'" (click)="setSegment('occupied')">Зайняті</button>
-		<button [class.active]="segment() === 'cleaning'" (click)="setSegment('cleaning')">Прибирання</button>
-		<button [class.active]="segment() === 'unavailable'" (click)="setSegment('unavailable')">Недоступні</button>
-	</div>
-
-	<div class="toolbar-row">
-		<div class="view-switch">
-			<button [class.active]="viewMode() === 'cards'" (click)="setViewMode('cards')">Картки</button>
-			<button [class.active]="viewMode() === 'list'" (click)="setViewMode('list')">Список</button>
-		</div>
-		<div class="search-wrap">
-			<app-icon name="search" />
-			<input [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Знайти номер" />
-		</div>
+	<ng-template #filtersTpl>
 		<div class="filters-wrap">
 			<button class="button secondary" (click)="toggleFilters()"><app-icon name="filter" />Фільтри</button>
 			@if (filtersOpen()) {
@@ -121,7 +44,93 @@
 				</div>
 			}
 		</div>
+	</ng-template>
+	<div class="page-heading" [class.embedded-heading]="embedded()">
+		@if (!embedded()) {
+			<div>
+				<div class="breadcrumb">Робочий простір <span>/</span> Номери</div>
+				<h1>Номери</h1>
+				<p>Керуйте номерами, типами, цінами та їхнім поточним станом.</p>
+			</div>
+		}
+		<div class="page-actions">
+			@if (embedded()) {
+				<div class="search-wrap">
+					<app-icon name="search" />
+					<input [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Знайти номер" />
+				</div>
+			}
+			@if (canEditInventory) {
+				<button class="button secondary" [disabled]="!ready()" (click)="openRoomTypes()">Типи номерів</button>
+				<button
+					class="button primary"
+					[disabled]="!ready() || roomLimitReached()"
+					[title]="roomLimitReached() ? 'Ліміт номерів на цьому тарифі: ' + roomLimit : ''"
+					(click)="openAddRoom()"
+				>
+					+ Додати номер
+				</button>
+			}
+		</div>
 	</div>
+
+	@if (roomLimitReached()) {
+		<p class="form-note">Досягнуто ліміту номерів на цьому тарифі ({{ roomLimit }}). Перейдіть на вищий тариф, щоб додати більше.</p>
+	}
+
+	@if (!embedded()) {
+	<div class="kpis">
+		<div class="kpi"><small>Усього номерів</small><b>{{ counts().total }}</b></div>
+		<div class="kpi"><small>Зайняті</small><b>{{ counts().occupied }}</b><span>{{ counts().total ? Math.round((counts().occupied / counts().total) * 100) : 0 }}%</span></div>
+		<div class="kpi"><small>Вільні</small><b>{{ counts().ready }}</b></div>
+		<div class="kpi"><small>Потребують прибирання</small><b>{{ counts().cleaningKpi }}</b></div>
+		<div class="kpi"><small>Недоступні</small><b>{{ counts().unavailable }}</b></div>
+	</div>
+	<p class="card-sub kpi-note">
+		@if (live) {
+			Статус «Зайнятий» береться з бронювань: номер зайнятий, поки гостя заселено в календарі. Прибирання та блокування змінюються тут.
+		} @else {
+			Статуси нижче показують стан номерів зараз, а не на конкретні дати. Щоб перевірити наявність на певні дати заїзду/виїзду, відкрийте
+			<a routerLink="/calendar">Календар</a>.
+		}
+	</p>
+	}
+
+	@if (!live) {
+		<div class="ai-strip">
+			<b><app-icon name="spark" />Запитати AI про номери</b>
+			<button class="ai-q" (click)="askAi('freeToday')">Які номери сьогодні вільні?</button>
+			<button class="ai-q" (click)="askAi('toClean')">Які ще потрібно прибрати?</button>
+			<button class="ai-q" (click)="askAi('freeWeekend')">Які номери вільні на вихідні?</button>
+			<button class="ai-q" (click)="askAi('popular')">Який номер найчастіше бронюють?</button>
+			<button class="ai-q" (click)="askAi('blocked')">Які номери зараз заблоковані?</button>
+		</div>
+		@if (aiAnswerHtml()) {
+			<div class="ai-answer-box"><p [innerHTML]="aiAnswerHtml()"></p></div>
+		}
+	}
+
+	<div class="chips-mobile">
+		<button [class.active]="segment() === 'all'" (click)="setSegment('all')">Усі</button>
+		<button [class.active]="segment() === 'ready'" (click)="setSegment('ready')">Вільні зараз</button>
+		<button [class.active]="segment() === 'occupied'" (click)="setSegment('occupied')">Зайняті</button>
+		<button [class.active]="segment() === 'cleaning'" (click)="setSegment('cleaning')">Прибирання</button>
+		<button [class.active]="segment() === 'unavailable'" (click)="setSegment('unavailable')">Недоступні</button>
+	</div>
+
+	@if (!embedded()) {
+	<div class="toolbar-row">
+		<div class="view-switch">
+			<button [class.active]="viewMode() === 'cards'" (click)="setViewMode('cards')">Картки</button>
+			<button [class.active]="viewMode() === 'list'" (click)="setViewMode('list')">Список</button>
+		</div>
+		<div class="search-wrap">
+			<app-icon name="search" />
+			<input [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Знайти номер" />
+		</div>
+		<ng-container [ngTemplateOutlet]="filtersTpl" />
+	</div>
+	}
 
 	@if (loadError()) {
 		<div class="empty-state">
@@ -148,7 +157,7 @@
 			<h2>Номерів не знайдено</h2>
 			<p>Спробуйте змінити пошук або фільтри.</p>
 		</div>
-	} @else if (viewMode() === 'cards') {
+	} @else if (viewMode() === 'cards' && !embedded()) {
 		<div class="type-groups">
 			@for (group of typeGroups(); track group.type) {
 				<div class="type-group">

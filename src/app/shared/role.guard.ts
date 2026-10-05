@@ -10,7 +10,7 @@ import { defaultPageFor, getSessionRole, isLiveSession, isPageAllowed, LIVE_PAGE
  */
 export const roomsMovedGuard: CanActivateFn = () => {
 	if (!isPlatformBrowser(inject(PLATFORM_ID)) || !isLiveSession()) return true;
-	return inject(Router).createUrlTree(['/settings'], { queryParams: { tab: 'rooms' } });
+	return inject(Router).createUrlTree(['/settings', 'rooms']);
 };
 
 export const roleGuard: CanActivateFn = (route) => {

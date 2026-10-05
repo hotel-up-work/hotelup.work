@@ -6,6 +6,13 @@ import { companyProfile } from './feature/company/company.data';
 import { defaultPageFor, getSessionRole, isLiveSession, LIVE_PAGES } from './shared/role';
 import { roleGuard, roomsMovedGuard } from './shared/role.guard';
 
+const SETTINGS_META = {
+	title: 'Налаштування · Hotel Upwork',
+	titleSuffix: '',
+	description: 'Hotel Upwork: налаштування готелю, бронювань та інтеграцій.',
+	robots: 'noindex, nofollow',
+};
+
 export const routes: Routes = [
 	{
 		path: '',
@@ -228,22 +235,48 @@ export const routes: Routes = [
 		},
 		loadComponent: () => import('./pages/team/team.component').then((m) => m.TeamComponent),
 	},
+	// Real hotels: the settings layout with one child page per section; the demo keeps the seeded single page.
 	{
 		path: 'settings',
+		canMatch: [() => isLiveSession()],
 		canActivate: [roleGuard],
-		data: {
-			meta: {
-				title: 'Налаштування · Hotel Upwork',
-				titleSuffix: '',
-				description: 'Hotel Upwork: налаштування готелю, бронювань та інтеграцій.',
-				robots: 'noindex, nofollow',
+		data: { meta: SETTINGS_META },
+		loadComponent: () => import('./layouts/app-settings/app-settings.component').then((m) => m.AppSettingsComponent),
+		children: [
+			{ path: '', pathMatch: 'full', redirectTo: 'general' },
+			{
+				path: 'general',
+				data: { section: 'general', meta: SETTINGS_META },
+				loadComponent: () => import('./pages/settings/settings-live.component').then((m) => m.SettingsLiveComponent),
 			},
-		},
-		// Real hotels get the live setup page; the demo keeps the seeded settings.
-		loadComponent: () =>
-			isLiveSession()
-				? import('./pages/settings/settings-live.component').then((m) => m.SettingsLiveComponent)
-				: import('./pages/settings/settings.component').then((m) => m.SettingsComponent),
+			{
+				path: 'stay',
+				data: { section: 'stay', meta: SETTINGS_META },
+				loadComponent: () => import('./pages/settings/settings-live.component').then((m) => m.SettingsLiveComponent),
+			},
+			{
+				path: 'payments',
+				data: { section: 'payments', meta: SETTINGS_META },
+				loadComponent: () => import('./pages/settings/settings-live.component').then((m) => m.SettingsLiveComponent),
+			},
+			{
+				path: 'booking-types',
+				data: { section: 'booking-types', meta: SETTINGS_META },
+				loadComponent: () => import('./pages/settings/settings-live.component').then((m) => m.SettingsLiveComponent),
+			},
+			{
+				path: 'rooms',
+				data: { section: 'rooms', meta: SETTINGS_META },
+				loadComponent: () => import('./pages/settings/settings-live.component').then((m) => m.SettingsLiveComponent),
+			},
+		],
+	},
+	{
+		path: 'settings',
+		canMatch: [() => !isLiveSession()],
+		canActivate: [roleGuard],
+		data: { meta: SETTINGS_META },
+		loadComponent: () => import('./pages/settings/settings.component').then((m) => m.SettingsComponent),
 	},
 	{
 		path: 'search',

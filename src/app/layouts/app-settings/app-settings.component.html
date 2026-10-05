@@ -1,0 +1,25 @@
+<app-shell activeNav="settings" greetingTitle="Налаштування" [greetingSubtitle]="hotelSubtitle()">
+	<div class="settings-mobile-nav">
+		<select aria-label="Розділ налаштувань" [value]="section()" (change)="goTo($any($event.target).value)">
+			@for (s of sections; track s.id) {
+				<option [value]="s.id" [selected]="s.id === section()">{{ s.label }}</option>
+			}
+		</select>
+	</div>
+
+	<div class="settings-layout">
+		<nav class="settings-nav" aria-label="Розділи налаштувань">
+			@for (s of sections; track s.id) {
+				<a [routerLink]="['/settings', s.id]" [class.active]="section() === s.id" [attr.aria-current]="section() === s.id ? 'page' : null">{{ s.label }}</a>
+			}
+		</nav>
+
+		<div class="settings-content">
+			<router-outlet />
+		</div>
+	</div>
+</app-shell>
+
+@if (form.toastMessage()) {
+	<div class="toast" role="status">{{ form.toastMessage() }}</div>
+}

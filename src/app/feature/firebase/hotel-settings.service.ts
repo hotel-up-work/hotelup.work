@@ -18,6 +18,17 @@ export interface HotelSettings {
 	paymentMethods: PaymentMethod[];
 	/** Shown to guests who pay by bank transfer. */
 	bankDetails: string;
+	/** Booking types (e.g. room only, with breakfast): what each includes and its surcharge per night. */
+	bookingTypes: BookingType[];
+}
+
+export interface BookingType {
+	id: string;
+	name: string;
+	/** What the guest gets with this type. */
+	description: string;
+	/** Added to the room price, ₴ per night. */
+	extraPrice: number;
 }
 
 export const DEFAULT_CHECK_IN = '14:00';
@@ -25,6 +36,18 @@ export const DEFAULT_CHECK_OUT = '12:00';
 
 const str = (value: unknown): string => (typeof value === 'string' ? value : '');
 const time = (value: unknown, fallback: string): string => (typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value) ? value : fallback);
+
+function toBookingTypes(value: unknown): BookingType[] {
+	if (!Array.isArray(value)) return [];
+	return value
+		.filter((t): t is Record<string, unknown> => !!t && typeof t === 'object')
+		.map((t) => ({
+			id: str(t['id']) || Math.random().toString(36).slice(2, 10),
+			name: str(t['name']),
+			description: str(t['description']),
+			extraPrice: typeof t['extraPrice'] === 'number' && t['extraPrice'] >= 0 ? t['extraPrice'] : 0,
+		}));
+}
 
 function toSettings(data: DocumentData): HotelSettings {
 	const known = PAYMENT_METHODS.map((m) => m.value);
@@ -40,6 +63,7 @@ function toSettings(data: DocumentData): HotelSettings {
 		// A hotel that never chose offers every method.
 		paymentMethods: methods.length ? methods : known,
 		bankDetails: str(data['bankDetails']),
+		bookingTypes: toBookingTypes(data['bookingTypes']),
 	};
 }
 
