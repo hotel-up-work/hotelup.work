@@ -73,11 +73,11 @@
 						</div>
 						<label class="field">
 							Час заїзду
-							<input name="checkInTime" type="time" required [ngModel]="checkInTime()" (ngModelChange)="checkInTime.set($event)" />
+							<input name="checkInTime" type="time" required [ngModel]="checkInTime()" (ngModelChange)="setTimes($event, undefined)" />
 						</label>
 						<label class="field">
 							Час виїзду
-							<input name="checkOutTime" type="time" required [ngModel]="checkOutTime()" (ngModelChange)="checkOutTime.set($event)" />
+							<input name="checkOutTime" type="time" required [ngModel]="checkOutTime()" (ngModelChange)="setTimes(undefined, $event)" />
 						</label>
 					</div>
 					<div class="chips" role="group" aria-label="Швидкий вибір ночей">
@@ -164,7 +164,7 @@
 							<div class="field">
 								<span id="method-label">Спосіб оплати</span>
 								<div class="chips" role="group" aria-labelledby="method-label">
-									@for (m of PAYMENT_METHODS; track m.value) {
+									@for (m of paymentMethods(); track m.value) {
 										<button type="button" class="chip" [class.on]="method() === m.value" [attr.aria-pressed]="method() === m.value" (click)="method.set(m.value)">{{ m.label }}</button>
 									}
 								</div>

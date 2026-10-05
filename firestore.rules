@@ -8,7 +8,28 @@ service cloud.firestore {
     // there is no self-service create/update yet.
     match /hotels/{hotelId} {
       allow read: if request.auth != null && request.auth.uid in resource.data.ownerUids;
-      allow write: if false;
+      // The document itself is still created by hand; owners may only edit the profile and settings fields below
+      // (Settings page), never ownerUids.
+      allow create, delete: if false;
+      allow update: if request.auth != null
+        && request.auth.uid in resource.data.ownerUids
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+             ['name', 'city', 'phone', 'email', 'address', 'checkInTime', 'checkOutTime', 'paymentMethods', 'bankDetails'])
+        && request.resource.data.name is string && request.resource.data.name.size() >= 1 && request.resource.data.name.size() <= 100
+        && validHotelProfile(request.resource.data);
+
+      function validHotelProfile(data) {
+        return optText(data, 'city', 100)
+          && optText(data, 'phone', 40)
+          && optText(data, 'email', 200)
+          && optText(data, 'address', 300)
+          && optText(data, 'bankDetails', 500)
+          && optTime(data, 'checkInTime')
+          && optTime(data, 'checkOutTime')
+          && (!('paymentMethods' in data)
+              || (data.paymentMethods is list && data.paymentMethods.size() >= 1 && data.paymentMethods.size() <= 5
+                  && data.paymentMethods.hasOnly(['cash', 'card', 'transfer', 'online', 'other'])));
+      }
 
       function isHotelOwner() {
         return request.auth != null

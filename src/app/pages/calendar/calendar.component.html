@@ -359,7 +359,7 @@
 							<label class="full">
 								Спосіб оплати
 								<select name="method" [ngModel]="f.method" (ngModelChange)="patchForm({ method: $event })">
-									@for (m of PAYMENT_METHODS; track m.value) {
+									@for (m of paymentMethods(); track m.value) {
 										<option [value]="m.value">{{ m.label }}</option>
 									}
 								</select>
@@ -446,7 +446,7 @@
 						<label class="full">
 							Спосіб оплати
 							<select #methodSelect name="method">
-								@for (m of PAYMENT_METHODS; track m.value) {
+								@for (m of paymentMethods(); track m.value) {
 									<option [value]="m.value">{{ m.label }}</option>
 								}
 							</select>

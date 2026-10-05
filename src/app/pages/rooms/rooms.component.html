@@ -1,8 +1,22 @@
-<app-shell activeNav="rooms" greetingTitle="Номери" [greetingSubtitle]="hotelSubtitle()">
+@if (embedded()) {
+	<ng-container [ngTemplateOutlet]="content" />
+} @else {
+	<app-shell activeNav="rooms" greetingTitle="Номери" [greetingSubtitle]="hotelSubtitle()">
+		<ng-container [ngTemplateOutlet]="content" />
+	</app-shell>
+}
+
+<ng-template #content>
 	<div class="page-heading">
 		<div>
-			<div class="breadcrumb">Робочий простір <span>/</span> Номери</div>
-			<h1>Номери</h1>
+			@if (!embedded()) {
+				<div class="breadcrumb">Робочий простір <span>/</span> Номери</div>
+			}
+			@if (embedded()) {
+				<h2 class="embedded-title">Номерний фонд</h2>
+			} @else {
+				<h1>Номери</h1>
+			}
 			<p>Керуйте номерами, типами, цінами та їхнім поточним станом.</p>
 		</div>
 		@if (canEditInventory) {
@@ -273,13 +287,15 @@
 		</div>
 	}
 
+	@if (!embedded()) {
 	<div class="workspace-footer">
 		<span>Hotel Upwork · Номерний фонд</span>
 		@if (!live) {
 			<span>Демонстраційні дані · 17.09.2026</span>
 		}
 	</div>
-</app-shell>
+	}
+</ng-template>
 
 <div class="side-scrim" [hidden]="selectedRoomNumber() === null" (click)="closeSidePanel()"></div>
 <aside class="side-panel" [class.open]="selectedRoomNumber() !== null" aria-label="Деталі номера">

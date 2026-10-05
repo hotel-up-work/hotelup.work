@@ -100,10 +100,10 @@ Rules:
 ## Live pages — what a real account sees
 
 A real, Firebase-signed-in account (`isLiveSession()`) sees only pages backed by real data:
-`LIVE_PAGES` in `src/app/shared/role.ts`, currently **`dashboard`** (the home page after login), **`submissions`**, **`calendar`**, **`new-booking`**, **`guests`**, **`payments`** and **`rooms`**.
+`LIVE_PAGES` in `src/app/shared/role.ts`, currently **`dashboard`** (the home page after login), **`submissions`**, **`calendar`**, **`new-booking`**, **`guests`**, **`payments`** and **`settings`**. Rooms are not a separate live page: real hotels manage them in Settings → Номери, and `/rooms` redirects there (`roomsMovedGuard`).
 Everything else in this document describes the demo, which keeps every page (entered via `/demo`).
 
-- Sidebar and mobile nav list only live pages; Team, Settings, AI button, search,
+- Sidebar and mobile nav list only live pages (Settings included); Team, AI button, search,
   notifications, profile and the plan note are hidden.
 - Opening any other protected route redirects to the first live page with `?soon=<page>`, and
   the shell explains the section is not connected to real data yet.
@@ -141,7 +141,7 @@ documents are created manually (console / admin script); there is no self-servic
 
 Not yet decided / not built: role per hotel (today every real account is Owner of all its
 hotels), plan per hotel (plan is still one local demo setting), and whether several hotels
-require Enterprise (pricing says so, not enforced). Only Dashboard, Submissions, Calendar, New booking, Guests, Payments and Rooms read real hotel
+require Enterprise (pricing says so, not enforced). Only Dashboard, Submissions, Calendar, New booking, Guests, Payments and Settings (with the Rooms tab) read real hotel
 data today.
 
 ## Intended rules — take precedence over the page inventory
@@ -483,6 +483,8 @@ preferences, archiving.
 
 Purpose: manage room types, pricing, live status, and per-room configuration.
 
+**Real hotels** use this same page as the **Номери** tab of Settings (`<app-rooms [embedded]="true">`, no shell or page title); the `/rooms` route redirects there. Access follows Settings: Owner and Manager.
+
 | Section                                   | Extra access rule |
 | --------------------------------------------- | -------------------- |
 | KPI strip (total/occupied/free/needs cleaning/unavailable) | Same as page |
@@ -696,6 +698,18 @@ upload), Security (numbering, legal/company data, data export, change history, d
 | **Owner-only sections** (locked/read-only banner for everyone else) | Payments, Policies (`rules`), AI, Security — `OWNER_ONLY = ['payments','rules','ai','security']` |
 | **Editors**                                      | `owner`, `manager` (`EDITOR_ROLES`); any other role would see every section read-only |
 | Danger zone (deactivate Booking Page / deactivate hotel) | Nested inside Security tab → owner-only by inheritance |
+
+**Real hotels** get `SettingsLiveComponent` (the demo keeps the seeded page above), with four tabs, selected by `?tab=general|stay|payments|rooms`:
+
+| Tab | What it edits |
+| --- | --- |
+| Загальне та контакти | `name` (required, ≤100), `city`, `phone`, `email`, `address`. Name and city also update the sidebar. |
+| Заселення та виїзд | `checkInTime`, `checkOutTime` (`HH:MM`; default 14:00 / 12:00): the starting times of the New booking form, editable per booking. |
+| Оплати | `paymentMethods` (subset of `cash, card, transfer, online, other`, at least one; an unset hotel offers all) and `bankDetails` (≤500, shown when transfer is on). Only enabled methods appear in New booking, Calendar and the Add payment dialog. |
+| Номери | The Rooms page, embedded (see `rooms`). |
+
+- **Hotel data contract** (`hotels/{hotelId}`, `HotelSettingsService`): the document is still created by hand; owners may update only `name`, `city`, `phone`, `email`, `address`, `checkInTime`, `checkOutTime`, `paymentMethods`, `bankDetails` (never `ownerUids`). Every other tab of the demo (booking rules, policies, Booking Page, messages, automations, notifications, sources, AI, security) is not built for real hotels yet.
+- Editing needs `editInventory` (Owner, Manager); anyone else sees the tabs read-only.
 
 ## Implementation gaps — verify before marking resolved
 

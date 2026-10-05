@@ -4,6 +4,15 @@ import { CanActivateFn, Router } from '@angular/router';
 import { getStoredPlan, planIncludes } from './plan';
 import { defaultPageFor, getSessionRole, isLiveSession, isPageAllowed, LIVE_PAGES } from './role';
 
+/**
+ * Real hotels manage rooms inside Settings (a one-time setup), so the old Rooms route and every link to it
+ * land on that tab. The demo keeps its own Rooms page.
+ */
+export const roomsMovedGuard: CanActivateFn = () => {
+	if (!isPlatformBrowser(inject(PLATFORM_ID)) || !isLiveSession()) return true;
+	return inject(Router).createUrlTree(['/settings'], { queryParams: { tab: 'rooms' } });
+};
+
 export const roleGuard: CanActivateFn = (route) => {
 	const platformId = inject(PLATFORM_ID);
 	if (!isPlatformBrowser(platformId)) return true;

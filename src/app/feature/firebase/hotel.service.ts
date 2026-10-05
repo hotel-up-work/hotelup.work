@@ -54,6 +54,13 @@ export class HotelService {
 		return hotels;
 	}
 
+	/** Applies a rename from the Settings page to the cached list, so the sidebar updates without a reload. */
+	updateSummary(hotelId: string, name: string, city: string): void {
+		const hotels = this.hotels().map((hotel) => (hotel.id === hotelId ? { ...hotel, name: name || hotel.name, city } : hotel));
+		this.hotels.set(hotels);
+		setStoredHotels(hotels);
+	}
+
 	select(hotelId: string): void {
 		this.activeHotelId.set(hotelId);
 		setRealHotelId(hotelId);

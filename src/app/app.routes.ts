@@ -4,7 +4,7 @@ import { Router, Routes } from '@angular/router';
 import { buildAbsoluteUrl } from '@wawjs/ngx-default';
 import { companyProfile } from './feature/company/company.data';
 import { defaultPageFor, getSessionRole, isLiveSession, LIVE_PAGES } from './shared/role';
-import { roleGuard } from './shared/role.guard';
+import { roleGuard, roomsMovedGuard } from './shared/role.guard';
 
 export const routes: Routes = [
 	{
@@ -120,7 +120,7 @@ export const routes: Routes = [
 	},
 	{
 		path: 'rooms',
-		canActivate: [roleGuard],
+		canActivate: [roomsMovedGuard, roleGuard],
 		data: {
 			meta: {
 				title: 'Номери · Hotel Upwork',
@@ -239,7 +239,11 @@ export const routes: Routes = [
 				robots: 'noindex, nofollow',
 			},
 		},
-		loadComponent: () => import('./pages/settings/settings.component').then((m) => m.SettingsComponent),
+		// Real hotels get the live setup page; the demo keeps the seeded settings.
+		loadComponent: () =>
+			isLiveSession()
+				? import('./pages/settings/settings-live.component').then((m) => m.SettingsLiveComponent)
+				: import('./pages/settings/settings.component').then((m) => m.SettingsComponent),
 	},
 	{
 		path: 'search',

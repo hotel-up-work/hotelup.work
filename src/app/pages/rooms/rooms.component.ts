@@ -1,4 +1,5 @@
-import { Component, DestroyRef, computed, effect, inject, signal, type Type } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { Component, DestroyRef, computed, effect, inject, input, signal, type Type } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ModalService, type Modal } from '@wawjs/ngx-ui';
@@ -229,11 +230,13 @@ const sameText = (a: string, b: string) => a.trim().toLocaleLowerCase('uk-UA') =
 
 @Component({
 	selector: 'app-rooms',
-	imports: [AppShellComponent, IconComponent, FormsModule, RouterLink],
+	imports: [AppShellComponent, IconComponent, FormsModule, NgTemplateOutlet, RouterLink],
 	templateUrl: './rooms.component.html',
 	styleUrl: './rooms.component.scss',
 })
 export class RoomsComponent {
+	/** Rendered inside the Settings page (no app shell, no page title) instead of as its own route. */
+	readonly embedded = input(false);
 	private readonly _roomsService = inject(RoomsService);
 	private readonly _bookingsService = inject(BookingsService);
 	private readonly _router = inject(Router);

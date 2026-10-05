@@ -6,7 +6,8 @@ import { AppShellComponent } from '../../layouts/app-shell/app-shell.component';
 import { BookingInput, BookingPatch, BookingRecord, BookingsService, BookingStatus, checkOutPatch } from '../../feature/firebase/bookings.service';
 import { GuestsService } from '../../feature/firebase/guests.service';
 import { HotelService } from '../../feature/firebase/hotel.service';
-import { localDay, PAYMENT_METHODS, PaymentMethod, PaymentsService } from '../../feature/firebase/payments.service';
+import { HotelSettingsService } from '../../feature/firebase/hotel-settings.service';
+import { localDay, PaymentMethod, PaymentsService } from '../../feature/firebase/payments.service';
 import { RoomRecord, RoomsService, RoomStatus } from '../../feature/firebase/rooms.service';
 import { SubmissionRecord, SubmissionsService } from '../../feature/firebase/submissions.service';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -216,7 +217,9 @@ export class CalendarComponent {
 	private readonly _submissionsService = inject(SubmissionsService);
 	private readonly _guestsService = inject(GuestsService);
 	private readonly _paymentsService = inject(PaymentsService);
-	protected readonly PAYMENT_METHODS = PAYMENT_METHODS;
+	private readonly _settings = inject(HotelSettingsService);
+	/** Only the payment methods the hotel has switched on in Settings. */
+	protected readonly paymentMethods = this._settings.methods;
 	private readonly _hotel = inject(HotelService);
 	private readonly _route = inject(ActivatedRoute);
 	private readonly _router = inject(Router);
@@ -563,7 +566,7 @@ export class CalendarComponent {
 			total: null,
 			source: this.live ? 'Пряме бронювання' : SOURCES[0],
 			payment: 'none',
-			method: 'cash',
+			method: this.paymentMethods()[0]?.value ?? 'cash',
 			status: this.canChange ? 'confirmed' : 'pending',
 			notes: '',
 			submission: null,

@@ -1,6 +1,7 @@
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { PAYMENT_METHODS, type PaymentMethod } from '../../../feature/firebase/payments.service';
+import { HotelSettingsService } from '../../../feature/firebase/hotel-settings.service';
+import type { PaymentMethod } from '../../../feature/firebase/payments.service';
 import type { ModalSave } from '../../rooms/rooms.interface';
 
 export interface PayableBooking {
@@ -58,7 +59,7 @@ const money = (n: number) => new Intl.NumberFormat('uk-UA').format(n) + ' ₴';
 					<label class="full">
 						Спосіб оплати
 						<select name="method" [ngModel]="method()" (ngModelChange)="method.set($event)">
-							@for (m of methods; track m.value) {
+							@for (m of methods(); track m.value) {
 								<option [value]="m.value">{{ m.label }}</option>
 							}
 						</select>
@@ -91,12 +92,13 @@ export class PaymentFormComponent implements OnInit {
 
 	protected readonly money = money;
 	protected readonly Math = Math;
-	protected readonly methods = PAYMENT_METHODS;
+	/** Only the payment methods the hotel has switched on in Settings. */
+	protected readonly methods = inject(HotelSettingsService).methods;
 	protected readonly filter = signal('');
 	protected readonly bookingId = signal('');
 	protected readonly amount = signal<number | null>(null);
 	protected readonly date = signal('');
-	protected readonly method = signal<PaymentMethod>('cash');
+	protected readonly method = signal<PaymentMethod>(this.methods()[0]?.value ?? 'cash');
 	protected readonly note = signal('');
 	protected readonly error = signal('');
 	protected readonly saving = signal(false);
