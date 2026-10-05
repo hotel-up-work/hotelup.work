@@ -699,6 +699,7 @@
 					<h3>{{ p.name }}</h3>
 					<p>{{ p.limits }}</p>
 					<div class="price">{{ p.price }}<span>{{ p.period }}</span></div>
+						<p class="yearly">{{ p.yearly ? 'або ' + p.yearly : '' }}</p>
 					<ul class="checks">
 						@for (h of p.highlights; track h) {
 							<li>{{ h }}</li>

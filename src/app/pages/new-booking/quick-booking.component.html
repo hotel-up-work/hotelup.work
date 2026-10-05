@@ -56,13 +56,29 @@
 							<input name="end" type="date" required [min]="start()" [ngModel]="end()" (ngModelChange)="setEnd($event)" />
 						</label>
 						<div class="field">
-							<span id="guests-label">Гостей</span>
-							<div class="stepper" role="group" aria-labelledby="guests-label">
-								<button type="button" aria-label="Менше гостей" [disabled]="guests() <= 1" (click)="stepGuests(-1)">−</button>
-								<output>{{ guests() }}</output>
-								<button type="button" aria-label="Більше гостей" (click)="stepGuests(1)">+</button>
+							<span id="adults-label">Дорослі</span>
+							<div class="stepper" role="group" aria-labelledby="adults-label">
+								<button type="button" aria-label="Менше дорослих" [disabled]="adults() <= 1" (click)="stepAdults(-1)">−</button>
+								<output>{{ adults() }}</output>
+								<button type="button" aria-label="Більше дорослих" (click)="stepAdults(1)">+</button>
 							</div>
 						</div>
+						<div class="field">
+							<span id="children-label">Діти</span>
+							<div class="stepper" role="group" aria-labelledby="children-label">
+								<button type="button" aria-label="Менше дітей" [disabled]="children() <= 0" (click)="stepChildren(-1)">−</button>
+								<output>{{ children() }}</output>
+								<button type="button" aria-label="Більше дітей" (click)="stepChildren(1)">+</button>
+							</div>
+						</div>
+						<label class="field">
+							Час заїзду
+							<input name="checkInTime" type="time" required [ngModel]="checkInTime()" (ngModelChange)="checkInTime.set($event)" />
+						</label>
+						<label class="field">
+							Час виїзду
+							<input name="checkOutTime" type="time" required [ngModel]="checkOutTime()" (ngModelChange)="checkOutTime.set($event)" />
+						</label>
 					</div>
 					<div class="chips" role="group" aria-label="Швидкий вибір ночей">
 						@for (n of NIGHT_CHOICES; track n) {
@@ -82,12 +98,15 @@
 						</div>
 					}
 					@if (freeRooms().length) {
+						@if (extraPlaces() > 0) {
+							<p class="hint">Додаткових місць: {{ extraPlaces() }} × {{ money(room()?.extraGuestPrice ?? 0) }} за ніч уже враховано в сумі.</p>
+						}
 						<div class="room-grid" role="radiogroup" aria-label="Вільні номери">
 							@for (r of freeRooms(); track r.id) {
 								<label class="room-option" [class.selected]="r.id === roomId()">
 									<input type="radio" class="sr-only" name="room" [value]="r.id" [ngModel]="roomId()" (ngModelChange)="roomId.set($event)" />
 									<span class="room-num">{{ r.number }}</span>
-									<span class="room-type">{{ r.type }} · до {{ guestsLabel(r.capacity) }}</span>
+									<span class="room-type">{{ r.type }} · до {{ guestsLabel(r.capacity) }}@if (r.extraGuests) { <small>(+{{ r.extraGuests }} дод. по {{ money(r.extraGuestPrice) }})</small> }</span>
 									<span class="room-price">{{ money(r.price) }} <small>/ ніч</small></span>
 									<span class="room-total">{{ money(r.price * nights()) }} за {{ nightsLabel(nights()) }}</span>
 								</label>
@@ -153,11 +172,43 @@
 						}
 					}
 					<details class="more">
-						<summary>Email і нотатки</summary>
+						<summary>Додатково: прейскурант, місце, нотатки</summary>
 						<div class="guest-grid">
 							<label class="field">
 								Email
 								<input name="email" type="email" maxlength="200" [ngModel]="email()" (ngModelChange)="email.set($event)" />
+							</label>
+							<label class="field">
+								Прейскурант
+								<input name="rate" maxlength="50" list="rate-list" placeholder="Стандартний" [ngModel]="rate()" (ngModelChange)="rate.set($event)" />
+								<datalist id="rate-list">
+									@for (r of RATES; track r) {
+										<option [value]="r"></option>
+									}
+								</datalist>
+							</label>
+							<div class="field">
+								<span id="bed-label">По місцях</span>
+								<div class="bed-row">
+									<label class="check">
+										<input name="byBed" type="checkbox" [ngModel]="byBed()" (ngModelChange)="byBed.set($event)" />
+										Бронь на окреме місце
+									</label>
+									<input
+										name="bedNumber"
+										type="number"
+										min="1"
+										step="1"
+										aria-label="Номер місця"
+										[disabled]="!byBed()"
+										[ngModel]="bedNumber()"
+										(ngModelChange)="bedNumber.set(+$event || 1)"
+									/>
+								</div>
+							</div>
+							<label class="field full">
+								Для покоївок
+								<textarea name="housekeepingNote" maxlength="300" placeholder="Що підготувати в номері: додаткове ліжко, дитяче ліжечко…" [ngModel]="housekeepingNote()" (ngModelChange)="housekeepingNote.set($event)"></textarea>
 							</label>
 							<label class="field full">
 								Нотатки
@@ -173,18 +224,22 @@
 					<h2>Підсумок</h2>
 					<dl>
 						<dt>Заїзд</dt>
-						<dd>{{ shortDate(start()) }}</dd>
+						<dd>{{ shortDate(start()) }}, {{ checkInTime() }}</dd>
 						<dt>Виїзд</dt>
-						<dd>{{ shortDate(end()) }}</dd>
+						<dd>{{ shortDate(end()) }}, {{ checkOutTime() }}</dd>
 						<dt>Ночей / гостей</dt>
 						<dd>{{ nights() }} / {{ guests() }}</dd>
+						@if (extraPlaces() > 0) {
+							<dt>Дод. місця</dt>
+							<dd>{{ extraPlaces() }} × {{ money(room()?.extraGuestPrice ?? 0) }}</dd>
+						}
 						<dt>Номер</dt>
 						<dd>{{ room() ? room()!.number + ' · ' + room()!.type : '—' }}</dd>
 					</dl>
 					<label class="field total">
 						Сума, ₴
 						<input name="total" type="number" min="0" inputmode="numeric" [ngModel]="total()" (ngModelChange)="setTotal($event)" />
-						<small>{{ nightsLabel(nights()) }} × {{ money(room()?.price ?? 0) }}</small>
+						<small>{{ nightsLabel(nights()) }} × {{ money(room()?.price ?? 0) }}@if (extraPlaces() > 0) { + {{ extraPlaces() }} × {{ money(room()?.extraGuestPrice ?? 0) }} }</small>
 					</label>
 					@if (canCollect && paidNow() > 0) {
 						<p class="paid-note">Оплата зараз: <b>{{ money(paidNow()) }}</b> · залишок {{ money(total() - paidNow()) }}</p>
@@ -196,6 +251,9 @@
 						<p class="error" role="alert">{{ error() }}</p>
 					}
 					<button class="button primary full" type="submit" [disabled]="saving() || !room()">{{ saving() ? 'Зберігаємо…' : 'Створити бронювання' }}</button>
+					@if (canChange && start() === today) {
+						<button class="button secondary full" type="button" [disabled]="saving() || !room()" (click)="submit(true)">Створити та поселити</button>
+					}
 				</div>
 			</aside>
 		</form>

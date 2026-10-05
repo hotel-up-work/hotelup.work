@@ -16,6 +16,8 @@ export interface Room {
 	beds: string;
 	area: number | null;
 	price: number;
+	extraGuests: number;
+	extraGuestPrice: number;
 	amenities: string[];
 	status: RoomStatus;
 	guest: string | null;
@@ -55,6 +57,8 @@ export interface RoomFormValue {
 	floor: number;
 	capacity: number;
 	price: number;
+	extraGuests: number;
+	extraGuestPrice: number;
 	area: number;
 }
 
@@ -63,6 +67,8 @@ export interface RoomTypeFormValue {
 	description: string;
 	capacity: number;
 	price: number;
+	extraGuests: number;
+	extraGuestPrice: number;
 }
 
 export type { RoomBlock, RoomStatus };

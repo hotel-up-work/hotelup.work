@@ -256,6 +256,30 @@ p {
 	}
 }
 
+.bed-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+
+	.check {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex: 1;
+		min-width: 0;
+	}
+
+	input[type='checkbox'] {
+		width: auto;
+		flex: none;
+	}
+
+	input[type='number'] {
+		width: 72px;
+		flex: none;
+	}
+}
+
 .stay-grid {
 	display: grid;
 	grid-template-columns: repeat(4, minmax(0, 1fr));

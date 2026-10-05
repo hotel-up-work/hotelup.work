@@ -26,6 +26,21 @@ export interface BookingInput {
 	submissionId?: string;
 	/** `guests` document id; the name and contacts above stay as a copy of the guest at booking time. */
 	guestId?: string;
+	/** Adults and children staying (`guests` is their sum). */
+	adults?: number;
+	children?: number;
+	/** Planned check-in / check-out time, `HH:MM`. */
+	checkInTime?: string;
+	checkOutTime?: string;
+	/** Price list the booking was made on (free text, informational). */
+	rate?: string;
+	/** Booked per bed, with the bed's number. */
+	byBed?: boolean;
+	bedNumber?: number;
+	/** People beyond the room's capacity, charged at the room's extra-guest price. */
+	extraGuests?: number;
+	/** Note for housekeeping. */
+	housekeepingNote?: string;
 }
 
 export interface BookingRecord extends BookingInput {
@@ -71,10 +86,24 @@ function toBooking(id: string, data: DocumentData): BookingRecord {
 		notes: str(data['notes']),
 		submissionId: str(data['submissionId']) || undefined,
 		guestId: str(data['guestId']) || undefined,
+		adults: typeof data['adults'] === 'number' ? data['adults'] : undefined,
+		children: typeof data['children'] === 'number' ? data['children'] : undefined,
+		checkInTime: str(data['checkInTime']) || undefined,
+		checkOutTime: str(data['checkOutTime']) || undefined,
+		rate: str(data['rate']) || undefined,
+		byBed: data['byBed'] === true ? true : undefined,
+		bedNumber: typeof data['bedNumber'] === 'number' ? data['bedNumber'] : undefined,
+		extraGuests: typeof data['extraGuests'] === 'number' ? data['extraGuests'] : undefined,
+		housekeepingNote: str(data['housekeepingNote']) || undefined,
 		lateCheckoutHour: typeof data['lateCheckoutHour'] === 'number' ? data['lateCheckoutHour'] : null,
 		plannedCheckOut: str(data['plannedCheckOut']) || undefined,
 		createdAt: (data['createdAt'] as Timestamp | undefined)?.toDate() ?? null,
 	};
+}
+
+/** Firestore rejects `undefined` field values, so optional booking fields that were not filled in are left out. */
+function definedOnly<T extends object>(fields: T): Partial<T> {
+	return Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined)) as Partial<T>;
 }
 
 /** `YYYY-MM-DD` plus `days` days (calendar days, no time zone). */
@@ -129,7 +158,7 @@ export class BookingsService {
 		const ref = doc(collection(firestore, 'hotels', hotelId, 'bookings'));
 		const batch = writeBatch(firestore);
 		batch.set(ref, {
-			...fields,
+			...definedOnly(fields),
 			...(submissionId ? { submissionId } : {}),
 			...(guestId ? { guestId } : {}),
 			createdAt: serverTimestamp(),

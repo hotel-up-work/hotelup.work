@@ -69,10 +69,6 @@ export class AppShellComponent {
 	/** Connection banner: only real hotels write to Firestore, so the demo never shows it. */
 	protected readonly syncState = this._sync.state;
 
-	constructor() {
-		this._sync.start();
-	}
-
 	readonly activeNav = input<string>('');
 	readonly housekeepingBadge = input<number | null>(null);
 	readonly greetingTitle = input('Добрий день, Олександре');

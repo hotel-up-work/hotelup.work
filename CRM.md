@@ -63,11 +63,11 @@ Defined in `src/app/shared/plan.ts` (`Plan` type, `PLANS`, `PLAN_PAGES`). A plan
 role allows it (`ROLE_PAGES`) **and** the hotel's plan includes it (`PLAN_PAGES`); checked with
 `isPageAvailable(role, plan, path)`. Plan never grants a role anything it could not do before.
 
-| Plan key     | Name       | Price (demo)      | Pages added                                                        | Roles that can be used |
+| Plan key     | Name       | Price (demo)| Pages added                                                        | Roles that can be used |
 | ------------ | ---------- | ----------------- | ------------------------------------------------------------------ | ---------------------- |
 | `start`      | Start      | Free              | `calendar`, `submissions`, `rooms`, `team`, `settings`             | owner, manager, reception, sales |
-| `pro`        | Pro        | €39 / month       | + `dashboard`, `guests`, `payments`, `housekeeping`, `messages`    | all 7 |
-| `enterprise` | Enterprise | €89 / month       | + `automations`, `sales`, `ai`                                      | all 7 |
+| `pro`        | Pro        | 799 грн / month or 7 999 грн / year | + `dashboard`, `guests`, `payments`, `housekeeping`, `messages`    | all 7 |
+| `enterprise` | Enterprise | 1 299 грн / month or 12 999 грн / year | + `automations`, `sales`, `ai`                                      | all 7 |
 
 Plan limits (`PLAN_ROOM_LIMIT`, `PLAN_STAFF_LIMIT`): Start — up to 10 rooms and 3 staff accounts;
 Pro — up to 30 rooms and 15 staff; Enterprise — unlimited rooms/staff, several hotels, priority
@@ -348,9 +348,9 @@ write; roles per hotel are not built yet.
 - `hotels/{hotelId}/bookings/{id}`: `roomId` (rooms doc id; the grid follows the room if it is
   renumbered), `roomNumber` (display copy), `guestName` (1–200; the phone when no name was given),
   `checkIn`, `checkOut` (`YYYY-MM-DD`, `checkOut > checkIn`; the room is free for the next stay from
-  the check-out day), `guests` (int 1–50, ≤ the room's capacity, checked in the client), `total`
+  the check-out day), `guests` (int 1–50, ≤ the room's capacity plus its extra places, checked in the client), `total`
   and `paid` (`0 ≤ paid ≤ total`), `status` (`pending | confirmed | checkedin | checkedout | cancelled`), optional
-  `phone`, `email`, `source`, `notes` (≤1000), `submissionId`, `plannedCheckOut` (original check-out after an early departure), `guestId` (the guest profile, see Guest data contract), `lateCheckoutHour` (12–23),
+  `phone`, `email`, `source`, `notes` (≤1000), `submissionId`, `plannedCheckOut` (original check-out after an early departure), `guestId` (the guest profile, see Guest data contract), `lateCheckoutHour` (12–23), and, set by the New booking page: `adults` (≥1) and `children` (≥0) that add up to `guests`, `checkInTime` / `checkOutTime` (`HH:MM`), `extraGuests` (people beyond capacity, 0–20), `rate` (price list name, ≤50, informational), `byBed` with `bedNumber` (1–50, informational: availability is still per room), `housekeepingNote` (≤300),
   `createdAt`, `updatedAt` (server time on every write). Bookings are never deleted.
 - Overlaps are prevented in the client (other active bookings and room blocks; a block's last day
   is inclusive). Rules cannot query, so two people booking the same room at the same moment can
@@ -413,12 +413,13 @@ sidebar next to Calendar and is the primary "Нове бронювання" butt
 
 | Section | Extra access rule |
 | --- | --- |
-| 1. Dates and guests: check-in, nights (stepper and 1/2/3/5/7 chips), check-out, guests | Same as page |
-| 2. Rooms: only rooms free for the whole stay, big enough and not blocked, cheapest first, the first one preselected; type filter | Same as page |
-| 3. Guest: phone (focused on open), name, source chips, optional email and notes; a returning guest (phone found in earlier bookings) can be filled in with one click | Same as page |
+| 1. Dates and guests: check-in, nights (stepper and 1/2/3/5/7 chips), check-out, check-in and check-out time (default 14:00 / 12:00), adults and children | Same as page |
+| 2. Rooms: only rooms free for the whole stay, big enough (capacity plus the room's extra places) and not blocked, cheapest first, the first one preselected; type filter. People beyond capacity are extra places, charged per night at the room's extra-guest price and added to the total | Same as page |
+| 3. Guest: phone (focused on open), name, source chips, optional email, price list (free text with suggestions), per-bed booking with the bed number, a note for housekeeping and notes; a returning guest (phone found in earlier bookings) can be filled in with one click | Same as page |
 | **Payment now (none / 50% / full)** | **`collectPayment` + `guestBill`** — others book with nothing paid |
 | Summary: dates, room, editable total (nights × price by default), create button | Same as page |
 
+- "Створити та поселити" (roles with `changeBooking`, only when check-in is today) creates the booking already `checkedin`.
 - Enter in any field creates the booking; after saving, "Нове бронювання" returns a clean form that
   keeps the dates and source so several guests can be booked in a row; "Відкрити календар" shows it.
 - Writes the same `hotels/{hotelId}/bookings` document as the Calendar (see Booking data contract),
@@ -500,11 +501,11 @@ Purpose: manage room types, pricing, live status, and per-room configuration.
 write; roles per hotel are not built yet.
 
 - `hotels/{hotelId}/roomTypes/{id}`: `name` (≤50, unique per hotel, checked in the client),
-  `capacity` (int 1–50), `price` (≥0), optional `description`, `beds`, `area`, `amenities[]`.
+  `capacity` (int 1–50), `price` (≥0), optional `extraGuests` (int 0–20: most people allowed beyond capacity) and `extraGuestPrice` (≥0: cost of each extra person per night), optional `description`, `beds`, `area`, `amenities[]`.
   A type gives new rooms their defaults; changing a room's type copies the type's beds and
   amenities.
 - `hotels/{hotelId}/rooms/{id}`: `number` (≤8, unique per hotel, checked in the client),
-  `type` (type name), `floor` (int), `capacity` (int 1–50), `price` (≥0), `status`
+  `type` (type name), `floor` (int), `capacity` (int 1–50), `price` (≥0), optional `extraGuests`/`extraGuestPrice` (copied from the type, editable per room), `status`
   (`ready | occupied | needs-cleaning | cleaning | unavailable`), optional `beds`, `area`,
   `amenities[]`, `block` (`{reason, start, end, note}` with ISO dates, end ≥ start; set only
   while `unavailable`), `lastCleanedAt` (set when cleaning finishes or status goes back to

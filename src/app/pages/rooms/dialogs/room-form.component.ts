@@ -38,10 +38,10 @@ export class RoomFormComponent implements OnInit {
 		this.typeName.set(initial || (this.room?.type ?? this.types[0]?.name ?? ''));
 	}
 
-	protected async submit(number: string, floor: number, capacity: number, price: number, area: number): Promise<void> {
+	protected async submit(number: string, floor: number, capacity: number, price: number, area: number, extraGuests: number, extraGuestPrice: number): Promise<void> {
 		this.saving.set(true);
 		this.error.set('');
-		const error = await this.save({ number, type: this.typeName(), floor, capacity, price, area });
+		const error = await this.save({ number, type: this.typeName(), floor, capacity, price, area, extraGuests, extraGuestPrice });
 		this.saving.set(false);
 		if (error) this.error.set(error);
 		else this.close();

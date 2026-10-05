@@ -33,6 +33,10 @@ export interface RoomInput {
 	beds: string;
 	area: number | null;
 	price: number;
+	/** Most people allowed beyond `capacity`. */
+	extraGuests: number;
+	/** Cost of each extra person per night. */
+	extraGuestPrice: number;
 	amenities: string[];
 }
 
@@ -51,6 +55,10 @@ export interface RoomTypeInput {
 	beds: string;
 	area: number | null;
 	price: number;
+	/** Most people allowed beyond `capacity`. */
+	extraGuests: number;
+	/** Cost of each extra person per night. */
+	extraGuestPrice: number;
 	amenities: string[];
 }
 
@@ -65,6 +73,8 @@ export interface RoomPatch {
 	beds?: string;
 	area?: number | null;
 	price?: number;
+	extraGuests?: number;
+	extraGuestPrice?: number;
 	amenities?: string[];
 	status?: RoomStatus;
 	block?: RoomBlock | null;
@@ -90,6 +100,8 @@ function toRoom(id: string, data: DocumentData): RoomRecord {
 		beds: str(data['beds']),
 		area: typeof data['area'] === 'number' ? data['area'] : null,
 		price: num(data['price'], 0),
+		extraGuests: num(data['extraGuests'], 0),
+		extraGuestPrice: num(data['extraGuestPrice'], 0),
 		amenities: strings(data['amenities']),
 		status: ROOM_STATUSES.includes(data['status']) ? data['status'] : 'ready',
 		block: block && typeof block === 'object' ? { reason: str(block.reason), start: str(block.start), end: str(block.end), note: str(block.note) } : null,
@@ -106,6 +118,8 @@ function toRoomType(id: string, data: DocumentData): RoomTypeRecord {
 		beds: str(data['beds']),
 		area: typeof data['area'] === 'number' ? data['area'] : null,
 		price: num(data['price'], 0),
+		extraGuests: num(data['extraGuests'], 0),
+		extraGuestPrice: num(data['extraGuestPrice'], 0),
 		amenities: strings(data['amenities']),
 	};
 }

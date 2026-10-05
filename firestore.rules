@@ -23,6 +23,15 @@ service cloud.firestore {
       function optAmenities(data) {
         return !('amenities' in data) || (data.amenities is list && data.amenities.size() <= 40);
       }
+      // Optional `HH:MM` time of day.
+      function optTime(data, key) {
+        return !(key in data) || (data[key] is string && data[key].matches('^([01][0-9]|2[0-3]):[0-5][0-9]$'));
+      }
+      // Extra people beyond capacity and the per-night cost of each; both optional (older documents lack them).
+      function optExtraGuests(data) {
+        return (!('extraGuests' in data) || (data.extraGuests is int && data.extraGuests >= 0 && data.extraGuests <= 20))
+          && (!('extraGuestPrice' in data) || (data.extraGuestPrice is number && data.extraGuestPrice >= 0 && data.extraGuestPrice <= 1000000));
+      }
       function isDate(value) {
         return value is string && value.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
       }
@@ -43,13 +52,14 @@ service cloud.firestore {
         allow read, delete: if isHotelOwner();
         allow create, update: if isHotelOwner()
           && room().keys().hasAll(['number', 'type', 'floor', 'capacity', 'price', 'status'])
-          && room().keys().hasOnly(['number', 'type', 'floor', 'capacity', 'beds', 'area', 'price', 'amenities', 'status',
+          && room().keys().hasOnly(['number', 'type', 'floor', 'capacity', 'beds', 'area', 'price', 'extraGuests', 'extraGuestPrice', 'amenities', 'status',
                                     'block', 'lastCleanedAt', 'createdAt', 'updatedAt'])
           && room().number is string && room().number.size() >= 1 && room().number.size() <= 8
           && room().type is string && room().type.size() >= 1 && room().type.size() <= 50
           && room().floor is int && room().floor >= -5 && room().floor <= 200
           && room().capacity is int && room().capacity >= 1 && room().capacity <= 50
           && room().price is number && room().price >= 0 && room().price <= 1000000
+          && optExtraGuests(room())
           && room().status in ['ready', 'occupied', 'needs-cleaning', 'cleaning', 'unavailable']
           && optText(room(), 'beds', 100)
           && optArea(room())
@@ -66,10 +76,11 @@ service cloud.firestore {
         allow read, delete: if isHotelOwner();
         allow create, update: if isHotelOwner()
           && roomType().keys().hasAll(['name', 'capacity', 'price'])
-          && roomType().keys().hasOnly(['name', 'description', 'capacity', 'beds', 'area', 'price', 'amenities', 'createdAt'])
+          && roomType().keys().hasOnly(['name', 'description', 'capacity', 'beds', 'area', 'price', 'extraGuests', 'extraGuestPrice', 'amenities', 'createdAt'])
           && roomType().name is string && roomType().name.size() >= 1 && roomType().name.size() <= 50
           && roomType().capacity is int && roomType().capacity >= 1 && roomType().capacity <= 50
           && roomType().price is number && roomType().price >= 0 && roomType().price <= 1000000
+          && optExtraGuests(roomType())
           && optText(roomType(), 'description', 500)
           && optText(roomType(), 'beds', 100)
           && optArea(roomType())
@@ -85,7 +96,8 @@ service cloud.firestore {
                                           'total', 'paid', 'status', 'createdAt', 'updatedAt'])
             && booking().keys().hasOnly(['roomId', 'roomNumber', 'guestName', 'phone', 'email', 'checkIn', 'checkOut',
                                          'guests', 'total', 'paid', 'status', 'source', 'notes', 'submissionId',
-                                         'lateCheckoutHour', 'plannedCheckOut', 'guestId', 'createdAt', 'updatedAt'])
+                                         'lateCheckoutHour', 'plannedCheckOut', 'guestId', 'adults', 'children', 'checkInTime', 'checkOutTime',
+                                         'rate', 'byBed', 'bedNumber', 'extraGuests', 'housekeepingNote', 'createdAt', 'updatedAt'])
             && booking().roomId is string && booking().roomId.size() >= 1 && booking().roomId.size() <= 40
             && booking().roomNumber is string && booking().roomNumber.size() >= 1 && booking().roomNumber.size() <= 8
             && booking().guestName is string && booking().guestName.size() >= 1 && booking().guestName.size() <= 200
@@ -101,6 +113,15 @@ service cloud.firestore {
             && optText(booking(), 'notes', 1000)
             && optText(booking(), 'submissionId', 40)
             && optText(booking(), 'guestId', 40)
+            && (!('adults' in booking()) || (booking().adults is int && booking().adults >= 1 && booking().adults <= 50))
+            && (!('children' in booking()) || (booking().children is int && booking().children >= 0 && booking().children <= 50))
+            && (!('extraGuests' in booking()) || (booking().extraGuests is int && booking().extraGuests >= 0 && booking().extraGuests <= 20))
+            && optTime(booking(), 'checkInTime')
+            && optTime(booking(), 'checkOutTime')
+            && optText(booking(), 'rate', 50)
+            && (!('byBed' in booking()) || booking().byBed is bool)
+            && (!('bedNumber' in booking()) || (booking().bedNumber is int && booking().bedNumber >= 1 && booking().bedNumber <= 50))
+            && optText(booking(), 'housekeepingNote', 300)
             // Original check-out, kept when an early check-out shortens the stay.
             && (!('plannedCheckOut' in booking()) || (isDate(booking().plannedCheckOut) && booking().plannedCheckOut > booking().checkOut))
             && (!('lateCheckoutHour' in booking()) || booking().lateCheckoutHour == null

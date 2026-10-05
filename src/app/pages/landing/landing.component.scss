@@ -1755,6 +1755,13 @@ h3 {
 	}
 }
 
+.price-card .yearly {
+	min-height: 20px;
+	margin: -14px 0 20px;
+	font-size: 13px;
+	color: var(--muted);
+}
+
 .price {
 	font-size: 47px;
 	font-weight: 700;

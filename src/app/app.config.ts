@@ -15,6 +15,7 @@ import {
 } from '@wawjs/ngx-default';
 import { provideNgxCore } from '@wawjs/ngx-core';
 import { provideTranslate } from '@wawjs/ngx-translate';
+import { provideNgxHttp } from '@wawjs/ngx-http';
 import { provideNgxUi } from '@wawjs/ngx-ui';
 import { environment } from '../environments/environment';
 import { routes } from './app.routes';
@@ -43,6 +44,16 @@ export const appConfig: ApplicationConfig = {
 		}),
 		provideNgxDefaultSeo({
 			siteUrl: companyProfile.siteUrl,
+		}),
+		// Connectivity probes hit the services the app depends on (Firestore, then a generic 204), not just "any internet".
+		provideNgxHttp({
+			network: {
+				endpoints: ['https://firestore.googleapis.com/', 'https://www.gstatic.com/generate_204'],
+				intervalMs: 15_000,
+				timeoutMs: 4_000,
+				goodLatencyMs: 400,
+				maxConsecutiveFails: 2,
+			},
 		}),
 		provideNgxUi(),
 		provideRouter(routes),

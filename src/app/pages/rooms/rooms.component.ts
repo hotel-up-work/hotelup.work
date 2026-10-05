@@ -22,6 +22,8 @@ type ViewMode = 'cards' | 'list';
 const DEMO_TYPES: RoomType[] = [
 	{
 		id: 'standard',
+		extraGuests: 0,
+		extraGuestPrice: 0,
 		name: 'Стандарт',
 		description: '',
 		price: 1200,
@@ -32,6 +34,8 @@ const DEMO_TYPES: RoomType[] = [
 	},
 	{
 		id: 'superior',
+		extraGuests: 1,
+		extraGuestPrice: 300,
 		name: 'Покращений',
 		description: '',
 		price: 1500,
@@ -42,6 +46,8 @@ const DEMO_TYPES: RoomType[] = [
 	},
 	{
 		id: 'lux',
+		extraGuests: 1,
+		extraGuestPrice: 400,
 		name: 'Люкс',
 		description: '',
 		price: 1600,
@@ -52,6 +58,8 @@ const DEMO_TYPES: RoomType[] = [
 	},
 	{
 		id: 'apartment',
+		extraGuests: 2,
+		extraGuestPrice: 350,
 		name: 'Апартаменти',
 		description: '',
 		price: 2200,
@@ -90,6 +98,8 @@ function buildRooms(): Room[] {
 			beds: base.beds,
 			area: base.area,
 			price: base.price,
+			extraGuests: base.extraGuests,
+			extraGuestPrice: base.extraGuestPrice,
 			amenities: base.amenities,
 			status: 'occupied',
 			guest: GUEST_NAMES[gi++ % GUEST_NAMES.length],
@@ -177,6 +187,13 @@ function withStays(records: RoomRecord[], bookings: BookingRecord[], today: stri
 	});
 }
 
+/** Validation message for the "extra people" inputs, or null when they are fine. */
+function extraGuestsError(extraGuests: number, extraGuestPrice: number): string | null {
+	if (!Number.isInteger(extraGuests) || extraGuests < 0 || extraGuests > 20) return 'Додаткові місця: ціле число від 0 до 20.';
+	if (!(extraGuestPrice >= 0)) return 'Вкажіть ціну за додаткового гостя (0, якщо безкоштовно).';
+	return null;
+}
+
 function toRoom(r: RoomRecord): Room {
 	return {
 		id: r.id,
@@ -187,6 +204,8 @@ function toRoom(r: RoomRecord): Room {
 		beds: r.beds,
 		area: r.area,
 		price: r.price,
+		extraGuests: r.extraGuests,
+		extraGuestPrice: r.extraGuestPrice,
 		amenities: r.amenities,
 		status: r.status,
 		guest: null,
@@ -654,7 +673,7 @@ export class RoomsComponent {
 		this.toast('Перехід до прибирання · Демо');
 	}
 
-	private async addRoom({ number, type, floor, capacity, price, area }: RoomFormValue): Promise<string | null> {
+	private async addRoom({ number, type, floor, capacity, price, area, extraGuests, extraGuestPrice }: RoomFormValue): Promise<string | null> {
 		const n = number.trim();
 		const typeName = type.trim();
 		if (!n) return 'Вкажіть номер або назву.';
@@ -663,6 +682,8 @@ export class RoomsComponent {
 		if (!Number.isInteger(floor)) return 'Вкажіть поверх цілим числом.';
 		if (!Number.isInteger(capacity) || capacity < 1) return 'Місткість має бути щонайменше 1.';
 		if (!(price >= 0)) return 'Вкажіть базову ціну.';
+		const extrasError = extraGuestsError(extraGuests, extraGuestPrice);
+		if (extrasError) return extrasError;
 		if (this.roomLimitReached()) return `Ліміт номерів на цьому тарифі: ${this.roomLimit}. Перейдіть на вищий тариф, щоб додати більше.`;
 		const base = this.types().find((t) => sameText(t.name, typeName));
 		if (!base) return 'Оберіть тип номера зі списку.';
@@ -674,6 +695,8 @@ export class RoomsComponent {
 			beds: base.beds,
 			area: area > 0 ? area : base.area,
 			price,
+			extraGuests,
+			extraGuestPrice,
 			amenities: base.amenities,
 		};
 		if (this.live) return this._write(() => this._roomsService.addRoom(this.hotelId()!, input), `Номер ${n} додано`);
@@ -682,13 +705,15 @@ export class RoomsComponent {
 		return null;
 	}
 
-	private async addType({ name, description, capacity, price }: RoomTypeFormValue): Promise<string | null> {
+	private async addType({ name, description, capacity, price, extraGuests, extraGuestPrice }: RoomTypeFormValue): Promise<string | null> {
 		const n = name.trim();
 		if (!n) return 'Вкажіть назву типу.';
 		if (this.types().some((t) => sameText(t.name, n))) return `Тип «${n}» уже існує.`;
 		if (!Number.isInteger(capacity) || capacity < 1) return 'Місткість має бути щонайменше 1.';
 		if (!(price >= 0)) return 'Вкажіть базову ціну.';
-		const input = { name: n, description: description.trim(), capacity, price, beds: '', area: null, amenities: [] };
+		const extrasError = extraGuestsError(extraGuests, extraGuestPrice);
+		if (extrasError) return extrasError;
+		const input = { name: n, description: description.trim(), capacity, price, extraGuests, extraGuestPrice, beds: '', area: null, amenities: [] };
 		if (this.live) return this._write(() => this._roomsService.addType(this.hotelId()!, input), `Тип «${n}» створено`);
 		this.types.update((types) => [...types, { ...input, id: n }]);
 		this.toast(`Тип «${n}» створено`);
@@ -717,13 +742,15 @@ export class RoomsComponent {
 		return this._saveRoom(number, patch, 'Статус оновлено', demo);
 	}
 
-	private async editRoom(number: string, { type, floor, capacity, price, area }: RoomFormValue): Promise<string | null> {
+	private async editRoom(number: string, { type, floor, capacity, price, area, extraGuests, extraGuestPrice }: RoomFormValue): Promise<string | null> {
 		const room = this.room(number);
 		if (!room) return 'Номер не знайдено. Можливо, його вже видалили.';
 		if (!Number.isInteger(floor)) return 'Вкажіть поверх цілим числом.';
 		if (!Number.isInteger(capacity) || capacity < 1) return 'Місткість має бути щонайменше 1.';
 		if (!(price >= 0)) return 'Вкажіть ціну.';
-		const patch: RoomPatch = { type, floor, capacity, price, area: area > 0 ? area : null };
+		const extrasError = extraGuestsError(extraGuests, extraGuestPrice);
+		if (extrasError) return extrasError;
+		const patch: RoomPatch = { type, floor, capacity, price, extraGuests, extraGuestPrice, area: area > 0 ? area : null };
 		// A new type brings its beds and amenities; capacity and price come from the form.
 		const base = type !== room.type ? this.typeByName(type) : undefined;
 		if (base) {

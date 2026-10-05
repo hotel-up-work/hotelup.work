@@ -26,6 +26,11 @@ interface Created {
 const SOURCES = ['Телефон', 'Walk-in', 'Пряме бронювання', 'Сайт', 'Instagram', 'Google', 'Booking.com', 'Інше'];
 const NIGHT_CHOICES = [1, 2, 3, 5, 7];
 const MAX_NIGHTS = 90;
+const DEFAULT_CHECK_IN = '14:00';
+const DEFAULT_CHECK_OUT = '12:00';
+/** Suggestions for the price list field; any text is accepted. */
+const RATES = ['Стандартний', 'Rack rate', 'Корпоративний', 'Акційний', 'Для сайту'];
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 const money = (n: number) => new Intl.NumberFormat('uk-UA').format(n) + ' ₴';
 const shortDate = (s: string) =>
@@ -69,6 +74,7 @@ export class QuickBookingComponent {
 	});
 
 	protected readonly SOURCES = SOURCES;
+	protected readonly RATES = RATES;
 	protected readonly NIGHT_CHOICES = NIGHT_CHOICES;
 	protected readonly money = money;
 	protected readonly shortDate = shortDate;
@@ -91,7 +97,12 @@ export class QuickBookingComponent {
 	// Stay
 	protected readonly start = signal(this.today);
 	protected readonly nights = signal(1);
-	protected readonly guests = signal(2);
+	protected readonly adults = signal(2);
+	protected readonly children = signal(0);
+	/** Everyone staying, adults and children. */
+	protected readonly guests = computed(() => this.adults() + this.children());
+	protected readonly checkInTime = signal(DEFAULT_CHECK_IN);
+	protected readonly checkOutTime = signal(DEFAULT_CHECK_OUT);
 	protected readonly typeFilter = signal('all');
 	protected readonly roomId = signal('');
 	/** null = nights × room price. */
@@ -101,6 +112,10 @@ export class QuickBookingComponent {
 	protected readonly name = signal('');
 	protected readonly email = signal('');
 	protected readonly notes = signal('');
+	protected readonly housekeepingNote = signal('');
+	protected readonly rate = signal('');
+	protected readonly byBed = signal(false);
+	protected readonly bedNumber = signal(1);
 	protected readonly source = signal(SOURCES[0]);
 	protected readonly payment = signal<Payment>('none');
 	protected readonly method = signal<PaymentMethod>('cash');
@@ -125,7 +140,7 @@ export class QuickBookingComponent {
 		const guests = this.guests();
 		const type = this.typeFilter();
 		return this.rooms()
-			.filter((r) => (type === 'all' || r.type === type) && r.capacity >= guests && roomIsFree(r, this._bookings(), start, end))
+			.filter((r) => (type === 'all' || r.type === type) && r.capacity + r.extraGuests >= guests && roomIsFree(r, this._bookings(), start, end))
 			.sort((a, b) => a.price - b.price || a.number.localeCompare(b.number, 'uk', { numeric: true }));
 	});
 
@@ -137,7 +152,12 @@ export class QuickBookingComponent {
 	});
 
 	protected readonly room = computed(() => this.freeRooms().find((r) => r.id === this.roomId()) ?? null);
-	protected readonly autoTotal = computed(() => this.nights() * (this.room()?.price ?? 0));
+	/** People beyond the room's capacity; each is charged the room's extra-guest price per night. */
+	protected readonly extraPlaces = computed(() => {
+		const room = this.room();
+		return room ? Math.min(room.extraGuests, Math.max(0, this.guests() - room.capacity)) : 0;
+	});
+	protected readonly autoTotal = computed(() => this.nights() * ((this.room()?.price ?? 0) + this.extraPlaces() * (this.room()?.extraGuestPrice ?? 0)));
 	protected readonly total = computed(() => this.totalOverride() ?? this.autoTotal());
 	protected readonly paidNow = computed(() => {
 		if (!this.canCollect) return 0;
@@ -243,11 +263,14 @@ export class QuickBookingComponent {
 		if (from) this.start.set(from);
 		if (from && to && to > from) this.nights.set(Math.min(MAX_NIGHTS, nightsBetween(from, to)));
 		const g = Number(guests);
-		if (Number.isInteger(g) && g >= 1) this.guests.set(Math.min(g, 50));
+		if (Number.isInteger(g) && g >= 1) this.adults.set(Math.min(g, 50));
 		const room = this.rooms().find((r) => r.number === roomNumber);
 		if (room) {
 			this.typeFilter.set('all');
-			this.guests.update((current) => Math.min(current, room.capacity));
+			if (this.guests() > room.capacity + room.extraGuests) {
+				this.children.set(0);
+				this.adults.set(Math.min(this.adults(), room.capacity + room.extraGuests));
+			}
 			this.roomId.set(room.id);
 		}
 	}
@@ -284,8 +307,12 @@ export class QuickBookingComponent {
 		this.setNights(this.nights() + delta);
 	}
 
-	protected stepGuests(delta: number): void {
-		this.guests.update((g) => Math.min(50, Math.max(1, g + delta)));
+	protected stepAdults(delta: number): void {
+		this.adults.update((a) => Math.min(50, Math.max(1, a + delta)));
+	}
+
+	protected stepChildren(delta: number): void {
+		this.children.update((c) => Math.min(50, Math.max(0, c + delta)));
 	}
 
 	protected setTotal(value: unknown): void {
@@ -299,7 +326,8 @@ export class QuickBookingComponent {
 		if (known.email && !this.email()) this.email.set(known.email);
 	}
 
-	protected async submit(): Promise<void> {
+	/** `checkInNow` also marks the guest as checked in (desk check-in on the arrival day). */
+	protected async submit(checkInNow = false): Promise<void> {
 		if (this.saving() || !this.ready()) return;
 		const hotelId = this.hotelId()!;
 		const room = this.room();
@@ -307,6 +335,10 @@ export class QuickBookingComponent {
 		const phone = this.phone().trim();
 		if (!name && !phone) return this.error.set('Вкажіть телефон або ім’я гостя.');
 		if (!room) return this.error.set('Оберіть номер: на ці дати вільних номерів немає.');
+		if (!TIME.test(this.checkInTime()) || !TIME.test(this.checkOutTime())) return this.error.set('Вкажіть час заїзду та виїзду.');
+		if (this.byBed() && !(Number.isInteger(this.bedNumber()) && this.bedNumber() >= 1 && this.bedNumber() <= room.capacity)) {
+			return this.error.set(`Місце має бути від 1 до ${room.capacity}.`);
+		}
 		// Another tab or colleague may have taken the room since the list was drawn.
 		if (!roomIsFree(room, this._bookings(), this.start(), this.end())) return this.error.set(`Номер ${room.number} уже зайнятий на ці дати. Оберіть інший.`);
 		const total = Math.max(0, Math.round(this.total()));
@@ -321,9 +353,17 @@ export class QuickBookingComponent {
 			guests: this.guests(),
 			total,
 			paid: this.paidNow(),
-			status: this.canChange ? 'confirmed' : 'pending',
+			status: this.canChange ? (checkInNow ? 'checkedin' : 'confirmed') : 'pending',
 			source: this.source(),
 			notes: this.notes().trim(),
+			adults: this.adults(),
+			children: this.children(),
+			checkInTime: this.checkInTime(),
+			checkOutTime: this.checkOutTime(),
+			...(this.extraPlaces() > 0 ? { extraGuests: this.extraPlaces() } : {}),
+			...(this.rate().trim() ? { rate: this.rate().trim() } : {}),
+			...(this.byBed() ? { byBed: true, bedNumber: this.bedNumber() } : {}),
+			...(this.housekeepingNote().trim() ? { housekeepingNote: this.housekeepingNote().trim() } : {}),
 		};
 		this.error.set('');
 		this.saving.set(true);
@@ -352,7 +392,11 @@ export class QuickBookingComponent {
 		this.name.set('');
 		this.email.set('');
 		this.notes.set('');
-		this.guests.set(2);
+		this.adults.set(2);
+		this.children.set(0);
+		this.byBed.set(false);
+		this.bedNumber.set(1);
+		this.housekeepingNote.set('');
 		this.totalOverride.set(null);
 		this.payment.set('none');
 		this.error.set('');

@@ -4,7 +4,7 @@
 	<h2>{{ room ? 'Редагувати номер ' + room.number : 'Додати номер' }}</h2>
 	<form
 		class="crm-form"
-		(submit)="$event.preventDefault(); submit(numberInput.value, floorInput.valueAsNumber, capacityInput.valueAsNumber, priceInput.valueAsNumber, areaInput.valueAsNumber)"
+		(submit)="$event.preventDefault(); submit(numberInput.value, floorInput.valueAsNumber, capacityInput.valueAsNumber, priceInput.valueAsNumber, areaInput.valueAsNumber, extraGuestsInput.valueAsNumber, extraPriceInput.valueAsNumber)"
 	>
 		<label [class.full]="!!room">
 			Номер / назва
@@ -35,6 +35,14 @@
 			<input #capacityInput name="capacity" type="number" min="1" step="1" [value]="room?.capacity ?? d?.capacity ?? 2" />
 		</label>
 		<label>Базова ціна, ₴<input #priceInput name="price" type="number" min="0" [value]="room?.price ?? d?.price ?? 1600" /></label>
+		<label>
+			Додаткові місця (макс. гостей понад місткість)
+			<input #extraGuestsInput name="extraGuests" type="number" min="0" max="20" step="1" [value]="room?.extraGuests ?? d?.extraGuests ?? 0" />
+		</label>
+		<label>
+			Ціна за додаткового гостя, ₴ / ніч
+			<input #extraPriceInput name="extraGuestPrice" type="number" min="0" [value]="room?.extraGuestPrice ?? d?.extraGuestPrice ?? 0" />
+		</label>
 		<label>
 			Площа, м² (необовʼязково)
 			<input #areaInput name="area" type="number" min="1" [value]="room ? (room.area ?? '') : (d?.area ?? '')" />

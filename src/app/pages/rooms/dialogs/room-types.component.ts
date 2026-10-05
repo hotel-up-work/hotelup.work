@@ -13,12 +13,14 @@ const money = (n: number) => new Intl.NumberFormat('uk-UA').format(n) + ' ₴';
 				<h2>Створити тип номера</h2>
 				<form
 					class="crm-form"
-					(submit)="$event.preventDefault(); submit(nameInput.value, descInput.value, capacityInput.valueAsNumber, priceInput.valueAsNumber)"
+					(submit)="$event.preventDefault(); submit(nameInput.value, descInput.value, capacityInput.valueAsNumber, priceInput.valueAsNumber, extraGuestsInput.valueAsNumber, extraPriceInput.valueAsNumber)"
 				>
 					<label class="full">Назва<input #nameInput name="name" required maxlength="50" placeholder="Люкс" /></label>
 					<label class="full">Опис<textarea #descInput name="desc" maxlength="500" placeholder="Просторий номер для двох гостей."></textarea></label>
 					<label>Місткість за замовчуванням<input #capacityInput name="capacity" type="number" min="1" step="1" value="2" /></label>
 					<label>Базова ціна, ₴<input #priceInput name="price" type="number" min="0" value="1600" /></label>
+					<label>Додаткові місця (макс. гостей понад місткість)<input #extraGuestsInput name="extraGuests" type="number" min="0" max="20" step="1" value="0" /></label>
+					<label>Ціна за додаткового гостя, ₴ / ніч<input #extraPriceInput name="extraGuestPrice" type="number" min="0" value="0" /></label>
 					@if (error()) {
 						<p class="full crm-error" role="alert">{{ error() }}</p>
 					}
@@ -78,10 +80,10 @@ export class RoomTypesComponent implements OnInit {
 		this.adding.set(true);
 	}
 
-	protected async submit(name: string, description: string, capacity: number, price: number): Promise<void> {
+	protected async submit(name: string, description: string, capacity: number, price: number, extraGuests: number, extraGuestPrice: number): Promise<void> {
 		this.saving.set(true);
 		this.error.set('');
-		const error = await this.addType({ name, description, capacity, price });
+		const error = await this.addType({ name, description, capacity, price, extraGuests, extraGuestPrice });
 		this.saving.set(false);
 		if (error) this.error.set(error);
 		else if (this.afterAdd) this.afterAdd(name.trim());

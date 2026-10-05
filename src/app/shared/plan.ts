@@ -9,6 +9,8 @@ export interface PlanInfo {
 	name: string;
 	price: string;
 	period: string;
+	/** Yearly price line, e.g. "7 999 грн / рік"; empty for the free plan. */
+	yearly: string;
 	tagline: string;
 	limits: string;
 	/** Short "what you get" list for plan cards. */
@@ -21,7 +23,8 @@ export const PLANS: Record<Plan, PlanInfo> = {
 	start: {
 		key: 'start',
 		name: 'Start',
-		price: '€0',
+		price: '0 грн',
+		yearly: '',
 		period: 'назавжди',
 		tagline: 'Календар і заявки з ваших сайтів.',
 		limits: 'До 10 номерів · до 3 працівників',
@@ -31,7 +34,8 @@ export const PLANS: Record<Plan, PlanInfo> = {
 	pro: {
 		key: 'pro',
 		name: 'Pro',
-		price: '€39',
+		price: '799 грн',
+		yearly: '7 999 грн / рік',
 		period: '/ місяць',
 		tagline: 'Щоденна робота всього готелю.',
 		limits: 'До 30 номерів · до 15 працівників',
@@ -42,7 +46,8 @@ export const PLANS: Record<Plan, PlanInfo> = {
 	enterprise: {
 		key: 'enterprise',
 		name: 'Enterprise',
-		price: '€89',
+		price: '1 299 грн',
+		yearly: '12 999 грн / рік',
 		period: '/ місяць',
 		tagline: 'Автоматизації, аналітика та AI.',
 		limits: 'Без обмежень номерів і працівників',
