@@ -104,6 +104,8 @@
 							[style.grid-row]="row.row"
 							[style.grid-column]="ci + 2"
 							(click)="onDayCellClick(row.room.number, d)"
+							(mouseenter)="showGhost(row.room.number, d)"
+							(mouseleave)="hideGhost()"
 							(dragover)="onDragOver($event)"
 							(drop)="onDrop($event, row.room.number, d)"
 						></div>
@@ -112,6 +114,19 @@
 			}
 			@for (blk of blockedOverlays(); track blk.room + blk.start) {
 				<div class="cal-blocked" [style.grid-row]="blk.row" [style.grid-column]="blk.colStart + ' / ' + blk.colEnd">Недоступно<br />{{ blk.reason }}</div>
+			}
+			@if (ghostBlock(); as g) {
+				<div
+					class="booking-block ghost"
+					aria-hidden="true"
+					[style.grid-row]="g.row"
+					[style.grid-column]="g.colStart + ' / ' + g.colEnd"
+					[style.margin-left]="'calc(4px + ' + g.insetLeft + '%)'"
+					[style.margin-right]="'calc(4px + ' + g.insetRight + '%)'"
+				>
+					<b>+ Бронювання</b>
+					<div class="bb-meta"><span>{{ dayNum(g.start) }}–{{ dayNum(g.end) }} · 2 гост.</span></div>
+				</div>
 			}
 			@for (blk of bookingBlocks(); track blk.booking.id) {
 				<div

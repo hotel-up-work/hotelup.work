@@ -617,19 +617,20 @@ dialog {
 	min-height: 56px;
 	position: relative;
 	background: var(--white);
+}
 
-	&:hover:not(.has-block)::after {
-		content: '+ Бронювання';
-		position: absolute;
-		inset: 6px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 9px;
-		color: #a98a49;
-		border: 1px dashed #d9c193;
-		border-radius: 6px;
-		background: var(--white);
+// The hover preview of a new booking: a block in the same place and size as the real one, drawn as an outline.
+.booking-block.ghost {
+	z-index: 2;
+	pointer-events: none;
+	cursor: default;
+	background: transparent;
+	border: 1px dashed var(--gold);
+	color: var(--gold-ink, #8b6c30);
+
+	.bb-meta {
+		color: inherit;
+		opacity: 0.8;
 	}
 }
 

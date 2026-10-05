@@ -360,6 +360,42 @@ export class CalendarComponent {
 		return blocks;
 	});
 
+	/** The day cell under the pointer; a click there starts a one-night booking. */
+	private readonly _ghost = signal<{ room: string; date: string } | null>(null);
+
+	/** What that booking would look like: placed like a real block (check-in 14:00, check-out 11:00), so the hover and the result match. */
+	protected readonly ghostBlock = computed(() => {
+		const ghost = this._ghost();
+		if (!ghost) return null;
+		const dates = this.dateRange();
+		const row = this.gridRows().find((r) => r.kind === 'room' && r.room.number === ghost.room)?.row;
+		if (row === undefined) return null;
+		const end = addDays(ghost.date, 1);
+		const rawStart = dayDiff(this.viewStart(), ghost.date);
+		if (rawStart < 0 || rawStart >= dates.length) return null;
+		const showCheckoutEdge = rawStart + 1 < dates.length;
+		const colStart = rawStart + 2;
+		const colEnd = showCheckoutEdge ? rawStart + 4 : rawStart + 3;
+		const totalCols = colEnd - colStart;
+		return {
+			row,
+			colStart,
+			colEnd,
+			start: ghost.date,
+			end,
+			insetLeft: (CHECKIN_HOUR / 24 / totalCols) * 100,
+			insetRight: showCheckoutEdge ? ((24 - CHECKOUT_HOUR) / 24 / totalCols) * 100 : 0,
+		};
+	});
+
+	protected showGhost(room: string, date: string): void {
+		this._ghost.set(this.ready() && !this.occupied(room, date) ? { room, date } : null);
+	}
+
+	protected hideGhost(): void {
+		this._ghost.set(null);
+	}
+
 	protected readonly blockedOverlays = computed(() => {
 		const dates = this.dateRange();
 		const rowsByRoom = new Map(
