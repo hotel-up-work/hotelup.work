@@ -1,0 +1,193 @@
+<app-shell activeNav="calendar" greetingTitle="Картка бронювання" [greetingSubtitle]="hotelSubtitle()">
+	<div class="page-heading">
+		<div class="breadcrumb"><a routerLink="/calendar">Календар</a> <span>/</span> Бронювання</div>
+	</div>
+
+	@if (loadError()) {
+		<section class="card empty-state">
+			<h2>Не вдалося завантажити дані</h2>
+			<p role="alert">{{ loadError() }}</p>
+		</section>
+	} @else if (!bookingId()) {
+		<section class="card empty-state">
+			<h2>Оберіть бронювання</h2>
+			<p>Відкрийте бронювання в календарі й натисніть «Відкрити картку бронювання».</p>
+			<a class="button primary" routerLink="/calendar">Перейти до календаря</a>
+		</section>
+	} @else if (loading()) {
+		<section class="card empty-state"><p>Завантажуємо бронювання…</p></section>
+	} @else if (booking(); as b) {
+		<header class="head">
+			<div class="head-main">
+				<h1>{{ value('guestName') || 'Гість без імені' }}</h1>
+				<p class="head-meta">
+					<span class="pill" [attr.data-status]="b.status">{{ statusLabel[b.status] }}</span>
+					<span>Номер {{ b.roomNumber }}</span>
+					<span>{{ shortDate(b.checkIn) }} – {{ shortDate(b.checkOut) }}</span>
+					<span>Ночей: {{ nights() }}</span>
+				</p>
+			</div>
+			<p class="autosave" role="status" [attr.data-kind]="summary().kind">{{ summary().text }}</p>
+		</header>
+
+		<nav class="tabs" aria-label="Розділи картки">
+			<ul>
+				@for (tab of tabs; track tab; let first = $first) {
+					<li>
+						@if (first) {
+							<span class="tab current" aria-current="page">{{ tab }}</span>
+						} @else {
+							<button class="tab" type="button" disabled title="З’явиться пізніше">{{ tab }}</button>
+						}
+					</li>
+				}
+			</ul>
+		</nav>
+		<p class="legend">Сірі розділи й поля «Скоро» зʼявляться пізніше. Решта полів зберігається сама.</p>
+
+		@if (readOnly()) {
+			<p class="notice" role="note">
+				{{ b.status === 'cancelled' ? 'Бронювання скасовано: картка доступна лише для перегляду.' : 'Ваша роль дозволяє лише переглядати картку.' }}
+			</p>
+		}
+
+		<div class="columns">
+			@for (column of columns; track $index) {
+				<div class="column">
+					@for (section of column; track section.id) {
+						<section class="card" [attr.aria-labelledby]="'s-' + section.id">
+							<h2 [id]="'s-' + section.id">{{ section.title }}</h2>
+							<div class="fields">
+								@for (f of section.fields; track f.key) {
+									<div class="field" [class.wide]="f.wide" [class.soon]="f.soon" [class.invalid]="fieldError()[f.key]" [class.check]="f.kind === 'check'">
+										<div class="label-row">
+											<label [for]="'f-' + f.key">{{ f.label }}</label>
+											@if (f.soon) {
+												<span class="tag">Скоро</span>
+											} @else {
+												<span class="fs" aria-hidden="true" [attr.data-state]="saveState()[f.key]">
+													@switch (saveState()[f.key]) {
+														@case ('saving') { Зберігаємо… }
+														@case ('saved') { Збережено }
+													}
+												</span>
+											}
+										</div>
+
+										@switch (f.kind) {
+											@case ('select') {
+												<select
+													#el
+													[id]="'f-' + f.key"
+													[name]="f.key"
+													[disabled]="isOff(f)"
+													[attr.aria-invalid]="fieldError()[f.key] ? 'true' : null"
+													[attr.aria-describedby]="fieldError()[f.key] ? 'e-' + f.key : null"
+													(change)="edit(f.key, el.value, 0)"
+												>
+													@for (o of options(f); track o.value) {
+														<option [value]="o.value" [disabled]="o.disabled" [selected]="o.value === value(f.key)">{{ o.label }}</option>
+													}
+												</select>
+											}
+											@case ('textarea') {
+												<textarea
+													#el
+													[id]="'f-' + f.key"
+													[name]="f.key"
+													rows="3"
+													[disabled]="isOff(f)"
+													[value]="value(f.key)"
+													[attr.aria-invalid]="fieldError()[f.key] ? 'true' : null"
+													[attr.aria-describedby]="fieldError()[f.key] ? 'e-' + f.key : null"
+													(input)="edit(f.key, el.value, typingDelay)"
+													(blur)="flush(f.key)"
+												></textarea>
+											}
+											@case ('check') {
+												<input
+													#el
+													type="checkbox"
+													[id]="'f-' + f.key"
+													[name]="f.key"
+													[disabled]="isOff(f)"
+													[checked]="value(f.key) === 'true'"
+													(change)="edit(f.key, el.checked ? 'true' : '', 0)"
+												/>
+											}
+											@case ('readonly') {
+												<output class="static" [id]="'f-' + f.key" [class.debt]="f.key === 'balance' && booking()!.total > booking()!.paid">{{ display(f.key) }}</output>
+											}
+											@case ('date') {
+												<input
+													#el
+													type="date"
+													[id]="'f-' + f.key"
+													[name]="f.key"
+													[disabled]="isOff(f)"
+													[value]="value(f.key)"
+													[attr.aria-invalid]="fieldError()[f.key] ? 'true' : null"
+													[attr.aria-describedby]="fieldError()[f.key] ? 'e-' + f.key : null"
+													(change)="edit(f.key, el.value, 0)"
+												/>
+											}
+											@case ('time') {
+												<input
+													#el
+													type="time"
+													[id]="'f-' + f.key"
+													[name]="f.key"
+													[disabled]="isOff(f)"
+													[value]="value(f.key)"
+													[attr.aria-invalid]="fieldError()[f.key] ? 'true' : null"
+													[attr.aria-describedby]="fieldError()[f.key] ? 'e-' + f.key : null"
+													(change)="edit(f.key, el.value, 0)"
+												/>
+											}
+											@default {
+												<input
+													#el
+													[id]="'f-' + f.key"
+													[name]="f.key"
+													[type]="f.kind === 'number' || f.kind === 'money' ? 'number' : f.kind"
+													[attr.inputmode]="f.kind === 'number' ? 'numeric' : f.kind === 'money' ? 'decimal' : null"
+													[attr.min]="f.kind === 'number' || f.kind === 'money' ? 0 : null"
+													[attr.step]="f.kind === 'money' ? '0.01' : null"
+													[attr.autocomplete]="f.autocomplete ?? 'off'"
+													[attr.spellcheck]="f.kind === 'email' ? 'false' : null"
+													[disabled]="isOff(f)"
+													[value]="value(f.key)"
+													[attr.aria-invalid]="fieldError()[f.key] ? 'true' : null"
+													[attr.aria-describedby]="fieldError()[f.key] ? 'e-' + f.key : null"
+													(input)="edit(f.key, el.value, typingDelay)"
+													(blur)="flush(f.key)"
+												/>
+											}
+										}
+
+										@if (fieldError()[f.key]; as message) {
+											<p class="msg error" [id]="'e-' + f.key" role="alert">{{ message }}</p>
+										} @else if (f.hint) {
+											<p class="msg">
+												{{ f.hint }}
+												@if (f.key === 'paid') {
+													<a routerLink="/payments">Відкрити оплати</a>
+												}
+											</p>
+										}
+									</div>
+								}
+							</div>
+						</section>
+					}
+				</div>
+			}
+		</div>
+	} @else {
+		<section class="card empty-state">
+			<h2>Бронювання не знайдено</h2>
+			<p>Воно могло бути з іншого готелю або посилання застаріло.</p>
+			<a class="button primary" routerLink="/calendar">Перейти до календаря</a>
+		</section>
+	}
+</app-shell>

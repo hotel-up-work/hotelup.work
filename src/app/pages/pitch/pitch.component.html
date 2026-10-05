@@ -1,0 +1,185 @@
+<header class="bar">
+	<a class="brand" routerLink="/" aria-label="Hotel Upwork, головна сторінка">
+		<span class="mark">H</span>
+		<span>Hotel <strong>Upwork</strong></span>
+	</a>
+	<p class="counter" aria-live="polite">
+		<b>{{ pad(active() + 1) }}</b> / {{ pad(total) }}
+		@if (active() > 0 && active() <= cases.length) {
+			<span class="counter-label">· {{ cases[active() - 1].short }}</span>
+		}
+	</p>
+	<a class="site-link" routerLink="/">Сайт <span aria-hidden="true">↗</span></a>
+</header>
+
+<nav class="dots" aria-label="Слайди презентації">
+	@for (i of slideIndexes; track i) {
+		<button
+			type="button"
+			[class.on]="active() === i"
+			[attr.aria-current]="active() === i ? 'step' : null"
+			[attr.aria-label]="'Слайд ' + (i + 1)"
+			(click)="go(i)"
+		></button>
+	}
+</nav>
+
+<div class="arrows">
+	<button type="button" aria-label="Попередній слайд" [disabled]="active() === 0" (click)="go(active() - 1)">↑</button>
+	<button type="button" aria-label="Наступний слайд" [disabled]="active() === total - 1" (click)="go(active() + 1)">↓</button>
+</div>
+
+<main>
+	<section #slide class="slide cover" aria-labelledby="cover-title">
+		<div class="cover-inner">
+			<p class="eyebrow">ДЛЯ ВЛАСНИКІВ І КЕРУЮЧИХ ГОТЕЛІВ</p>
+			<h1 id="cover-title">5 проблем, які щосезону коштують готелю грошей</h1>
+			<p class="lead">
+				Від проблеми до рішення: як це виглядає у звичайному українському готелі і як Hotel Upwork
+				це закриває.
+			</p>
+			<ol class="agenda">
+				@for (c of cases; track c.key; let i = $index) {
+					<li>
+						<button type="button" (click)="go(i + 1)">
+							<span>{{ pad(i + 1) }}</span>{{ c.short }}
+						</button>
+					</li>
+				}
+			</ol>
+			<p class="hint">
+				<button type="button" class="btn gold" (click)="go(1)">Почати <span aria-hidden="true">↓</span></button>
+				<span class="keys">або гортайте, клавіші <kbd>↓</kbd> <kbd>→</kbd></span>
+			</p>
+		</div>
+	</section>
+
+	@for (c of cases; track c.key; let i = $index) {
+		<section #slide class="slide case" [attr.aria-labelledby]="'case-' + c.key">
+			<div class="case-inner">
+				<div class="panel problem">
+					<p class="tag">Проблема {{ pad(i + 1) }}</p>
+					<h2 [id]="'case-' + c.key">{{ c.title }}</h2>
+					<p class="situation">{{ c.situation }}</p>
+					<p class="cost"><b>Чим це обходиться:</b> {{ c.cost }}</p>
+				</div>
+
+				<span class="arrow" aria-hidden="true"></span>
+
+				<div class="panel solution">
+					<div class="solution-copy">
+						<p class="tag">Рішення Hotel Upwork</p>
+						<h3>{{ c.fix }}</h3>
+						<ul class="checks">
+							@for (s of c.solution; track s) {
+								<li>{{ s }}</li>
+							}
+						</ul>
+					</div>
+
+					<figure class="visual" aria-hidden="true">
+						@switch (c.key) {
+							@case ('overbooking') {
+								<div class="card">
+									<div class="card-head"><b>Календар</b><span>18–21 жовтня</span></div>
+									<div class="cal">
+										<span></span><span>Сб</span><span>Нд</span><span>Пн</span><span>Вт</span>
+										<b>203</b>
+										<div class="cal-row"><i class="bk s-site" style="--from: 1; --to: 3">Сайт · Коваленко</i></div>
+										<b>204</b>
+										<div class="cal-row"><i class="bk s-phone" style="--from: 1; --to: 4">Телефон · Бондар</i></div>
+										<b>205</b>
+										<div class="cal-row"><i class="bk s-insta" style="--from: 2; --to: 5">Instagram · Шевченко</i></div>
+									</div>
+								</div>
+								<div class="toast">
+									<span class="dot"></span>
+									<div><b>Нова заявка з сайту</b>204 · 18–20 жовтня · <em>дати зайняті</em></div>
+								</div>
+							}
+							@case ('money') {
+								<div class="card">
+									<div class="card-head"><b>Журнал оплат</b><span>Сьогодні</span></div>
+									<div class="ledger">
+										<div><span>Коваленко · 101</span><small>Переказ · прийняла Олена</small><b>2 000 ₴</b></div>
+										<div><span>Бондар · 102</span><small>Готівка · прийняв Максим</small><b>1 500 ₴</b></div>
+										<div><span>Мельник · 202</span><small>Картка · прийняла Олена</small><b>3 200 ₴</b></div>
+									</div>
+									<div class="ledger-foot">
+										<span>Ще до сплати</span><b>4 800 ₴ · 2 бронювання</b>
+									</div>
+								</div>
+								<p class="note">Запис не можна змінити або видалити</p>
+							}
+							@case ('blackout') {
+								<div class="phone">
+									<div class="phone-status"><span>Світла немає</span><span>4G ▮▮▮</span></div>
+									<p class="phone-q">Вільно в суботу, 18 жовтня</p>
+									<div class="rooms">
+										<span>103</span><span>204</span><span>205</span>
+									</div>
+									<div class="phone-btn">+ Нове бронювання</div>
+									<p class="phone-sub">Дані в хмарі · оновлено щойно</p>
+								</div>
+							}
+							@case ('staff') {
+								<div class="card guest">
+									<div class="guest-head">
+										<span class="avatar">ІМ</span>
+										<div><b>Ірина Мельник</b><small>Постійна гостя · 4 проживання</small></div>
+									</div>
+									<dl>
+										<div><dt>Останнє</dt><dd>202 Люкс · серпень 2026</dd></div>
+										<div><dt>Телефон</dt><dd>+380 67 ••• •• 14</dd></div>
+									</dl>
+									<p class="guest-note">«Просить номер з тихого боку і подушки без пір’я»</p>
+									<small class="guest-by">Записала Олена, рецепція · 2025</small>
+								</div>
+								<div class="toast">
+									<span class="dot off"></span>
+									<div><b>Доступ Максима вимкнено</b>База гостей лишилась у готелі</div>
+								</div>
+							}
+							@case ('remote') {
+								<div class="card">
+									<div class="card-head"><b>Огляд дня</b><span>Сб, 18 жовтня</span></div>
+									<div class="kpis">
+										<div><small>Заїзди</small><b>7</b></div>
+										<div><small>Виїзди</small><b>4</b></div>
+										<div><small>Завантаження</small><b>82%</b></div>
+										<div><small>До сплати</small><b>4 800 ₴</b></div>
+									</div>
+									<p class="attention-title">Потребує уваги</p>
+									<ul class="attention">
+										<li>Номер 204 ще не прибраний</li>
+										<li>2 бронювання з неоплаченим залишком</li>
+									</ul>
+								</div>
+							}
+							@default never;
+						}
+					</figure>
+				</div>
+			</div>
+		</section>
+	}
+
+	<section #slide class="slide final" aria-labelledby="final-title">
+		<div class="final-inner">
+			<p class="eyebrow">СПІЛЬНА ПРИЧИНА</p>
+			<h2 id="final-title">Дані готелю розкидані по людях, зошитах і месенджерах.</h2>
+			<p class="lead">
+				Hotel Upwork збирає бронювання, гостей та оплати в одній системі, яку однаково бачать
+				рецепція, менеджер і власник.
+			</p>
+			<div class="actions">
+				<a class="btn gold" routerLink="/">Подивитися продукт <span aria-hidden="true">↗</span></a>
+				<a class="btn outline" routerLink="/demo">Відкрити демо</a>
+			</div>
+			<p class="fine">
+				Start безкоштовний: календар і заявки з сайтів, до 10 номерів, без картки.
+				<a routerLink="/pricing">Усі тарифи</a>
+			</p>
+		</div>
+	</section>
+</main>

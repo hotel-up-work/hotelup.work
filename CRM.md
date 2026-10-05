@@ -100,7 +100,7 @@ Rules:
 ## Live pages — what a real account sees
 
 A real, Firebase-signed-in account (`isLiveSession()`) sees only pages backed by real data:
-`LIVE_PAGES` in `src/app/shared/role.ts`, currently **`dashboard`** (the home page after login), **`submissions`**, **`calendar`**, **`new-booking`**, **`guests`**, **`payments`** and **`settings`**. Rooms are not a separate live page: real hotels manage them in Settings → Номери, and `/rooms` redirects there (`roomsMovedGuard`).
+`LIVE_PAGES` in `src/app/shared/role.ts`, currently **`dashboard`** (the home page after login), **`submissions`**, **`calendar`**, **`new-booking`**, **`booking`** (the booking card, opened from the Calendar side panel as `/booking?id=…`), **`guests`**, **`payments`** and **`settings`**. Rooms are not a separate live page: real hotels manage them in Settings → Номери, and `/rooms` redirects there (`roomsMovedGuard`).
 Everything else in this document describes the demo, which keeps every page (entered via `/demo`).
 
 - Sidebar and mobile nav list only live pages (Settings included); Team, AI button, search,
@@ -351,7 +351,9 @@ write; roles per hotel are not built yet.
   the check-out day), `guests` (int 1–50, ≤ the room's capacity plus its extra places, checked in the client), `total`
   and `paid` (`0 ≤ paid ≤ total`), `status` (`pending | confirmed | checkedin | checkedout | cancelled`), optional
   `phone`, `email`, `source`, `notes` (≤1000), `submissionId`, `plannedCheckOut` (original check-out after an early departure), `guestId` (the guest profile, see Guest data contract), `lateCheckoutHour` (12–23), and, set by the New booking page: `adults` (≥1) and `children` (≥0) that add up to `guests`, `checkInTime` / `checkOutTime` (`HH:MM`), `extraGuests` (people beyond capacity, 0–20), `rate` (price list name, ≤50, informational), `byBed` with `bedNumber` (1–50, informational: availability is still per room), `housekeepingNote` (≤300),
+  and, set by the booking card (`/booking?id=`): `childrenPaid` (0–`children`), text details up to 100 characters (`accommodationType`, `mealPlan`, `citizenship`, `contactPerson`, `manager`, `privilegeCategory`, `visitPurpose`, `externalNumber`, `companyOperator`, `companySource`, `contractTerms`, `paymentType`, `payMethod`) and numbers 0–100 000 000 (`creditLimit`, `creditRemainder`, `depositBalance`; plain figures the desk types in, not calculated).
   `createdAt`, `updatedAt` (server time on every write). Bookings are never deleted.
+- **Booking card** (`booking-live.component`, `changeBooking` roles edit, others read; a cancelled booking is read-only): every field autosaves on its own (text after a 700 ms pause or on leaving the field, lists/dates/switches at once). Unsaveable changes are not sent and show the reason next to the field: room busy on the dates, guests over the room's capacity plus extra places, total below `paid`, check-out not after check-in. Changing the dates keeps the price per night (the total follows the nights); editing "Ціна за ніч" sets `total` = price × nights. `paid` is read-only on the card and follows the payments journal. Money block needs `guestBill`. Dropdown lists are built into the code (`booking-card.fields.ts`). Not built yet and shown as disabled "Скоро" placeholders: the other card tabs, guarantee, transfer and decision date, business-trip documents, hotel inventory, extra characteristics, room properties, guest tasks, loyalty card, auto-charging, company segment, price fixation.
 - Overlaps are prevented in the client (other active bookings and room blocks; a block's last day
   is inclusive). Rules cannot query, so two people booking the same room at the same moment can
   still double-book.

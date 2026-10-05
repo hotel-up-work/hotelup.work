@@ -42,6 +42,19 @@ export const routes: Routes = [
 		loadComponent: () => import('./pages/pricing/pricing.component').then((m) => m.PricingComponent),
 	},
 	{
+		path: 'pitch',
+		data: {
+			meta: {
+				title: '5 ситуацій, які коштують готелю грошей · Hotel Upwork',
+				titleSuffix: '',
+				description:
+					'Овербукінг, загублені передоплати, блекаути, звільнення адміністратора і контроль на відстані: як Hotel Upwork вирішує їх для готелів в Україні.',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/og-landing.jpg'),
+			},
+		},
+		loadComponent: () => import('./pages/pitch/pitch.component').then((m) => m.PitchComponent),
+	},
+	{
 		path: 'login',
 		data: {
 			meta: {
@@ -359,7 +372,11 @@ export const routes: Routes = [
 				robots: 'noindex, nofollow',
 			},
 		},
-		loadComponent: () => import('./pages/booking/booking.component').then((m) => m.BookingComponent),
+		// Real hotels get the editable, autosaving booking card on live data; the demo keeps the seeded one.
+		loadComponent: () =>
+			isLiveSession()
+				? import('./pages/booking/booking-live.component').then((m) => m.BookingLiveComponent)
+				: import('./pages/booking/booking.component').then((m) => m.BookingComponent),
 	},
 	{
 		path: 'book',

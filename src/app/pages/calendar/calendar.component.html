@@ -242,6 +242,8 @@
 				<div class="dialog-actions">
 					@if (!live) {
 						<a class="button primary full" href="/booking/">Відкрити бронювання</a>
+					} @else {
+						<a class="button primary full" routerLink="/booking" [queryParams]="{ id: b.id }">Відкрити картку бронювання</a>
 					}
 					@if (canChange && b.status === 'pending') {
 						<button class="button primary" [disabled]="saving()" (click)="setStatus(b.id, 'confirmed')">Підтвердити бронювання</button>

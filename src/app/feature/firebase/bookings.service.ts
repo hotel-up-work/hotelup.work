@@ -5,8 +5,34 @@ import { localDay, paymentFields, type PaymentMethod, type Recorder } from './pa
 
 export type BookingStatus = 'pending' | 'confirmed' | 'checkedin' | 'checkedout' | 'cancelled';
 
+/** Text details of the booking card, picked from built-in lists or typed; all optional, up to 100 characters. */
+export const BOOKING_TEXT_KEYS = [
+	'accommodationType',
+	'mealPlan',
+	'citizenship',
+	'contactPerson',
+	'manager',
+	'privilegeCategory',
+	'visitPurpose',
+	'externalNumber',
+	'companyOperator',
+	'companySource',
+	'contractTerms',
+	'paymentType',
+	'payMethod',
+] as const;
+export type BookingTextKey = (typeof BOOKING_TEXT_KEYS)[number];
+/** Money details of the booking card; plain numbers the front desk types in. */
+export const BOOKING_MONEY_KEYS = ['creditLimit', 'creditRemainder', 'depositBalance'] as const;
+export type BookingMoneyKey = (typeof BOOKING_MONEY_KEYS)[number];
+
+export type BookingDetails = { [K in BookingTextKey]?: string } & { [K in BookingMoneyKey]?: number } & {
+	/** Children whose stay is charged. */
+	childrenPaid?: number;
+};
+
 /** Fields a booking is created with (`hotels/{hotelId}/bookings/{bookingId}`, see firestore.rules). */
-export interface BookingInput {
+export interface BookingInput extends BookingDetails {
 	/** `rooms` document id; `roomNumber` is a copy for display if the room is later removed. */
 	roomId: string;
 	roomNumber: string;
@@ -51,11 +77,26 @@ export interface BookingRecord extends BookingInput {
 	createdAt: Date | null;
 }
 
-export interface BookingPatch {
+export interface BookingPatch extends BookingDetails {
 	roomId?: string;
 	roomNumber?: string;
 	checkIn?: string;
 	checkOut?: string;
+	checkInTime?: string;
+	checkOutTime?: string;
+	guestName?: string;
+	phone?: string;
+	email?: string;
+	source?: string;
+	rate?: string;
+	adults?: number;
+	children?: number;
+	guests?: number;
+	extraGuests?: number;
+	byBed?: boolean;
+	bedNumber?: number;
+	housekeepingNote?: string;
+	total?: number;
 	paid?: number;
 	status?: BookingStatus;
 	notes?: string;
@@ -69,7 +110,12 @@ const str = (value: unknown): string => (typeof value === 'string' ? value : '')
 const num = (value: unknown, fallback: number): number => (typeof value === 'number' ? value : fallback);
 
 function toBooking(id: string, data: DocumentData): BookingRecord {
+	const details: BookingDetails = {};
+	for (const key of BOOKING_TEXT_KEYS) details[key] = str(data[key]) || undefined;
+	for (const key of BOOKING_MONEY_KEYS) details[key] = typeof data[key] === 'number' ? data[key] : undefined;
 	return {
+		...details,
+		childrenPaid: typeof data['childrenPaid'] === 'number' ? data['childrenPaid'] : undefined,
 		id,
 		roomId: str(data['roomId']),
 		roomNumber: str(data['roomNumber']),
