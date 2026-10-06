@@ -1,4 +1,5 @@
-import { RenderMode, ServerRoute } from '@angular/ssr';
+import { PrerenderFallback, RenderMode, ServerRoute } from '@angular/ssr';
+import { PROPOSAL_HOTELS } from './pages/proposal/proposal-hotels';
 
 const PROTECTED_PATHS = [
 	'dashboard',
@@ -31,6 +32,12 @@ export const serverRoutes: ServerRoute[] = [
 			renderMode: RenderMode.Client,
 		}),
 	),
+	{
+		path: 'proposal/:slug',
+		renderMode: RenderMode.Prerender,
+		fallback: PrerenderFallback.Client,
+		getPrerenderParams: async () => PROPOSAL_HOTELS.map(({ slug }) => ({ slug })),
+	},
 	{
 		path: '**',
 		renderMode: RenderMode.Prerender,

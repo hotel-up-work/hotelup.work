@@ -55,6 +55,30 @@ export const routes: Routes = [
 		loadComponent: () => import('./pages/pitch/pitch.component').then((m) => m.PitchComponent),
 	},
 	{
+		path: 'proposal',
+		data: {
+			meta: {
+				title: 'Комерційна пропозиція · Hotel Upwork',
+				titleSuffix: '',
+				description: 'Hotel Upwork: власний канал прямих бронювань і система управління готелем.',
+				robots: 'noindex, nofollow',
+			},
+		},
+		loadComponent: () => import('./pages/proposal/proposal.component').then((m) => m.ProposalComponent),
+	},
+	{
+		path: 'proposal/:slug',
+		data: {
+			meta: {
+				title: 'Комерційна пропозиція · Hotel Upwork',
+				titleSuffix: '',
+				description: 'Hotel Upwork: власний канал прямих бронювань і система управління готелем.',
+				robots: 'noindex, nofollow',
+			},
+		},
+		loadComponent: () => import('./pages/proposal/proposal.component').then((m) => m.ProposalComponent),
+	},
+	{
 		path: 'login',
 		data: {
 			meta: {

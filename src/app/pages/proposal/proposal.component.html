@@ -1,0 +1,300 @@
+<header class="bar">
+	<a class="brand" routerLink="/" aria-label="Hotel Upwork, головна сторінка">
+		<span class="mark">H</span>
+		<span>Hotel <strong>Upwork</strong></span>
+	</a>
+	<a class="btn gold small" href="#start">Почати безкоштовно</a>
+</header>
+
+<main>
+	<section class="hero" aria-labelledby="hero-title">
+		<div class="wrap">
+			@if (hotel(); as h) {
+				<p class="for">Пропозиція для {{ h.name }}, {{ h.city }}</p>
+			}
+			<h1 id="hero-title">Більше прямих бронювань. Менше комісій.</h1>
+			<p class="lead">Сайт і система управління бронюваннями для готелів та апарт-об’єктів.</p>
+			<p class="actions">
+				<a class="btn gold" href="#start">Перших 30 днів безкоштовно</a>
+				<a class="btn ghost" href="#pricing">Тарифи</a>
+			</p>
+		</div>
+	</section>
+
+	<section class="band" aria-labelledby="ota-title">
+		<div class="wrap">
+			<h2 id="ota-title">{{ otaTitle() }}</h2>
+			<p class="sub">Коли гість бронює через OTA, частина вартості бронювання залишається платформі.</p>
+			<div class="math">
+				<div class="card">
+					<b>100 000 грн</b>
+					<p>Уявімо, що за місяць через платформи приходить бронювань на 100 000 грн.</p>
+				</div>
+				<dl>
+					<div class="loss">
+						<dd>≈ 15 000 грн</dd>
+						<dt>умовної комісії</dt>
+					</div>
+					<div class="keep">
+						<dd>≈ 85 000 грн</dd>
+						<dt>залишається готелю</dt>
+					</div>
+				</dl>
+			</div>
+			<p class="note">* Приклад для ілюстрації економіки; фактична комісія залежить від умов конкретної платформи.</p>
+		</div>
+	</section>
+
+	<section aria-labelledby="problem-title">
+		<div class="wrap">
+			<h2 id="problem-title">Проблема не тільки в комісії</h2>
+			<p class="sub">Готель поступово стає залежним від чужого каналу продажів.</p>
+			<ul class="grid two">
+				@for (p of problems; track p.title) {
+					<li class="card">
+						<h3>{{ p.title }}</h3>
+						<p>{{ p.text }}</p>
+					</li>
+				}
+			</ul>
+		</div>
+	</section>
+
+	<section class="band dark" aria-labelledby="channel-title">
+		<div class="wrap">
+			<h2 id="channel-title">Ваш власний сайт = ваш власний канал продажів</h2>
+			<p class="sub">Не просто сторінка в інтернеті. Точка, де гість може прийняти рішення і забронювати.</p>
+			<ol class="flow">
+				@for (f of funnel; track f.title) {
+					<li class="card">
+						<h3>{{ f.title }}</h3>
+						<p>{{ f.text }}</p>
+					</li>
+				}
+			</ol>
+			<p class="closing">Ви будуєте власний канал, який працює на бренд готелю.</p>
+		</div>
+	</section>
+
+	<section aria-labelledby="site-title">
+		<div class="wrap">
+			<h2 id="site-title">Сайт, який продає проживання</h2>
+			<p class="sub">Структура під конкретний готель, а не шаблонна «візитка».</p>
+			<ul class="ticks">
+				@for (b of siteBlocks; track b) {
+					<li>{{ b }}</li>
+				}
+			</ul>
+		</div>
+	</section>
+
+	<section class="band" aria-labelledby="econ-title">
+		<div class="wrap">
+			<h2 id="econ-title">Сайт має окупатися не «красивим дизайном», а бронюваннями</h2>
+			<ol class="chips arrows" aria-label="Наприклад">
+				<li>Бронювання</li>
+				<li>Прямий клієнт</li>
+				<li>Менше залежності</li>
+				<li>Більше контролю</li>
+			</ol>
+			<p class="closing">Кожне пряме бронювання — це не лише продаж, а й контакт гостя, якого можна повернути повторно.</p>
+			<p class="accent">Сайт стає активом готелю, а не просто витратою на розробку.</p>
+		</div>
+	</section>
+
+	<section aria-labelledby="cases-title">
+		<div class="wrap">
+			<h2 id="cases-title">5 проблем, які щосезону коштують готелю грошей</h2>
+			<p class="sub">Від проблеми до рішення: як це виглядає у звичайному українському готелі і як Hotel Upwork це закриває.</p>
+			<ol class="cases">
+				@for (c of cases; track c.title; let i = $index) {
+					<li class="case">
+						<span class="num" aria-hidden="true">0{{ i + 1 }}</span>
+						<div class="problem">
+							<h3>{{ c.title }}</h3>
+							<p>{{ c.situation }}</p>
+							<p class="cost"><b>Чим це обходиться:</b> {{ c.cost }}</p>
+						</div>
+						<div class="fix">
+							<h4>Рішення Hotel Upwork</h4>
+							<p>{{ c.fix }}</p>
+						</div>
+					</li>
+				}
+			</ol>
+		</div>
+	</section>
+
+	<section class="band" aria-labelledby="system-title">
+		<div class="wrap">
+			<h2 id="system-title">Дані готелю розкидані по людях, зошитах і месенджерах</h2>
+			<ul class="chips" aria-label="Де зараз дані">
+				@for (s of scattered; track s) {
+					<li>{{ s }}</li>
+				}
+			</ul>
+			<p class="accent">Hotel Upwork: бронювання + гості + оплати в одній системі.</p>
+			<h3 class="subhead">Одна система для рецепції, менеджера і власника</h3>
+			<ul class="grid three">
+				@for (s of system; track s.title) {
+					<li class="card">
+						<h3>{{ s.title }}</h3>
+						<p>{{ s.text }}</p>
+					</li>
+				}
+			</ul>
+		</div>
+	</section>
+
+	<section class="band dark" aria-labelledby="os-title">
+		<div class="wrap">
+			<h2 id="os-title">Але що робити з усіма цими заявками?</h2>
+			<p class="sub">Сайт вирішує проблему каналу продажів. Далі потрібно керувати самим потоком бронювань.</p>
+			<ul class="chips" aria-label="Звідки приходять заявки">
+				@for (c of inbound; track c) {
+					<li>{{ c }}</li>
+				}
+			</ul>
+			<p class="closing">А де все це зберігається? Якщо відповідь «у різних місцях», пора переходити до системи.</p>
+			<h3 class="subhead">OS — єдине місце для роботи з гостями</h3>
+			<p class="sub">Система збирає заявки, клієнтів, історію взаємодій та етапи продажу в одному середовищі.</p>
+			<ul class="grid four">
+				@for (a of crmAreas; track a.title) {
+					<li class="card">
+						<h3>{{ a.title }}</h3>
+						<p>{{ a.text }}</p>
+					</li>
+				}
+			</ul>
+		</div>
+	</section>
+
+	<section aria-labelledby="int-title">
+		<div class="wrap">
+			<h2 id="int-title">Усі канали бронювання під контролем в одному місці</h2>
+			<p class="sub">Інтеграція з Booking та іншими системами.</p>
+			<ul class="chips" aria-label="Канали бронювання">
+				@for (c of channels; track c) {
+					<li>{{ c }}</li>
+				}
+			</ul>
+			<p class="hub"><b>Hotel Upwork</b> єдина система управління бронюваннями</p>
+			<ul class="ticks">
+				@for (c of channelChecks; track c) {
+					<li>{{ c }}</li>
+				}
+			</ul>
+			<p class="accent">Ваші канали продажів можуть бути різними. Система управління одна.</p>
+		</div>
+	</section>
+
+	<section class="band" aria-labelledby="crm-title">
+		<div class="wrap">
+			<h2 id="crm-title">Кожен гість має свій профіль і свою історію</h2>
+			<div class="crm">
+				<article class="card guest" aria-label="Приклад картки гостя">
+					<h3>Анна Коваль</h3>
+					<ul>
+						<li>12–15 жовтня</li>
+						<li>Deluxe · 2 гостя</li>
+						<li>8 400 грн</li>
+						<li>Джерело: сайт</li>
+						<li>+380 XX XXX XX XX</li>
+					</ul>
+					<span class="status">Бронювання підтверджено</span>
+				</article>
+				<div>
+					<h4>Історія взаємодії</h4>
+					<ol class="history">
+						@for (g of guestSteps; track g.step) {
+							<li>
+								<b>{{ g.step }}</b><span>{{ g.via }}</span>
+							</li>
+						}
+					</ol>
+				</div>
+			</div>
+			<h3 class="subhead">Жодна заявка не повинна загубитися</h3>
+			<ol class="stages">
+				@for (s of stages; track s) {
+					<li>{{ s }}</li>
+				}
+			</ol>
+			<p class="closing">Адміністратор бачить, на якому етапі кожна заявка, і що потрібно зробити далі.</p>
+		</div>
+	</section>
+
+	<section aria-labelledby="combo-title">
+		<div class="wrap">
+			<h2 id="combo-title">Сайт + CRM = власна система продажів</h2>
+			<div class="grid two">
+				<div class="card">
+					<h3>Сайт</h3>
+					<ul class="plain">
+						<li>приводить прямі заявки</li>
+						<li>показує номери та послуги</li>
+						<li>формує довіру до готелю</li>
+						<li>створює власний канал бронювання</li>
+					</ul>
+				</div>
+				<div class="card">
+					<h3>CRM</h3>
+					<ul class="plain">
+						<li>зберігає гостей</li>
+						<li>веде заявки по етапах</li>
+						<li>показує джерела</li>
+						<li>допомагає працювати з повторними продажами</li>
+					</ul>
+				</div>
+			</div>
+			<p class="accent">Ви отримуєте не два інструменти, а власний контур продажів готелю.</p>
+		</div>
+	</section>
+
+	<section class="band" id="pricing" aria-labelledby="pricing-title">
+		<div class="wrap">
+			<h2 id="pricing-title">Тарифи</h2>
+			<ul class="grid three">
+				@for (p of plans; track p.key) {
+					<li class="card plan" [class.rec]="p.recommended">
+						@if (p.recommended) {
+							<span class="badge">Рекомендований</span>
+						}
+						<h3>{{ p.name }}</h3>
+						<p class="tagline">{{ p.tagline }}</p>
+						<p class="price">
+							<b>{{ p.price }}</b> {{ p.period }}
+						</p>
+						@if (p.yearly) {
+							<p class="yearly">або {{ p.yearly }}</p>
+						}
+						<p class="limits">{{ p.limits }}</p>
+						<ul class="ticks compact">
+							@for (h of p.highlights; track h) {
+								<li>{{ h }}</li>
+							}
+						</ul>
+					</li>
+				}
+			</ul>
+		</div>
+	</section>
+
+	<section class="band dark final" id="start" aria-labelledby="final-title">
+		<div class="wrap">
+			<h2 id="final-title">Перестаньте залежати від чужих платформ</h2>
+			<p class="sub">
+				Створіть власний канал прямих бронювань і керуйте ним системно. Давайте покажемо, як це може працювати саме для
+				{{ hotelName() }}.
+			</p>
+			<p class="chips-inline">Сайт + CRM = контроль продажів</p>
+			<p class="actions">
+				<a class="btn gold" routerLink="/pricing">Перших 30 днів безкоштовно</a>
+				@if (emailHref) {
+					<a class="btn ghost-dark" [href]="emailHref">Написати нам</a>
+				}
+			</p>
+			<p class="note">Календар і заявки з сайтів: старт безкоштовний, до 10 номерів, без картки.</p>
+		</div>
+	</section>
+</main>
