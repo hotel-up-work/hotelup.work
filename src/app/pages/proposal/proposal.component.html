@@ -21,6 +21,26 @@
 		</div>
 	</section>
 
+	@if (siteHost(); as host) {
+		<section class="site" aria-labelledby="site-title">
+			<div class="wrap">
+				<h2 id="site-title">Сайт, який ми вже створили для вас</h2>
+				<p class="sub">Перегляньте, як {{ hotelName() }} виглядає у власному каналі прямих бронювань.</p>
+				<a class="browser" [href]="'https://' + host" target="_blank" rel="noopener" [attr.aria-label]="'Відкрити ' + host + ' в новій вкладці'">
+					<span class="chrome" aria-hidden="true">
+						<i></i><i></i><i></i>
+						<span class="address">{{ host }}</span>
+					</span>
+					<span class="screen">
+						<span class="screen-name">{{ hotel()!.name }}</span>
+						<span class="screen-city">{{ hotel()!.city }}</span>
+						<span class="btn gold">Відкрити сайт <span aria-hidden="true">↗</span></span>
+					</span>
+				</a>
+			</div>
+		</section>
+	}
+
 	<section class="band" aria-labelledby="ota-title">
 		<div class="wrap">
 			<h2 id="ota-title">{{ otaTitle() }}</h2>
@@ -42,49 +62,6 @@
 				</dl>
 			</div>
 			<p class="note">* Приклад для ілюстрації економіки; фактична комісія залежить від умов конкретної платформи.</p>
-		</div>
-	</section>
-
-	<section aria-labelledby="problem-title">
-		<div class="wrap">
-			<h2 id="problem-title">Проблема не тільки в комісії</h2>
-			<p class="sub">Готель поступово стає залежним від чужого каналу продажів.</p>
-			<ul class="grid two">
-				@for (p of problems; track p.title) {
-					<li class="card">
-						<h3>{{ p.title }}</h3>
-						<p>{{ p.text }}</p>
-					</li>
-				}
-			</ul>
-		</div>
-	</section>
-
-	<section class="band dark" aria-labelledby="channel-title">
-		<div class="wrap">
-			<h2 id="channel-title">Ваш власний сайт = ваш власний канал продажів</h2>
-			<p class="sub">Не просто сторінка в інтернеті. Точка, де гість може прийняти рішення і забронювати.</p>
-			<ol class="flow">
-				@for (f of funnel; track f.title) {
-					<li class="card">
-						<h3>{{ f.title }}</h3>
-						<p>{{ f.text }}</p>
-					</li>
-				}
-			</ol>
-			<p class="closing">Ви будуєте власний канал, який працює на бренд готелю.</p>
-		</div>
-	</section>
-
-	<section aria-labelledby="site-title">
-		<div class="wrap">
-			<h2 id="site-title">Сайт, який продає проживання</h2>
-			<p class="sub">Структура під конкретний готель, а не шаблонна «візитка».</p>
-			<ul class="ticks">
-				@for (b of siteBlocks; track b) {
-					<li>{{ b }}</li>
-				}
-			</ul>
 		</div>
 	</section>
 
@@ -122,27 +99,6 @@
 					</li>
 				}
 			</ol>
-		</div>
-	</section>
-
-	<section class="band" aria-labelledby="system-title">
-		<div class="wrap">
-			<h2 id="system-title">Дані готелю розкидані по людях, зошитах і месенджерах</h2>
-			<ul class="chips" aria-label="Де зараз дані">
-				@for (s of scattered; track s) {
-					<li>{{ s }}</li>
-				}
-			</ul>
-			<p class="accent">Hotel Upwork: бронювання + гості + оплати в одній системі.</p>
-			<h3 class="subhead">Одна система для рецепції, менеджера і власника</h3>
-			<ul class="grid three">
-				@for (s of system; track s.title) {
-					<li class="card">
-						<h3>{{ s.title }}</h3>
-						<p>{{ s.text }}</p>
-					</li>
-				}
-			</ul>
 		</div>
 	</section>
 
@@ -185,42 +141,6 @@
 				}
 			</ul>
 			<p class="accent">Ваші канали продажів можуть бути різними. Система управління одна.</p>
-		</div>
-	</section>
-
-	<section class="band" aria-labelledby="crm-title">
-		<div class="wrap">
-			<h2 id="crm-title">Кожен гість має свій профіль і свою історію</h2>
-			<div class="crm">
-				<article class="card guest" aria-label="Приклад картки гостя">
-					<h3>Анна Коваль</h3>
-					<ul>
-						<li>12–15 жовтня</li>
-						<li>Deluxe · 2 гостя</li>
-						<li>8 400 грн</li>
-						<li>Джерело: сайт</li>
-						<li>+380 XX XXX XX XX</li>
-					</ul>
-					<span class="status">Бронювання підтверджено</span>
-				</article>
-				<div>
-					<h4>Історія взаємодії</h4>
-					<ol class="history">
-						@for (g of guestSteps; track g.step) {
-							<li>
-								<b>{{ g.step }}</b><span>{{ g.via }}</span>
-							</li>
-						}
-					</ol>
-				</div>
-			</div>
-			<h3 class="subhead">Жодна заявка не повинна загубитися</h3>
-			<ol class="stages">
-				@for (s of stages; track s) {
-					<li>{{ s }}</li>
-				}
-			</ol>
-			<p class="closing">Адміністратор бачить, на якому етапі кожна заявка, і що потрібно зробити далі.</p>
 		</div>
 	</section>
 

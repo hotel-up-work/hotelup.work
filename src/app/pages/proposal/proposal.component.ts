@@ -18,30 +18,6 @@ interface Case {
 	fix: string;
 }
 
-const PROBLEMS: Card[] = [
-	{ title: 'Комісія', text: 'Ви платите за кожне бронювання, яке прийшло через посередника.' },
-	{ title: 'Залежність', text: 'Продажі залежать від правил, алгоритмів і видимості сторонньої платформи.' },
-	{ title: 'Втрата власного каналу', text: 'Гість може не знати, де забронювати у вас напряму.' },
-	{ title: 'Втрата повторних продажів', text: 'Без власної бази складніше повертати гостя знову.' },
-];
-
-const FUNNEL: Card[] = [
-	{ title: 'Реклама', text: 'Instagram · TikTok · Google' },
-	{ title: 'Сайт', text: 'Номери · ціни · переваги' },
-	{ title: 'Заявка', text: 'Запит · бронювання' },
-	{ title: 'Готель', text: 'Прямий клієнт' },
-];
-
-const SITE_BLOCKS = [
-	'Номери та категорії',
-	'Ціни та умови',
-	'Фото й переваги',
-	'SPA / ресторан / послуги',
-	'Акції та спеціальні пропозиції',
-	'Контакти, карта та месенджери',
-	'Форма заявки / бронювання',
-];
-
 const CASES: Case[] = [
 	{
 		title: 'Двоє гостей з підтвердженням на один номер',
@@ -77,14 +53,6 @@ const CASES: Case[] = [
 	},
 ];
 
-const SYSTEM: Card[] = [
-	{ title: 'Бронювання', text: 'Один календар для всіх джерел.' },
-	{ title: 'Оплати', text: 'Кожна гривня прив’язана до бронювання.' },
-	{ title: 'Хмара', text: 'Доступ із браузера та телефона.' },
-	{ title: 'База гостей', text: 'Історія проживань і нотатки належать готелю.' },
-	{ title: 'Контроль', text: 'Власник бачить цифри та борги дистанційно.' },
-];
-
 const CRM_AREAS: Card[] = [
 	{ title: 'База гостей', text: 'Контакти та історія' },
 	{ title: 'Заявки', text: 'Нова → в роботі → бронювання' },
@@ -106,16 +74,14 @@ export class ProposalComponent {
 		initialValue: findProposalHotel(this._route.snapshot.paramMap.get('slug')),
 	});
 	protected readonly hotelName = computed(() => this.hotel()?.name ?? 'вашого готелю');
+	/** The landing page built for this hotel: https://<slug>.hotelup.work. */
+	protected readonly siteHost = computed(() => (this.hotel() ? `${this.hotel()!.slug}.hotelup.work` : null));
 	protected readonly otaTitle = computed(
 		() => `Скільки грошей ${this.hotel()?.name ?? 'ваш готель'} віддає посередникам?`,
 	);
 
 	protected readonly emailHref = companyEmailHref;
-	protected readonly problems = PROBLEMS;
-	protected readonly funnel = FUNNEL;
-	protected readonly siteBlocks = SITE_BLOCKS;
 	protected readonly cases = CASES;
-	protected readonly system = SYSTEM;
 	protected readonly crmAreas = CRM_AREAS;
 	protected readonly plans = PLAN_ORDER.map((key) => PLANS[key]);
 	protected readonly channels = ['Booking.com', 'Airbnb', 'Expedia', 'Сайт готелю', 'Прямі заявки'];
@@ -125,13 +91,5 @@ export class ProposalComponent {
 		'Менше ручної роботи адміністратора',
 		'Менший ризик подвійного бронювання',
 	];
-	protected readonly stages = ['Нова заявка', 'В роботі', 'Підтверджена', 'Заїзд', 'Повторний гість'];
-	protected readonly guestSteps = [
-		{ step: 'Переглянула номер Deluxe', via: 'Сайт' },
-		{ step: 'Залишила заявку', via: 'Форма бронювання' },
-		{ step: 'Адміністратор зв’язався', via: 'Телефон' },
-		{ step: 'Бронювання підтверджено', via: 'CRM' },
-	];
-	protected readonly scattered = ['Зошит', 'Viber', 'Excel', 'Телефон', 'Пошта'];
 	protected readonly inbound = ['Instagram DM', 'Телефон', 'Viber / WhatsApp', 'Заявки з сайту', 'OTA'];
 }
