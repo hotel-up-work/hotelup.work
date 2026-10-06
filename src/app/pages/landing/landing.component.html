@@ -104,7 +104,7 @@
 		<a href="#features">Можливості</a>
 		<a href="#ai">AI <span class="tiny">✦</span></a>
 		<a href="#hotels">Для готелів</a>
-		<a href="#pricing">Ціни</a>
+		<a routerLink="/pricing">Ціни</a>
 	</nav>
 	<div class="header-actions">
 		<a class="login" routerLink="/login">Увійти ↗</a>
@@ -687,31 +687,63 @@
 	<section id="pricing" class="pricing">
 		<div class="center">
 			<p class="eyebrow">ПРОСТІ ЦІНИ. УСЕ НЕОБХІДНЕ.</p>
-			<h2>Почніть безкоштовно.</h2>
-			<p>Календар бронювань і заявки з ваших сайтів безкоштовні назавжди. Решту вмикаєте, коли потрібно.</p>
+			<h2>Сайт під ключ і CRM.<br />Починайте з безкоштовного.</h2>
+			<p>Сайт оплачується один раз. Календар і заявки з ваших сайтів у CRM безкоштовні назавжди, решту вмикаєте, коли потрібно.</p>
 		</div>
-		<div class="pricing-grid">
-			@for (p of plans; track p.key) {
-				<article class="price-card" [class.recommended]="p.recommended">
-					@if (p.recommended) {
-						<span class="recommend">РЕКОМЕНДОВАНИЙ</span>
-					}
-					<h3>{{ p.name }}</h3>
-					<p>{{ p.limits }}</p>
-					<div class="price">{{ p.price }}<span>{{ p.period }}</span></div>
-						<p class="yearly">{{ p.yearly ? 'або ' + p.yearly : '' }}</p>
-					<ul class="checks">
-						@for (h of p.highlights; track h) {
-							<li>{{ h }}</li>
+
+		<div class="price-lane">
+			<div class="lane-head">
+				<h3>Сайт для готелю</h3>
+				<span>разова оплата, без підписки</span>
+			</div>
+			<div class="tier-grid">
+				@for (t of siteTiers; track t.name) {
+					<a class="tier" [class.recommended]="t.recommended" routerLink="/pricing">
+						@if (t.recommended) {
+							<span class="recommend">ОБИРАЮТЬ ЧАСТІШЕ</span>
 						}
-					</ul>
-					<button class="btn gold" (click)="choosePlan(p.key)">{{ p.cta }} <span>↗</span></button>
-				</article>
-			}
+						<b>{{ t.name }}</b>
+						<span class="tier-price">{{ t.price }}</span>
+						<small>{{ t.tagline }}</small>
+						<span class="tier-link">Що входить →</span>
+					</a>
+				}
+			</div>
 		</div>
-		<p class="buyout-note">
-			<a class="text-button" routerLink="/pricing">Порівняти всі тарифи →</a>
-		</p>
+
+		<div class="price-lane">
+			<div class="lane-head">
+				<h3>CRM Hotel Upwork</h3>
+				<span>помісячно, а за рік дешевше</span>
+			</div>
+			<div class="pricing-grid">
+				@for (p of plans; track p.key) {
+					<article class="price-card" [class.recommended]="p.recommended">
+						@if (p.recommended) {
+							<span class="recommend">РЕКОМЕНДОВАНИЙ</span>
+						}
+						<h3>{{ p.name }}</h3>
+						<p>{{ p.limits }}</p>
+						<div class="price">{{ p.price }}<span>{{ p.period }}</span></div>
+						<p class="yearly">{{ p.yearly ? 'або ' + p.yearly : '' }}</p>
+						<ul class="checks">
+							@for (h of p.highlights; track h) {
+								<li>{{ h }}</li>
+							}
+						</ul>
+						<button class="btn gold" (click)="choosePlan(p.key)">{{ p.cta }} <span>↗</span></button>
+					</article>
+				}
+			</div>
+		</div>
+
+		<div class="pricing-cta">
+			<div>
+				<h3>Не впевнені, що обрати?</h3>
+				<p>Порівняйте всі пакети й тарифи, а менеджер допоможе підібрати рішення під ваш готель.</p>
+			</div>
+			<a class="btn gold" routerLink="/pricing">Дивитися всі ціни <span>↗</span></a>
+		</div>
 	</section>
 
 	<section class="final-cta">

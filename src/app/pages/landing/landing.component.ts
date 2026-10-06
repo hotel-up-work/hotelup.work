@@ -13,6 +13,7 @@ import {
 	viewChild,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { SITE_TIERS } from '../../shared/site-tiers';
 import { PLAN_ORDER, PLANS, setStoredPlan, type Plan } from '../../shared/plan';
 
 interface ParallaxTarget {
@@ -166,6 +167,7 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
 	protected readonly isDark = signal(this._readInitialTheme() === 'dark');
 
 	protected readonly plans = PLAN_ORDER.map((key) => PLANS[key]);
+	protected readonly siteTiers = SITE_TIERS;
 
 	protected choosePlan(plan: Plan): void {
 		setStoredPlan(plan);
