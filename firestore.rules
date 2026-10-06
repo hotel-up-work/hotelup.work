@@ -193,7 +193,9 @@ service cloud.firestore {
           && isDate(payment().occurredOn)
           && optText(payment(), 'note', 300)
           && payment().recordedBy is string && payment().recordedBy.size() <= 100
-          && payment().recordedByUid is string && payment().recordedByUid.size() <= 40
+          && payment().recordedByUid == request.auth.uid
+          // existsAfter: a booking created in the same batch (payment taken at booking time) counts too.
+          && existsAfter(/databases/$(database)/documents/hotels/$(hotelId)/bookings/$(payment().bookingId))
           && payment().createdAt == request.time;
         allow update, delete: if false;
       }
@@ -268,8 +270,17 @@ service cloud.firestore {
                     && (!('history' in data()) || data().history.size() == 0)
                     && data().status == 'new'
                     && data().createdAt == request.time;
-      allow read, update: if request.auth != null
-                    && request.auth.uid in get(/databases/$(database)/documents/hotels/$(resource.data.hotelId)).data.ownerUids;
+      function isSubmissionOwner() {
+        return request.auth != null
+          && request.auth.uid in get(/databases/$(database)/documents/hotels/$(resource.data.hotelId)).data.ownerUids;
+      }
+      allow read: if isSubmissionOwner();
+      // Staff may only move a lead through its workflow (status + history), never edit what the visitor sent
+      // or re-assign it to another hotel.
+      allow update: if isSubmissionOwner()
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'history'])
+                    && request.resource.data.status in ['new', 'inProgress', 'booked', 'closed', 'spam']
+                    && request.resource.data.history is list;
       allow delete: if false;
     }
 
