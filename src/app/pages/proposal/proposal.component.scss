@@ -88,28 +88,79 @@ section {
 	padding-block: 72px;
 }
 
-.band {
-	background: var(--surface);
+/* Three section tones only: ivory paper, warm sand and ink. */
+
+section,
+footer {
+	background: var(--bg);
+	color: var(--ink);
 }
 
-.dark {
-	background: var(--dark);
-	color: var(--on-dark);
+.tone-paper {
+	--bg: oklch(0.985 0.004 85);
+	--card: oklch(1 0 0);
+	--border: oklch(0.9 0.008 85);
+	--surface: oklch(0.955 0.008 85);
+}
 
-	.sub,
-	.card p,
-	.note {
-		color: var(--on-dark-muted);
+.tone-sand {
+	--bg: oklch(0.945 0.03 85);
+	--card: oklch(0.985 0.012 85);
+	--border: oklch(0.86 0.045 85);
+	--surface: oklch(0.92 0.04 85);
+}
+
+
+
+
+.tone-ink {
+	--ink: oklch(0.96 0.005 85);
+	--muted: oklch(0.8 0.01 85);
+	--gold-ink: oklch(0.82 0.11 85);
+	--danger: oklch(0.76 0.14 30);
+	--ok: oklch(0.8 0.13 155);
+	--bg: oklch(0.19 0.005 85);
+	--card: oklch(0.25 0.006 85);
+	--border: oklch(0.36 0.01 85);
+	--surface: oklch(0.23 0.006 85);
+}
+
+.hero {
+	background:
+		radial-gradient(60% 80% at 85% 0%, oklch(0.9 0.07 85 / 0.55), transparent 70%),
+		var(--bg);
+}
+
+:host-context([data-theme='dark']) {
+	.tone-paper {
+		--bg: oklch(0.2 0.005 85);
+		--card: oklch(0.25 0.006 85);
+		--border: oklch(0.32 0.008 85);
+		--surface: oklch(0.23 0.006 85);
 	}
 
-	.card,
-	.chips li {
-		background: #26272b;
-		border-color: #3a3b41;
+	.tone-sand {
+		--bg: oklch(0.25 0.03 85);
+		--card: oklch(0.3 0.03 85);
+		--border: oklch(0.38 0.04 85);
+		--surface: oklch(0.28 0.03 85);
 	}
 
-	.accent {
-		color: var(--gold);
+
+
+
+	.tone-ink {
+		--bg: oklch(0.14 0.004 85);
+		--card: oklch(0.2 0.005 85);
+		--border: oklch(0.3 0.008 85);
+		--surface: oklch(0.18 0.005 85);
+	}
+
+
+	.hero {
+		background:
+			radial-gradient(60% 80% at 85% 0%, oklch(0.4 0.08 85 / 0.35), transparent 70%),
+			var(--bg);
 	}
 }
 
@@ -234,11 +285,11 @@ h3 {
 	}
 
 	&.ghost-dark {
-		border-color: var(--on-dark-muted);
-		color: var(--on-dark);
+		border-color: var(--muted);
+		color: var(--ink);
 
 		&:hover {
-			border-color: var(--on-dark);
+			border-color: var(--ink);
 		}
 	}
 }
@@ -543,10 +594,6 @@ h3 {
 }
 
 /* Hotel site preview */
-
-.site {
-	padding-top: 0;
-}
 
 .browser {
 	margin-top: 32px;

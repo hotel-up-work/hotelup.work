@@ -7,7 +7,7 @@
 </header>
 
 <main>
-	<section class="hero" aria-labelledby="hero-title">
+	<section class="hero tone-paper" aria-labelledby="hero-title">
 		<div class="wrap">
 			@if (hotel(); as h) {
 				<p class="for">Пропозиція для {{ h.name }}, {{ h.city }}</p>
@@ -22,7 +22,7 @@
 	</section>
 
 	@if (siteHost(); as host) {
-		<section class="site" aria-labelledby="site-title">
+		<section class="site tone-sand" aria-labelledby="site-title">
 			<div class="wrap">
 				<h2 id="site-title">Ми вже створили сайт для вашого готелю</h2>
 				<p class="sub">Це персональний сайт для {{ hotelName() }}. Перегляньте його, і якщо він вам сподобається, зв’яжіться з нами, щоб отримати його.</p>
@@ -46,7 +46,7 @@
 		</section>
 	}
 
-	<section class="band" aria-labelledby="ota-title">
+	<section class="tone-ink" aria-labelledby="ota-title">
 		<div class="wrap">
 			<h2 id="ota-title">{{ otaTitle() }}</h2>
 			<p class="sub">Коли гість бронює через OTA, частина вартості бронювання залишається платформі.</p>
@@ -70,7 +70,7 @@
 		</div>
 	</section>
 
-	<section class="band" aria-labelledby="econ-title">
+	<section class="tone-paper" aria-labelledby="econ-title">
 		<div class="wrap">
 			<h2 id="econ-title">Сайт має окупатися не «красивим дизайном», а бронюваннями</h2>
 			<ol class="chips arrows" aria-label="Наприклад">
@@ -84,7 +84,7 @@
 		</div>
 	</section>
 
-	<section aria-labelledby="cases-title">
+	<section class="tone-sand" aria-labelledby="cases-title">
 		<div class="wrap">
 			<h2 id="cases-title">5 проблем, які щосезону коштують готелю грошей</h2>
 			<p class="sub">Від проблеми до рішення: як це виглядає у звичайному українському готелі і як Hotel Upwork це закриває.</p>
@@ -107,7 +107,7 @@
 		</div>
 	</section>
 
-	<section class="band dark" aria-labelledby="os-title">
+	<section class="tone-ink" aria-labelledby="os-title">
 		<div class="wrap">
 			<h2 id="os-title">Але що робити з усіма цими заявками?</h2>
 			<p class="sub">Сайт вирішує проблему каналу продажів. Далі потрібно керувати самим потоком бронювань.</p>
@@ -130,7 +130,7 @@
 		</div>
 	</section>
 
-	<section aria-labelledby="int-title">
+	<section class="tone-paper" aria-labelledby="int-title">
 		<div class="wrap">
 			<h2 id="int-title">Усі канали бронювання під контролем в одному місці</h2>
 			<p class="sub">Інтеграція з Booking та іншими системами.</p>
@@ -149,7 +149,7 @@
 		</div>
 	</section>
 
-	<section aria-labelledby="combo-title">
+	<section class="tone-sand" aria-labelledby="combo-title">
 		<div class="wrap">
 			<h2 id="combo-title">Сайт + CRM = власна система продажів</h2>
 			<div class="grid two">
@@ -176,7 +176,7 @@
 		</div>
 	</section>
 
-	<section class="band" id="pricing" aria-labelledby="pricing-title">
+	<section class="tone-paper" id="pricing" aria-labelledby="pricing-title">
 		<div class="wrap">
 			<h2 id="pricing-title">Тарифи</h2>
 			<ul class="grid three">
@@ -205,7 +205,7 @@
 		</div>
 	</section>
 
-	<section class="band dark final" id="start" aria-labelledby="final-title">
+	<section class="tone-ink final" id="start" aria-labelledby="final-title">
 		<div class="wrap">
 			<h2 id="final-title">Перестаньте залежати від чужих платформ</h2>
 			<p class="sub">
@@ -223,7 +223,7 @@
 	</section>
 </main>
 
-<footer class="foot">
+<footer class="foot tone-paper">
 	<div class="wrap">
 		<a class="brand" routerLink="/" aria-label="Hotel Upwork, головна сторінка">
 			<span class="mark">H</span>
