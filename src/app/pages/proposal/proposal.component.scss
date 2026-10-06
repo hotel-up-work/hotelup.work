@@ -704,3 +704,28 @@ h3 {
 		}
 	}
 }
+
+/* Reasons */
+
+.reasons {
+	margin-top: 40px;
+	display: grid;
+	gap: 16px;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
+
+	.card {
+		display: flex;
+		gap: 20px;
+		align-items: flex-start;
+	}
+
+	.num {
+		flex: none;
+		min-width: 2ch;
+		font-size: 28px;
+		font-weight: 800;
+		line-height: 1.1;
+		color: var(--gold-ink);
+		font-variant-numeric: tabular-nums;
+	}
+}
