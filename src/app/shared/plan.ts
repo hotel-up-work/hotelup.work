@@ -46,8 +46,8 @@ export const PLANS: Record<Plan, PlanInfo> = {
 	enterprise: {
 		key: 'enterprise',
 		name: 'Enterprise',
-		price: '1 299 грн',
-		yearly: '12 999 грн / рік',
+		price: 'від 1 299 грн',
+		yearly: 'від 12 999 грн / рік',
 		period: '/ місяць',
 		tagline: 'Автоматизації, аналітика та AI.',
 		limits: 'Без обмежень номерів і працівників',

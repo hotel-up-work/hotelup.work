@@ -212,6 +212,46 @@ nav {
 	}
 }
 
+.crm-intro {
+	padding-top: 96px;
+
+	h2 {
+		font-size: 38px;
+		line-height: 1.15;
+		letter-spacing: -1.5px;
+		max-width: 20ch;
+		margin: 0 auto 20px;
+		text-wrap: balance;
+	}
+}
+
+.site-tiers {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 16px;
+	max-width: 1240px;
+	margin: 0 auto;
+	padding: 0 5%;
+	box-sizing: content-box;
+}
+
+.site-tier {
+	padding: 28px 24px;
+
+	.price {
+		font-size: 42px;
+	}
+
+	.tagline {
+		min-height: 44px;
+		margin-bottom: 0;
+	}
+
+	.inherits {
+		font-weight: 700;
+	}
+}
+
 .plans {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
@@ -249,6 +289,20 @@ nav {
 
 	.btn {
 		width: 100%;
+	}
+}
+
+.sales-link {
+	align-self: center;
+	margin: 14px 0 0;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--gold-ink);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+
+	&:hover {
+		color: var(--ink);
 	}
 }
 
@@ -313,6 +367,7 @@ nav {
 }
 
 .compare,
+.contact,
 .faq {
 	max-width: 1080px;
 	margin: 0 auto;
@@ -398,6 +453,79 @@ tbody:last-child tr:last-child > * {
 	border-bottom: 0;
 }
 
+.contact {
+	max-width: 720px;
+	scroll-margin-top: 24px;
+}
+
+.contact-lead {
+	color: var(--muted);
+	margin-bottom: 28px;
+}
+
+.contact-form {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 16px;
+
+	label {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		font-size: 13px;
+		font-weight: 700;
+	}
+
+	.wide {
+		grid-column: 1 / -1;
+	}
+
+	input,
+	select,
+	textarea {
+		font: inherit;
+		font-weight: 400;
+		color: var(--ink);
+		background: var(--white);
+		border: 1px solid var(--border);
+		border-radius: 6px;
+		padding: 12px 14px;
+		min-height: 48px;
+
+		&:focus-visible {
+			outline: 3px solid #a67b30;
+			outline-offset: 2px;
+			border-color: var(--gold);
+		}
+	}
+
+	textarea {
+		resize: vertical;
+	}
+
+	.btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+}
+
+.form-note {
+	margin: 0;
+	padding: 14px 16px;
+	border-radius: 6px;
+	font-size: 14px;
+
+	&.ok {
+		background: var(--gold-light);
+		color: var(--gold-ink);
+	}
+
+	&.err {
+		border: 1px solid #c0392b;
+		color: #c0392b;
+	}
+}
+
 .faq {
 	max-width: 780px;
 
@@ -480,6 +608,13 @@ footer {
 	}
 }
 
+@media (max-width: 1100px) {
+	.site-tiers {
+		grid-template-columns: repeat(2, 1fr);
+		max-width: 760px;
+	}
+}
+
 @media (max-width: 980px) {
 	.plans {
 		grid-template-columns: 1fr;
@@ -527,8 +662,28 @@ footer {
 		}
 	}
 
+	.site-tiers {
+		grid-template-columns: 1fr;
+		max-width: 520px;
+	}
+
+	.contact-form {
+		grid-template-columns: 1fr;
+	}
+
+	.crm-intro {
+		padding-top: 64px;
+
+		h2 {
+			font-size: 28px;
+			letter-spacing: -1px;
+		}
+	}
+
+	.site-tiers,
 	.plans,
 	.compare,
+	.contact,
 	.faq {
 		padding-left: 16px;
 		padding-right: 16px;
@@ -539,6 +694,7 @@ footer {
 	}
 
 	.compare,
+	.contact,
 	.faq {
 		padding-top: 64px;
 

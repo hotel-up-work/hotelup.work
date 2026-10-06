@@ -14,8 +14,42 @@
 
 <main>
 	<section class="intro">
-		<p class="eyebrow">ТАРИФИ</p>
-		<h1>Почніть безкоштовно. Платіть, коли готель росте.</h1>
+		<p class="eyebrow">САЙТ ПІД КЛЮЧ</p>
+		<h1>Сайт для вашого готелю. Разова ціна, без підписки.</h1>
+		<p>
+			Ми розробники: робимо сайти для готелів і підключаємо їх до Hotel Upwork. Оберіть пакет,
+			а далі розширюйте його разом з готелем.
+		</p>
+	</section>
+
+	<section class="site-tiers" aria-label="Пакети створення сайту">
+		@for (t of siteTiers; track t.name) {
+			<article class="plan site-tier" [class.recommended]="t.recommended">
+				@if (t.recommended) {
+					<span class="recommend">РЕКОМЕНДОВАНИЙ</span>
+				}
+				<h2>{{ t.name }}</h2>
+				<p class="tagline">{{ t.tagline }}</p>
+				<div class="price">{{ t.price }}<span>разово</span></div>
+				<a class="btn" [class.gold]="t.recommended" [class.outline]="!t.recommended" [href]="siteOrderHref">
+					Замовити сайт <span aria-hidden="true">↗</span>
+				</a>
+				<a class="sales-link" href="#contact">Зв'язатися з відділом продажів</a>
+				<ul class="checks">
+					@if (t.inherits) {
+						<li class="inherits">Усе з пакета «{{ t.inherits }}»</li>
+					}
+					@for (f of t.features; track f) {
+						<li>{{ f }}</li>
+					}
+				</ul>
+			</article>
+		}
+	</section>
+
+	<section class="intro crm-intro">
+		<p class="eyebrow">ТАРИФИ CRM</p>
+		<h2>Почніть безкоштовно. Платіть, коли готель росте.</h2>
 		<p>
 			Календар бронювань і заявки з ваших сайтів безкоштовні назавжди. Решту модулів вмикаєте тоді,
 			коли вони справді потрібні.
@@ -36,6 +70,7 @@
 				<button type="button" class="btn" [class.gold]="p.recommended" [class.outline]="!p.recommended" (click)="choose(p.key)">
 					{{ p.cta }} <span aria-hidden="true">↗</span>
 				</button>
+				<a class="sales-link" href="#contact">Зв'язатися з відділом продажів</a>
 				<ul class="checks">
 					@for (h of p.highlights; track h) {
 						<li>{{ h }}</li>
@@ -88,6 +123,55 @@
 				}
 			</table>
 		</div>
+	</section>
+
+	<section class="contact" id="contact" aria-labelledby="contact-title">
+		<h2 id="contact-title">Зв'язатися з відділом продажів</h2>
+		<p class="contact-lead">
+			Розкажіть про ваш готель, і ми підберемо пакет сайту та тариф CRM. Відповімо протягом робочого дня.
+		</p>
+		@if (status() === 'sent') {
+			<p class="form-note ok" role="status">Дякуємо! Заявку отримано, ми скоро зв'яжемося з вами.</p>
+		} @else {
+			<form class="contact-form" (ngSubmit)="submit()" #f="ngForm">
+				<label>
+					Ім'я
+					<input name="name" type="text" autocomplete="name" required [(ngModel)]="form.name" />
+				</label>
+				<label>
+					Телефон
+					<input name="phone" type="tel" autocomplete="tel" required [(ngModel)]="form.phone" />
+				</label>
+				<label>
+					Email
+					<input name="email" type="email" autocomplete="email" [(ngModel)]="form.email" />
+				</label>
+				<label>
+					Назва готелю
+					<input name="hotel" type="text" autocomplete="organization" [(ngModel)]="form.hotel" />
+				</label>
+				<label class="wide">
+					Що вас цікавить
+					<select name="interest" [(ngModel)]="form.interest">
+						@for (i of interests; track i) {
+							<option [value]="i">{{ i }}</option>
+						}
+					</select>
+				</label>
+				<label class="wide">
+					Повідомлення
+					<textarea name="message" rows="4" [(ngModel)]="form.message"></textarea>
+				</label>
+				@if (status() === 'error') {
+					<p class="form-note err wide" role="alert">
+						Не вдалося надіслати заявку. Спробуйте пізніше або напишіть нам напряму.
+					</p>
+				}
+				<button type="submit" class="btn gold wide" [disabled]="f.invalid || status() === 'sending'">
+					{{ status() === 'sending' ? 'Надсилаємо…' : 'Надіслати заявку' }} <span aria-hidden="true">↗</span>
+				</button>
+			</form>
+		}
 	</section>
 
 	<section class="faq" aria-labelledby="faq-title">
