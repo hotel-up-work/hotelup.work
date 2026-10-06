@@ -2,7 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
-import { companyEmailHref } from '../../feature/company/company.data';
+import { CONTACTS } from '../../shared/contacts';
 import { PLAN_ORDER, PLANS } from '../../shared/plan';
 import { findProposalHotel } from './proposal-hotels';
 
@@ -80,7 +80,7 @@ export class ProposalComponent {
 		() => `Скільки грошей ${this.hotel()?.name ?? 'ваш готель'} віддає посередникам?`,
 	);
 
-	protected readonly emailHref = companyEmailHref;
+	protected readonly contacts = CONTACTS;
 	protected readonly cases = CASES;
 	protected readonly crmAreas = CRM_AREAS;
 	protected readonly plans = PLAN_ORDER.map((key) => PLANS[key]);

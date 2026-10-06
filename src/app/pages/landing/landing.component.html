@@ -776,6 +776,8 @@
 			<b>Компанія</b>
 			<a href="#hotels">Про нас</a>
 			<button (click)="openContactsModal()">Контакти</button>
+			<a [href]="contacts.phoneHref">{{ contacts.phone }}</a>
+			<a [href]="contacts.telegramHref" target="_blank" rel="noopener">Telegram</a>
 			<a routerLink="/pricing">Ціни</a>
 		</div>
 		<div>
@@ -822,7 +824,9 @@
 		@case ('contacts') {
 			<span class="demo-badge">Hotel Upwork · Демонстраційна сторінка</span>
 			<h2>Контакти Hotel Upwork</h2>
-			<p>Контактні дані команди ще не додані. Перед запуском сторінки тут потрібно вказати актуальні email і телефон.</p>
+			<p><b>{{ contacts.name }}</b></p>
+			<p><a [href]="contacts.phoneHref">{{ contacts.phone }}</a></p>
+			<p><a [href]="contacts.telegramHref" target="_blank" rel="noopener">{{ contacts.telegram }}</a></p>
 		}
 		@case ('terms') {
 			<span class="demo-badge">Hotel Upwork · Демонстраційна сторінка</span>

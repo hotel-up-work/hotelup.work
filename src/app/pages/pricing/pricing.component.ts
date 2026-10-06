@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { companyEmailHref } from '../../feature/company/company.data';
 import { sendSalesRequest } from '../../shared/sales-contact';
+import { CONTACTS } from '../../shared/contacts';
 import { SITE_TIERS } from '../../shared/site-tiers';
 import { PLAN_ORDER, planIncludes, PLANS, setStoredPlan, type Plan } from '../../shared/plan';
 
@@ -116,6 +117,7 @@ export class PricingComponent {
 		`Сайти ми робимо під ключ і підключаємо до системи бронювання. Залиште контакти, і менеджер зв'яжеться з вами, уточнить побажання та допоможе обрати пакет.`;
 	protected readonly crmLead =
 		`Нових клієнтів ми підключаємо особисто, тому самостійної реєстрації немає. Залиште контакти, і наш менеджер зв'яжеться з вами, допоможе обрати пакет сайту та тариф CRM і налаштує систему під ваш готель.`;
+	protected readonly salesContact = CONTACTS;
 	protected readonly siteTiers = SITE_TIERS;
 	protected readonly siteOrderHref = companyEmailHref
 		? `${companyEmailHref}?subject=${encodeURIComponent('Замовлення сайту для готелю')}`

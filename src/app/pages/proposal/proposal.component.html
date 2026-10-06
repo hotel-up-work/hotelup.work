@@ -24,8 +24,8 @@
 	@if (siteHost(); as host) {
 		<section class="site" aria-labelledby="site-title">
 			<div class="wrap">
-				<h2 id="site-title">Сайт, який ми вже створили для вас</h2>
-				<p class="sub">Перегляньте, як {{ hotelName() }} виглядає у власному каналі прямих бронювань.</p>
+				<h2 id="site-title">Ми вже створили сайт для вашого готелю</h2>
+				<p class="sub">Це персональний сайт для {{ hotelName() }}. Перегляньте його, і якщо він вам сподобається, зв’яжіться з нами, щоб отримати його.</p>
 				<a class="browser" [href]="'https://' + host" target="_blank" rel="noopener" [attr.aria-label]="'Відкрити ' + host + ' в новій вкладці'">
 					<span class="chrome" aria-hidden="true">
 						<i></i><i></i><i></i>
@@ -37,6 +37,11 @@
 						<span class="btn gold">Відкрити сайт <span aria-hidden="true">↗</span></span>
 					</span>
 				</a>
+				<p class="actions">
+					<a class="btn gold" [href]="contacts.telegramHref" target="_blank" rel="noopener">Хочу цей сайт <span aria-hidden="true">↗</span></a>
+					<a class="btn ghost" [href]="contacts.phoneHref">{{ contacts.phone }}</a>
+				</p>
+				<p class="note">Пишіть у Telegram або телефонуйте: {{ contacts.name }}.</p>
 			</div>
 		</section>
 	}
@@ -210,11 +215,25 @@
 			<p class="chips-inline">Сайт + CRM = контроль продажів</p>
 			<p class="actions">
 				<a class="btn gold" routerLink="/pricing">Перших 30 днів безкоштовно</a>
-				@if (emailHref) {
-					<a class="btn ghost-dark" [href]="emailHref">Написати нам</a>
-				}
+				<a class="btn ghost-dark" [href]="contacts.telegramHref" target="_blank" rel="noopener">Telegram ↗</a>
+				<a class="btn ghost-dark" [href]="contacts.phoneHref">{{ contacts.phone }}</a>
 			</p>
 			<p class="note">Календар і заявки з сайтів: старт безкоштовний, до 10 номерів, без картки.</p>
 		</div>
 	</section>
 </main>
+
+<footer class="foot">
+	<div class="wrap">
+		<a class="brand" routerLink="/" aria-label="Hotel Upwork, головна сторінка">
+			<span class="mark">H</span>
+			<span>Hotel <strong>Upwork</strong></span>
+		</a>
+		<p class="tag">Увесь готель в одній простій системі</p>
+		<address>
+			<b>{{ contacts.name }}</b>
+			<a [href]="contacts.phoneHref">{{ contacts.phone }}</a>
+			<a [href]="contacts.telegramHref" target="_blank" rel="noopener">{{ contacts.telegram }}</a>
+		</address>
+	</div>
+</footer>

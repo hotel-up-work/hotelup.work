@@ -13,6 +13,7 @@ import {
 	viewChild,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { CONTACTS } from '../../shared/contacts';
 import { SITE_TIERS } from '../../shared/site-tiers';
 import { PLAN_ORDER, PLANS, setStoredPlan, type Plan } from '../../shared/plan';
 
@@ -66,6 +67,7 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
 	private readonly _isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 	private readonly _router = inject(Router);
 
+	protected readonly contacts = CONTACTS;
 	protected readonly dialogRef = viewChild<ElementRef<HTMLDialogElement>>('dialogEl');
 	protected readonly modalKind = signal<ModalKind>(null);
 	protected readonly guestName = signal('');

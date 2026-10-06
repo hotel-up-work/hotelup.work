@@ -221,6 +221,8 @@
 <footer>
 	<span>© 2026 Hotel Upwork</span>
 	<a routerLink="/">Головна</a>
+	<a [href]="salesContact.phoneHref">{{ salesContact.phone }}</a>
+	<a [href]="salesContact.telegramHref" target="_blank" rel="noopener">Telegram</a>
 	<a href="/privacy/">Політика конфіденційності</a>
 	<a href="/cookies/">Cookies</a>
 </footer>
