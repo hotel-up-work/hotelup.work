@@ -34,7 +34,6 @@
 				<a class="btn" [class.gold]="t.recommended" [class.outline]="!t.recommended" [href]="siteOrderHref">
 					Замовити сайт <span aria-hidden="true">↗</span>
 				</a>
-				<a class="sales-link" href="#contact">Зв'язатися з відділом продажів</a>
 				<ul class="checks">
 					@if (t.inherits) {
 						<li class="inherits">Усе з пакета «{{ t.inherits }}»</li>
@@ -46,6 +45,16 @@
 			</article>
 		}
 	</section>
+
+	<ng-container
+		[ngTemplateOutlet]="salesBlock"
+		[ngTemplateOutletContext]="{
+			key: 'site',
+			c: contacts.site,
+			title: 'Замовте сайт для свого готелю',
+			lead: siteLead,
+		}"
+	/>
 
 	<section class="intro crm-intro">
 		<p class="eyebrow">ТАРИФИ CRM</p>
@@ -64,13 +73,17 @@
 				}
 				<h2>{{ p.name }}</h2>
 				<p class="tagline">{{ p.tagline }}</p>
-				<div class="price">{{ p.price }}<span>{{ p.period }}</span></div>
+				<div class="price">
+					@if (p.price.startsWith('від ')) {
+						<small class="from">від</small>
+					}
+					{{ p.price.replace('від ', '') }}<span>{{ p.period }}</span>
+				</div>
 				<p class="yearly">{{ p.yearly ? 'або ' + p.yearly : '' }}</p>
 				<p class="limits">{{ p.limits }}</p>
 				<button type="button" class="btn" [class.gold]="p.recommended" [class.outline]="!p.recommended" (click)="choose(p.key)">
 					{{ p.cta }} <span aria-hidden="true">↗</span>
 				</button>
-				<a class="sales-link" href="#contact">Зв'язатися з відділом продажів</a>
 				<ul class="checks">
 					@for (h of p.highlights; track h) {
 						<li>{{ h }}</li>
@@ -79,6 +92,69 @@
 			</article>
 		}
 	</section>
+
+	<ng-template #salesBlock let-key="key" let-c="c" let-title="title" let-lead="lead">
+		<section class="contact" [id]="'contact-' + key" [attr.aria-labelledby]="'contact-title-' + key">
+			<h2 [id]="'contact-title-' + key">{{ title }}</h2>
+			<p class="contact-lead">{{ lead }}</p>
+			@if (!c.open()) {
+				<button type="button" class="btn outline" aria-expanded="false" [attr.aria-controls]="'form-' + key" (click)="c.open.set(true)">
+					Зв'язатися з відділом продажів <span aria-hidden="true">↗</span>
+				</button>
+			} @else if (c.status() === 'sent') {
+				<p class="form-note ok" role="status">Дякуємо! Ми отримали вашу заявку, і менеджер зв'яжеться з вами найближчим часом.</p>
+			} @else {
+				<form [id]="'form-' + key" class="contact-form" (ngSubmit)="submit(key)" #f="ngForm">
+					<label>
+						Ім'я
+						<input name="name" type="text" autocomplete="name" [(ngModel)]="c.form.name" />
+					</label>
+					<label>
+						Телефон
+						<input name="phone" type="tel" autocomplete="tel" required [(ngModel)]="c.form.phone" />
+					</label>
+					<label>
+						Email
+						<input name="email" type="email" autocomplete="email" [(ngModel)]="c.form.email" />
+					</label>
+					<label>
+						Назва готелю
+						<input name="hotel" type="text" autocomplete="organization" [(ngModel)]="c.form.hotel" />
+					</label>
+					<label class="wide">
+						Що вас цікавить
+						<select name="interest" [(ngModel)]="c.form.interest">
+							@for (i of interests; track i) {
+								<option [value]="i">{{ i }}</option>
+							}
+						</select>
+					</label>
+					<label class="wide">
+						Повідомлення
+						<textarea name="message" rows="4" [(ngModel)]="c.form.message"></textarea>
+					</label>
+					@if (c.status() === 'error') {
+						<p class="form-note err wide" role="alert">
+							Не вдалося надіслати заявку. Спробуйте пізніше або напишіть нам напряму.
+						</p>
+					}
+					<button type="submit" class="btn gold wide" [disabled]="f.invalid || c.status() === 'sending'">
+						{{ c.status() === 'sending' ? 'Надсилаємо…' : 'Надіслати заявку' }} <span aria-hidden="true">↗</span>
+					</button>
+				</form>
+			}
+		</section>
+	</ng-template>
+
+	<ng-container
+		[ngTemplateOutlet]="salesBlock"
+		[ngTemplateOutletContext]="{
+			key: 'crm',
+			c: contacts.crm,
+			title: 'Почніть роботу з Hotel Upwork',
+			lead: crmLead,
+		}"
+	/>
 
 	<section class="compare" aria-labelledby="compare-title">
 		<h2 id="compare-title">Порівняння тарифів</h2>
@@ -123,55 +199,6 @@
 				}
 			</table>
 		</div>
-	</section>
-
-	<section class="contact" id="contact" aria-labelledby="contact-title">
-		<h2 id="contact-title">Зв'язатися з відділом продажів</h2>
-		<p class="contact-lead">
-			Розкажіть про ваш готель, і ми підберемо пакет сайту та тариф CRM. Відповімо протягом робочого дня.
-		</p>
-		@if (status() === 'sent') {
-			<p class="form-note ok" role="status">Дякуємо! Заявку отримано, ми скоро зв'яжемося з вами.</p>
-		} @else {
-			<form class="contact-form" (ngSubmit)="submit()" #f="ngForm">
-				<label>
-					Ім'я
-					<input name="name" type="text" autocomplete="name" required [(ngModel)]="form.name" />
-				</label>
-				<label>
-					Телефон
-					<input name="phone" type="tel" autocomplete="tel" required [(ngModel)]="form.phone" />
-				</label>
-				<label>
-					Email
-					<input name="email" type="email" autocomplete="email" [(ngModel)]="form.email" />
-				</label>
-				<label>
-					Назва готелю
-					<input name="hotel" type="text" autocomplete="organization" [(ngModel)]="form.hotel" />
-				</label>
-				<label class="wide">
-					Що вас цікавить
-					<select name="interest" [(ngModel)]="form.interest">
-						@for (i of interests; track i) {
-							<option [value]="i">{{ i }}</option>
-						}
-					</select>
-				</label>
-				<label class="wide">
-					Повідомлення
-					<textarea name="message" rows="4" [(ngModel)]="form.message"></textarea>
-				</label>
-				@if (status() === 'error') {
-					<p class="form-note err wide" role="alert">
-						Не вдалося надіслати заявку. Спробуйте пізніше або напишіть нам напряму.
-					</p>
-				}
-				<button type="submit" class="btn gold wide" [disabled]="f.invalid || status() === 'sending'">
-					{{ status() === 'sending' ? 'Надсилаємо…' : 'Надіслати заявку' }} <span aria-hidden="true">↗</span>
-				</button>
-			</form>
-		}
 	</section>
 
 	<section class="faq" aria-labelledby="faq-title">

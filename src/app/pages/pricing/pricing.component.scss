@@ -292,20 +292,6 @@ nav {
 	}
 }
 
-.sales-link {
-	align-self: center;
-	margin: 14px 0 0;
-	font-size: 13px;
-	font-weight: 600;
-	color: var(--gold-ink);
-	text-decoration: underline;
-	text-underline-offset: 3px;
-
-	&:hover {
-		color: var(--ink);
-	}
-}
-
 .yearly {
 	min-height: 20px;
 	margin: 0 0 8px;
@@ -326,6 +312,14 @@ nav {
 		color: var(--muted);
 		margin-left: 8px;
 	}
+}
+
+.from {
+	margin-right: 8px;
+	font-size: 16px;
+	font-weight: 600;
+	letter-spacing: 0;
+	color: var(--muted);
 }
 
 .recommended {
@@ -455,7 +449,12 @@ tbody:last-child tr:last-child > * {
 
 .contact {
 	max-width: 720px;
-	scroll-margin-top: 24px;
+	text-align: center;
+	padding-top: 64px;
+
+	.contact-form {
+		text-align: left;
+	}
 }
 
 .contact-lead {

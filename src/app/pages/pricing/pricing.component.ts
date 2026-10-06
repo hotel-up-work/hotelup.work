@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { companyEmailHref } from '../../feature/company/company.data';
@@ -62,6 +63,8 @@ const COMPARE: CompareGroup[] = [
 		],
 	},
 ];
+
+const FORM_NAMES = { site: 'Створення сайту', crm: 'Тарифи CRM' } as const;
 
 interface SiteTier {
 	name: string;
@@ -153,7 +156,7 @@ const FAQ: { q: string; a: string }[] = [
 
 @Component({
 	selector: 'app-pricing',
-	imports: [RouterLink, FormsModule],
+	imports: [RouterLink, FormsModule, NgTemplateOutlet],
 	templateUrl: './pricing.component.html',
 	styleUrl: './pricing.component.scss',
 })
@@ -165,8 +168,14 @@ export class PricingComponent {
 		...PLAN_ORDER.map((key) => `CRM: ${PLANS[key].name}`),
 		'Інше',
 	];
-	protected readonly form = { name: '', phone: '', email: '', hotel: '', interest: this.interests[1], message: '' };
-	protected readonly status = signal<'idle' | 'sending' | 'sent' | 'error'>('idle');
+	protected readonly contacts = {
+		site: this._contact(this.interests[0]),
+		crm: this._contact(this.interests[1]),
+	};
+	protected readonly siteLead =
+		`Сайти ми робимо під ключ і підключаємо до системи бронювання. Залиште контакти, і менеджер зв'яжеться з вами, уточнить побажання та допоможе обрати пакет.`;
+	protected readonly crmLead =
+		`Нових клієнтів ми підключаємо особисто, тому самостійної реєстрації немає. Залиште контакти, і наш менеджер зв'яжеться з вами, допоможе обрати пакет сайту та тариф CRM і налаштує систему під ваш готель.`;
 	protected readonly siteTiers = SITE_TIERS;
 	protected readonly siteOrderHref = companyEmailHref
 		? `${companyEmailHref}?subject=${encodeURIComponent('Замовлення сайту для готелю')}`
@@ -180,14 +189,23 @@ export class PricingComponent {
 		return row.page && planIncludes(plan, row.page) ? '✓' : '';
 	}
 
-	protected async submit(): Promise<void> {
-		if (this.status() === 'sending') return;
-		this.status.set('sending');
+	protected async submit(key: 'site' | 'crm'): Promise<void> {
+		const c = this.contacts[key];
+		if (c.status() === 'sending') return;
+		c.status.set('sending');
 		try {
-			this.status.set((await sendSalesRequest({ ...this.form })) ? 'sent' : 'error');
+			c.status.set((await sendSalesRequest({ formName: FORM_NAMES[key], ...c.form })) ? 'sent' : 'error');
 		} catch {
-			this.status.set('error');
+			c.status.set('error');
 		}
+	}
+
+	private _contact(interest: string) {
+		return {
+			form: { name: '', phone: '', email: '', hotel: '', interest, message: '' },
+			open: signal(false),
+			status: signal<'idle' | 'sending' | 'sent' | 'error'>('idle'),
+		};
 	}
 
 	protected choose(plan: Plan): void {
