@@ -370,7 +370,7 @@ write; roles per hotel are not built yet.
 
 #### Booking card: live and demo
 
-The card is one component (`src/app/pages/booking/`) with two data modes. `/booking` is a detail view of the Calendar, not a page of its own: it opens for any role and plan that can open `calendar` (`DETAIL_OF` in `role.ts`). Every field and tab is declared once in `booking-card.fields.ts` with a `live` flag.
+The card is one component (`src/app/pages/booking/`) with two data modes. `/booking`, `/new-booking` and `/book` are detail views of the Calendar and `/guest` of Guests: they open for any role and plan that can open that page. `/search`, `/notifications` and `/profile` are shell features open to every role and plan (`DETAIL_OF` and `SHELL_PAGES` in `role.ts`). Every field and tab is declared once in `booking-card.fields.ts` with a `live` flag.
 
 - **Live (real account):** shows only fields and tabs that are saved to the booking (`live: true`): the **Картка** tab with stay, notes, guest, terms and the money block. Unbuilt fields and tabs are **hidden**, not shown as disabled placeholders.
 - **Demo:** shows every field and tab, backed by one seeded booking kept in memory (reset on reload; the same demo hotel and guest as the other demos). Demo-only parts: the extra Картка fields (room properties, guarantee, transfer and decision date, documents, hotel inventory, extra characteristics, loyalty card, auto-charging, company segment, price fixation, services total), the notes log with author and time, the audit footer (booked / checked in / last changed), and the tabs below. Seed people, numbers and amounts are invented.

@@ -4,9 +4,10 @@ import { Router, Routes } from '@angular/router';
 import { buildAbsoluteUrl } from '@wawjs/ngx-default';
 import { companyProfile } from './feature/company/company.data';
 import { defaultPageFor, getSessionRole, isLiveSession, LIVE_PAGES } from './shared/role';
-import { roleGuard, roomsMovedGuard } from './shared/role.guard';
+import { liveSettingsGuard, roleGuard, roomsMovedGuard } from './shared/role.guard';
 
 const SETTINGS_META = {
+	image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/settings.jpg'),
 	title: 'Налаштування · Hotel Upwork',
 	titleSuffix: '',
 	description: 'Hotel Upwork: налаштування готелю, бронювань та інтеграцій.',
@@ -22,7 +23,7 @@ export const routes: Routes = [
 				titleSuffix: '',
 				description:
 					'Hotel Upwork: бронювання, гості, оплати, прибирання та комунікація в одній простій системі для незалежних готелів.',
-				image: buildAbsoluteUrl(companyProfile.siteUrl, '/og-landing.jpg'),
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/home.jpg'),
 			},
 		},
 		loadComponent: () =>
@@ -36,7 +37,7 @@ export const routes: Routes = [
 				titleSuffix: '',
 				description:
 					'Тарифи Hotel Upwork: безкоштовний Start з календарем і заявками з сайтів, Pro для щоденної роботи готелю та Enterprise з автоматизаціями, аналітикою і AI.',
-				image: buildAbsoluteUrl(companyProfile.siteUrl, '/og-pricing.jpg'),
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/pricing.jpg'),
 			},
 		},
 		loadComponent: () => import('./pages/pricing/pricing.component').then((m) => m.PricingComponent),
@@ -49,7 +50,7 @@ export const routes: Routes = [
 				titleSuffix: '',
 				description:
 					'Овербукінг, загублені передоплати, блекаути, звільнення адміністратора і контроль на відстані: як Hotel Upwork вирішує їх для готелів в Україні.',
-				image: buildAbsoluteUrl(companyProfile.siteUrl, '/og-landing.jpg'),
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/pitch.jpg'),
 			},
 		},
 		loadComponent: () => import('./pages/pitch/pitch.component').then((m) => m.PitchComponent),
@@ -60,6 +61,7 @@ export const routes: Routes = [
 			meta: {
 				title: 'Комерційна пропозиція · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/proposal.jpg'),
 				description: 'Hotel Upwork: власний канал прямих бронювань і система управління готелем.',
 				robots: 'noindex, nofollow',
 			},
@@ -72,6 +74,7 @@ export const routes: Routes = [
 			meta: {
 				title: 'Комерційна пропозиція · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/proposal.jpg'),
 				description: 'Hotel Upwork: власний канал прямих бронювань і система управління готелем.',
 				robots: 'noindex, nofollow',
 			},
@@ -84,6 +87,7 @@ export const routes: Routes = [
 			meta: {
 				title: 'Вхід · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/login.jpg'),
 				description: 'Hotel Upwork: вхід до системи.',
 				robots: 'noindex, nofollow',
 			},
@@ -96,6 +100,7 @@ export const routes: Routes = [
 			meta: {
 				title: 'Демо-режим · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/demo.jpg'),
 				description: 'Hotel Upwork: перегляньте систему в демо-режимі за роллю та тарифом.',
 				robots: 'noindex, nofollow',
 			},
@@ -109,6 +114,7 @@ export const routes: Routes = [
 			meta: {
 				title: 'Огляд готелю · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/dashboard.jpg'),
 				description:
 					'Hotel Upwork: щоденний центр управління готелем. Заїзди, номери, оплати та завдання в одному огляді.',
 				robots: 'noindex, nofollow',
@@ -124,6 +130,7 @@ export const routes: Routes = [
 			meta: {
 				title: 'Календар · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/calendar.jpg'),
 				description: 'Hotel Upwork: календар. Усі номери, бронювання та вільні дати в одному місці.',
 				robots: 'noindex, nofollow',
 			},
@@ -138,6 +145,7 @@ export const routes: Routes = [
 			meta: {
 				title: 'Заявки · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/submissions.jpg'),
 				description: 'Hotel Upwork: заявки з форм ваших сайтів в одному місці.',
 				robots: 'noindex, nofollow',
 			},
@@ -152,6 +160,7 @@ export const routes: Routes = [
 			meta: {
 				title: 'Гості · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/guests.jpg'),
 				description: 'Hotel Upwork: база гостей готелю, історія проживань та контакти.',
 				robots: 'noindex, nofollow',
 			},
@@ -169,6 +178,7 @@ export const routes: Routes = [
 			meta: {
 				title: 'Номери · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/rooms.jpg'),
 				description: 'Hotel Upwork: номерний фонд, типи номерів та їх статуси.',
 				robots: 'noindex, nofollow',
 			},
@@ -182,6 +192,7 @@ export const routes: Routes = [
 			meta: {
 				title: 'Оплати · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/payments.jpg'),
 				description: 'Hotel Upwork: оплати, заборгованості та фінансова аналітика.',
 				robots: 'noindex, nofollow',
 			},
@@ -199,6 +210,7 @@ export const routes: Routes = [
 			meta: {
 				title: 'Прибирання · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/housekeeping.jpg'),
 				description: 'Hotel Upwork: керування прибиранням номерів та завданнями персоналу.',
 				robots: 'noindex, nofollow',
 			},
@@ -213,6 +225,7 @@ export const routes: Routes = [
 			meta: {
 				title: 'Повідомлення · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/messages.jpg'),
 				description: 'Hotel Upwork: спілкування з гостями в одному вхідному ящику.',
 				robots: 'noindex, nofollow',
 			},
@@ -226,6 +239,7 @@ export const routes: Routes = [
 			meta: {
 				title: 'Автоматизації · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/automations.jpg'),
 				description: 'Hotel Upwork: автоматичні сценарії та правила для щоденних завдань.',
 				robots: 'noindex, nofollow',
 			},
@@ -240,6 +254,7 @@ export const routes: Routes = [
 			meta: {
 				title: 'Продажі · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/sales.jpg'),
 				description: 'Hotel Upwork: аналітика продажів, канали бронювань та кампанії.',
 				robots: 'noindex, nofollow',
 			},
@@ -253,6 +268,7 @@ export const routes: Routes = [
 			meta: {
 				title: 'AI-помічник · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/ai.jpg'),
 				description: 'Hotel Upwork: AI-помічник для швидких відповідей та дій по готелю.',
 				robots: 'noindex, nofollow',
 			},
@@ -266,11 +282,20 @@ export const routes: Routes = [
 			meta: {
 				title: 'Команда · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/team.jpg'),
 				description: 'Hotel Upwork: керування командою, ролями та доступами співробітників.',
 				robots: 'noindex, nofollow',
 			},
 		},
 		loadComponent: () => import('./pages/team/team.component').then((m) => m.TeamComponent),
+	},
+	// The demo's single page comes first and has no canMatch: the prerenderer only finds /settings that way. A real account is sent on to its sections.
+	{
+		path: 'settings',
+		pathMatch: 'full',
+		canActivate: [liveSettingsGuard, roleGuard],
+		data: { meta: SETTINGS_META },
+		loadComponent: () => import('./pages/settings/settings.component').then((m) => m.SettingsComponent),
 	},
 	// Real hotels: the settings layout with one child page per section; the demo keeps the seeded single page.
 	{
@@ -280,7 +305,6 @@ export const routes: Routes = [
 		data: { meta: SETTINGS_META },
 		loadComponent: () => import('./layouts/app-settings/app-settings.component').then((m) => m.AppSettingsComponent),
 		children: [
-			{ path: '', pathMatch: 'full', redirectTo: 'general' },
 			{
 				path: 'general',
 				data: { section: 'general', meta: SETTINGS_META },
@@ -309,19 +333,13 @@ export const routes: Routes = [
 		],
 	},
 	{
-		path: 'settings',
-		canMatch: [() => !isLiveSession()],
-		canActivate: [roleGuard],
-		data: { meta: SETTINGS_META },
-		loadComponent: () => import('./pages/settings/settings.component').then((m) => m.SettingsComponent),
-	},
-	{
 		path: 'search',
 		canActivate: [roleGuard],
 		data: {
 			meta: {
 				title: 'Пошук · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/search.jpg'),
 				description: 'Hotel Upwork: пошук гостей, бронювань, номерів та оплат.',
 				robots: 'noindex, nofollow',
 			},
@@ -335,6 +353,7 @@ export const routes: Routes = [
 			meta: {
 				title: 'Сповіщення · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/notifications.jpg'),
 				description: 'Hotel Upwork: сповіщення про бронювання, оплати та завдання персоналу.',
 				robots: 'noindex, nofollow',
 			},
@@ -349,6 +368,7 @@ export const routes: Routes = [
 			meta: {
 				title: 'Профіль · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/profile.jpg'),
 				description: 'Hotel Upwork: особисті дані, пароль та сповіщення вашого профілю.',
 				robots: 'noindex, nofollow',
 			},
@@ -362,6 +382,7 @@ export const routes: Routes = [
 			meta: {
 				title: 'Гість · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/guest.jpg'),
 				description: 'Hotel Upwork: профіль гостя, історія проживань, оплати та повідомлення.',
 				robots: 'noindex, nofollow',
 			},
@@ -375,6 +396,7 @@ export const routes: Routes = [
 			meta: {
 				title: 'Нове бронювання · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/new-booking.jpg'),
 				description: 'Hotel Upwork: створення нового бронювання, вибір номера, гостя та оплати.',
 				robots: 'noindex, nofollow',
 			},
@@ -392,6 +414,7 @@ export const routes: Routes = [
 			meta: {
 				title: 'Деталі бронювання · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/booking.jpg'),
 				description: 'Hotel Upwork: деталі бронювання, оплати, гості та історія змін.',
 				robots: 'noindex, nofollow',
 			},
@@ -406,6 +429,7 @@ export const routes: Routes = [
 			meta: {
 				title: 'Пошук доступності · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/book.jpg'),
 				description: 'Hotel Upwork: пошук вільних номерів за датами та створення бронювання.',
 				robots: 'noindex, nofollow',
 			},
@@ -418,6 +442,7 @@ export const routes: Routes = [
 			meta: {
 				title: 'Підтвердження бронювання · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/confirmation.jpg'),
 				description: 'Hotel Upwork: підтвердження бронювання, дані заїзду та оплата для гостя.',
 				robots: 'noindex, nofollow',
 			},
@@ -431,6 +456,7 @@ export const routes: Routes = [
 			meta: {
 				title: 'Політика конфіденційності · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/privacy.jpg'),
 				description:
 					'Hotel Upwork: які персональні дані ми обробляємо, навіщо та як ви можете керувати ними.',
 			},
@@ -443,6 +469,7 @@ export const routes: Routes = [
 			meta: {
 				title: 'Політика щодо cookies · Hotel Upwork',
 				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/cookies.jpg'),
 				description: 'Hotel Upwork: які файли cookie ми використовуємо та як ними керувати.',
 			},
 		},

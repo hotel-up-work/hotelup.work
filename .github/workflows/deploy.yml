@@ -30,9 +30,6 @@ jobs:
             - name: Copy CNAME file
               run: cp CNAME dist/app/browser/
 
-            - name: Add SPA fallback for GitHub Pages route reload
-              run: cp dist/app/browser/index.html dist/app/browser/404.html
-
             - name: Disable Jekyll processing on GitHub Pages
               run: touch dist/app/browser/.nojekyll
 

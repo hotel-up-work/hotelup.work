@@ -4,5 +4,6 @@
   "title": "Hotel Upwork — Увесь готель в одній простій системі",
   "description": "Hotel Upwork — бронювання, гості, оплати, прибирання та комунікація в одній простій системі для незалежних готелів.",
   "image": "https://hotelup.work/logo.png",
+	"defaultSeo": { "image": "https://hotelup.work/seo/home.jpg" },
 	"siteUrl": "https://hotelup.work"
 }

@@ -67,15 +67,24 @@ export function getSessionRole(): Role | null {
 }
 
 /** Detail views that are not pages of their own: they open for whoever can open the page they belong to. */
-const DETAIL_OF: Record<string, string> = { booking: 'calendar' };
+const DETAIL_OF: Record<string, string> = { booking: 'calendar', 'new-booking': 'calendar', book: 'calendar', guest: 'guests' };
+/** Parts of the app shell (search, notifications, profile): every signed-in role and plan opens them. */
+const SHELL_PAGES = ['search', 'notifications', 'profile'];
+
+/** The page whose access rules decide `path`, or null when nothing gates it. */
+export function gatePage(path: string): string | null {
+	return SHELL_PAGES.includes(path) ? null : (DETAIL_OF[path] ?? path);
+}
 
 export function isPageAllowed(role: Role, path: string): boolean {
-	return ROLE_PAGES[role].includes(DETAIL_OF[path] ?? path);
+	const gate = gatePage(path);
+	return gate === null || ROLE_PAGES[role].includes(gate);
 }
 
 /** Role and plan together: the page is open only when both allow it (CRM.md → Plans). */
 export function isPageAvailable(role: Role, plan: Plan, path: string): boolean {
-	return isPageAllowed(role, path) && planIncludes(plan, DETAIL_OF[path] ?? path);
+	const gate = gatePage(path);
+	return isPageAllowed(role, path) && (gate === null || planIncludes(plan, gate));
 }
 
 /** Home screen for the role on the plan, or null when the plan gives the role no page at all. */
