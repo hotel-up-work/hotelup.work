@@ -1,0 +1,1 @@
+function i(e,o,t,n){return e.block&&t<=e.block.end&&n>e.block.start?!1:!o.some(r=>r.roomId===e.id&&r.status!==`cancelled`&&t<r.checkOut&&n>r.checkIn)}function s(e,o){return Math.round((Date.parse(o+`T00:00:00Z`)-Date.parse(e+`T00:00:00Z`))/864e5)}export{s as n,i as t};

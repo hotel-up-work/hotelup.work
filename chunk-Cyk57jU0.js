@@ -1,0 +1,1 @@
+var e={name:`Вікторія Кшемінська`,phone:`+38 098 390 1003`,phoneHref:`tel:+380983901003`,telegram:`t.me/hotelupwork`,telegramHref:`https://t.me/hotelupwork`};export{e as t};
