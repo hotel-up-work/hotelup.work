@@ -36,7 +36,7 @@ export const roleGuard: CanActivateFn = (route) => {
 	if (!isPageAllowed(role, path)) {
 		return router.createUrlTree(['/' + home], { queryParams: { denied: path } });
 	}
-	if (!planIncludes(plan, path)) {
+	if (!planIncludes(plan, path === 'booking' ? 'calendar' : path)) {
 		return router.createUrlTree(['/' + home], { queryParams: { locked: path } });
 	}
 

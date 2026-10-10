@@ -396,11 +396,8 @@ export const routes: Routes = [
 				robots: 'noindex, nofollow',
 			},
 		},
-		// Real hotels get the editable, autosaving booking card on live data; the demo keeps the seeded one.
-		loadComponent: () =>
-			isLiveSession()
-				? import('./pages/booking/booking-live.component').then((m) => m.BookingLiveComponent)
-				: import('./pages/booking/booking.component').then((m) => m.BookingComponent),
+		// One editable, autosaving card: real hotels see saved fields on live data, the demo sees every field on a seeded booking.
+		loadComponent: () => import('./pages/booking/booking-card.component').then((m) => m.BookingCardComponent),
 	},
 	{
 		path: 'book',

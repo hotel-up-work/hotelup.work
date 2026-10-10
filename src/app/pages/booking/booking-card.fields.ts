@@ -6,8 +6,8 @@ export interface FieldDef {
 	label: string;
 	kind: FieldKind;
 	options?: string[];
-	/** Not backed by data yet: shown disabled, so the layout matches the desk card and nothing is lost later. */
-	soon?: boolean;
+	/** False: not saved to a real booking yet. A real account does not see it; the demo keeps it in memory. */
+	live?: boolean;
 	/** Spans the whole section width. */
 	wide?: boolean;
 	autocomplete?: string;
@@ -21,22 +21,49 @@ export interface SectionDef {
 	fields: FieldDef[];
 }
 
-/** Tabs of the desk card. Only the first one exists; the rest keep their place until they are built. */
-export const CARD_TABS = [
-	'Картка',
-	'Анкети',
-	'Нарахування',
-	'Реєстр. картка',
-	'Підтвердження',
-	'Анулація',
-	'Прокат',
-	'Завдання',
-	'Розходи',
-	'Перенесення нарахувань',
-	'Балансовий рахунок',
-	'Дзвінки',
-	'Робота з ключами',
-	'Путівки',
+export type TabId =
+	| 'card'
+	| 'guests'
+	| 'charges'
+	| 'registration'
+	| 'confirmation'
+	| 'cancellation'
+	| 'rental'
+	| 'tasks'
+	| 'expenses'
+	| 'transfer'
+	| 'balance'
+	| 'calls'
+	| 'keys'
+	| 'vouchers';
+
+export interface TabDef {
+	id: TabId;
+	label: string;
+	/** Built on real data; a real account sees only these tabs. */
+	live: boolean;
+	/** Money tab: hidden from roles without the guest-bill capability. */
+	finance?: boolean;
+	/** Built in the demo with seeded data; the other tabs are listed there as disabled "Скоро". */
+	demo: boolean;
+}
+
+/** Tabs of the desk card. The first is built on real data; the rest are demo-only or still to come. */
+export const CARD_TABS: TabDef[] = [
+	{ id: 'card', label: 'Картка', live: true, demo: true },
+	{ id: 'guests', label: 'Анкети', live: false, demo: true },
+	{ id: 'charges', label: 'Нарахування', live: false, demo: true, finance: true },
+	{ id: 'registration', label: 'Реєстр. картка', live: false, demo: true },
+	{ id: 'confirmation', label: 'Підтвердження', live: false, demo: true },
+	{ id: 'cancellation', label: 'Анулація', live: false, demo: true },
+	{ id: 'rental', label: 'Прокат', live: false, demo: true },
+	{ id: 'tasks', label: 'Завдання', live: false, demo: true },
+	{ id: 'expenses', label: 'Розходи', live: false, demo: true },
+	{ id: 'transfer', label: 'Перенесення нарахувань', live: false, demo: true },
+	{ id: 'balance', label: 'Балансовий рахунок', live: false, demo: true, finance: true },
+	{ id: 'calls', label: 'Дзвінки', live: false, demo: true },
+	{ id: 'keys', label: 'Робота з ключами', live: false, demo: true },
+	{ id: 'vouchers', label: 'Путівки', live: false, demo: true },
 ];
 
 const NONE = '';
@@ -50,6 +77,10 @@ const SURCHARGE = ['Резидент', 'Нерезидент'];
 const PURPOSES = ['Відпочинок', 'Бізнес', 'Лікування', 'Конференція', 'Транзит', 'Родина або друзі'];
 const PAYMENT_TYPES = ['Готівковий', 'Безготівковий', 'Змішаний'];
 const PAY_METHODS = ['Оплата на місці', 'Передоплата', 'Оплата при бронюванні', 'Рахунок для компанії'];
+const GUARANTEE = ['Гарантована', 'Не гарантована'];
+const ROOM_PROPERTIES = ['Тихий номер', 'Високий поверх', 'Вид на місто', 'Балкон', 'Поруч із ліфтом'];
+const COMPANY_SEGMENTS = ['Корпоративні клієнти', 'Туроператори', 'Агенції', 'Приватні особи'];
+const PRICE_FIXATION = ['При критичних змінах', 'Завжди', 'Ніколи'];
 
 /** Select options always start with an empty "not set" choice. */
 export const NOT_SET = NONE;
@@ -74,7 +105,7 @@ export const COLUMNS: SectionDef[][] = [
 				{ key: 'extraGuests', label: 'Дод. місця', kind: 'number' },
 				{ key: 'byBed', label: 'По місцях', kind: 'check' },
 				{ key: 'bedNumber', label: 'Місце', kind: 'number' },
-				{ key: 'roomProperties', label: 'Властивості кімнат', kind: 'select', soon: true },
+				{ key: 'roomProperties', label: 'Властивості кімнат', kind: 'select', options: ROOM_PROPERTIES, live: false },
 			],
 		},
 		{
@@ -83,9 +114,8 @@ export const COLUMNS: SectionDef[][] = [
 			fields: [
 				{ key: 'notes', label: 'Примітки', kind: 'textarea', wide: true },
 				{ key: 'housekeepingNote', label: 'Для прибирання', kind: 'textarea', wide: true },
-				{ key: 'guestTasks', label: 'Завдання гостя', kind: 'text', soon: true, wide: true },
-				{ key: 'inventory', label: 'Готельний інвентар', kind: 'text', soon: true, wide: true },
-				{ key: 'extraFeatures', label: 'Додаткові характеристики', kind: 'text', soon: true, wide: true },
+				{ key: 'inventory', label: 'Готельний інвентар', kind: 'text', live: false, wide: true },
+				{ key: 'extraFeatures', label: 'Додаткові характеристики', kind: 'text', live: false, wide: true },
 			],
 		},
 	],
@@ -101,10 +131,10 @@ export const COLUMNS: SectionDef[][] = [
 				{ key: 'privilegeCategory', label: 'Категорія надбавки', kind: 'select', options: SURCHARGE },
 				{ key: 'contactPerson', label: 'Контактна особа', kind: 'text' },
 				{ key: 'manager', label: 'Менеджер', kind: 'text' },
-				{ key: 'guarantee', label: 'Бронь', kind: 'select', soon: true },
-				{ key: 'transfer', label: 'Замовлений трансфер', kind: 'check', soon: true },
-				{ key: 'transferDecision', label: 'Дата рішення', kind: 'date', soon: true },
-				{ key: 'documents', label: 'Відрядні посвідчення', kind: 'text', soon: true, wide: true },
+				{ key: 'guarantee', label: 'Бронь', kind: 'select', options: GUARANTEE, live: false },
+				{ key: 'transfer', label: 'Замовлений трансфер', kind: 'check', live: false },
+				{ key: 'transferDecision', label: 'Дата рішення', kind: 'date', live: false },
+				{ key: 'documents', label: 'Відрядні посвідчення', kind: 'text', live: false, wide: true },
 			],
 		},
 		{
@@ -121,9 +151,9 @@ export const COLUMNS: SectionDef[][] = [
 				{ key: 'companySource', label: 'Компанія-джерело', kind: 'text' },
 				{ key: 'contractTerms', label: 'Умова договору', kind: 'text' },
 				{ key: 'externalNumber', label: 'Номер бронювання зовнішньої системи', kind: 'text', wide: true },
-				{ key: 'companySegment', label: 'Сегмент компанії', kind: 'select', soon: true },
-				{ key: 'loyaltyCard', label: 'Карта лояльності', kind: 'text', soon: true },
-				{ key: 'autoCharging', label: 'Автонарахування', kind: 'check', soon: true },
+				{ key: 'companySegment', label: 'Сегмент компанії', kind: 'select', options: COMPANY_SEGMENTS, live: false },
+				{ key: 'loyaltyCard', label: 'Карта лояльності', kind: 'text', live: false },
+				{ key: 'autoCharging', label: 'Автонарахування', kind: 'check', live: false },
 			],
 		},
 	],
@@ -135,13 +165,28 @@ export const COLUMNS: SectionDef[][] = [
 			fields: [
 				{ key: 'price', label: 'Ціна за ніч, ₴', kind: 'money' },
 				{ key: 'total', label: 'Разом за проживання', kind: 'readonly' },
+				{ key: 'services', label: 'Додаткові послуги', kind: 'readonly', live: false },
 				{ key: 'paid', label: 'Оплачено', kind: 'readonly' },
 				{ key: 'balance', label: 'Баланс', kind: 'readonly' },
 				{ key: 'depositBalance', label: 'Баланс по депозиту, ₴', kind: 'money' },
 				{ key: 'creditLimit', label: 'Кредитний ліміт, ₴', kind: 'money' },
 				{ key: 'creditRemainder', label: 'Залишок ліміту, ₴', kind: 'money' },
-				{ key: 'priceFixation', label: 'Фіксація ціни', kind: 'select', soon: true },
+				{ key: 'priceFixation', label: 'Фіксація ціни', kind: 'select', options: PRICE_FIXATION, live: false },
 			],
 		},
 	],
 ];
+
+/** The sections a mode shows: a real account gets only fields that are saved; the demo gets everything. */
+export function columnsFor(demo: boolean, showFinance: boolean): SectionDef[][] {
+	return COLUMNS.map((column) =>
+		column
+			.filter((section) => !section.finance || showFinance)
+			.map((section) => ({ ...section, fields: demo ? section.fields : section.fields.filter((f) => f.live !== false) }))
+			.filter((section) => section.fields.length),
+	).filter((column) => column.length);
+}
+
+export function tabsFor(demo: boolean, showFinance: boolean): TabDef[] {
+	return (demo ? CARD_TABS : CARD_TABS.filter((t) => t.live)).filter((t) => !t.finance || showFinance);
+}

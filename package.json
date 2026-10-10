@@ -7,40 +7,39 @@
 		"rules": "firebase deploy --only firestore:rules --project hotel-upwork"
 	},
 	"dependencies": {
-		"@angular/common": "22.1.2",
-		"@angular/compiler": "22.1.2",
-		"@angular/core": "22.1.2",
-		"@angular/forms": "22.1.2",
-		"@angular/platform-browser": "22.1.2",
-		"@angular/platform-server": "22.1.2",
-		"@angular/router": "22.1.2",
-		"@angular/ssr": "22.1.4",
-		"@wawjs/ngx-core": "22.0.6",
-		"@wawjs/ngx-default": "22.0.2",
-		"@wawjs/ngx-http": "22.0.6",
-		"@wawjs/ngx-translate": "22.0.3",
-		"@wawjs/ngx-ui": "22.0.3",
-		"express": "5.1.0",
+		"@angular/common": "22.2.2",
+		"@angular/compiler": "22.2.2",
+		"@angular/core": "22.2.2",
+		"@angular/forms": "22.2.2",
+		"@angular/platform-browser": "22.2.2",
+		"@angular/platform-server": "22.2.2",
+		"@angular/router": "22.2.2",
+		"@angular/ssr": "22.2.2",
+		"@wawjs/ngx-core": "22.0.9",
+		"@wawjs/ngx-default": "22.0.3",
+		"@wawjs/ngx-http": "22.0.9",
+		"@wawjs/ngx-translate": "22.0.9",
+		"@wawjs/ngx-ui": "22.0.9",
+		"express": "5.3.0",
 		"firebase": "^12.19.0",
-		"rxjs": "7.8.0",
-		"tslib": "2.3.0"
+		"rxjs": "7.8.2",
+		"tslib": "2.8.1"
 	},
 	"devDependencies": {
-		"@angular/build": "22.1.4",
-		"@angular/cli": "22.1.4",
-		"@angular/compiler-cli": "22.1.2",
-		"@tailwindcss/postcss": "4.1.12",
-		"@types/express": "5.0.1",
+		"@angular/build": "22.2.2",
+		"@angular/cli": "22.2.2",
+		"@angular/compiler-cli": "22.2.2",
+		"@tailwindcss/postcss": "4.3.3",
+		"@types/express": "5.0.6",
 		"@types/node": "25.9.3",
-		"ng-packagr": "22.0.0",
-		"postcss": "8.5.26",
-		"prettier": "3.8.1",
-		"tailwindcss": "4.1.12",
+		"ng-packagr": "22.2.4",
+		"postcss": "8.5.29",
+		"prettier": "3.9.10",
+		"tailwindcss": "4.3.3",
 		"typescript": "6.0.3",
-		"vitest": "4.1.8"
+		"vitest": "4.1.11"
 	},
 	"overrides": {
-		"esbuild": "0.28.1",
-		"@hono/node-server": "2.0.11"
+		"@grpc/grpc-js": "1.14.6"
 	}
 }

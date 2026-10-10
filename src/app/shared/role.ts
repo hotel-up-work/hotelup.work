@@ -66,13 +66,16 @@ export function getSessionRole(): Role | null {
 	return getRealRole() ?? getDemoRole();
 }
 
+/** Detail views that are not pages of their own: they open for whoever can open the page they belong to. */
+const DETAIL_OF: Record<string, string> = { booking: 'calendar' };
+
 export function isPageAllowed(role: Role, path: string): boolean {
-	return ROLE_PAGES[role].includes(path);
+	return ROLE_PAGES[role].includes(DETAIL_OF[path] ?? path);
 }
 
 /** Role and plan together: the page is open only when both allow it (CRM.md → Plans). */
 export function isPageAvailable(role: Role, plan: Plan, path: string): boolean {
-	return isPageAllowed(role, path) && planIncludes(plan, path);
+	return isPageAllowed(role, path) && planIncludes(plan, DETAIL_OF[path] ?? path);
 }
 
 /** Home screen for the role on the plan, or null when the plan gives the role no page at all. */

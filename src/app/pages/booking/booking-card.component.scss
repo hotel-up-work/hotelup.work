@@ -396,22 +396,6 @@ ul {
 			border-color: var(--red);
 		}
 	}
-
-	// Not built yet: the control is there so the card keeps its shape, with "Скоро" where the value goes.
-	&.soon {
-		input:not([type='checkbox']),
-		select,
-		textarea {
-			border-style: dashed;
-			background: transparent;
-			cursor: not-allowed;
-		}
-
-		input::placeholder {
-			color: var(--muted);
-			opacity: 0.8;
-		}
-	}
 }
 
 .msg {
@@ -431,4 +415,76 @@ ul {
 	.field > label {
 		transition: none;
 	}
+}
+
+// ----- demo: notes log, history, audit footer -----
+
+.log,
+.history {
+	margin-top: 12px;
+}
+
+.log ul,
+.history ul {
+	display: grid;
+	gap: 8px;
+}
+
+.log li {
+	font-size: 13px;
+
+	span {
+		color: var(--muted);
+		font-size: 12px;
+		margin-left: 6px;
+	}
+
+	p {
+		margin-top: 2px;
+	}
+}
+
+.log-add {
+	display: grid;
+	gap: 8px;
+	justify-items: start;
+	margin-top: 12px;
+
+	textarea {
+		width: 100%;
+		min-height: 64px;
+		border: 1px solid var(--line);
+		border-radius: 6px;
+		background: var(--surface);
+		padding: 8px 12px;
+		color: var(--ink);
+		resize: vertical;
+	}
+}
+
+.history {
+	summary {
+		cursor: pointer;
+		font-size: 12px;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--muted);
+	}
+
+	ul {
+		margin-top: 12px;
+		font-size: 13px;
+	}
+
+	li span {
+		color: var(--muted);
+		font-size: 12px;
+	}
+}
+
+.audit {
+	margin-top: 12px;
+	font-size: 12px;
+	color: var(--muted);
 }

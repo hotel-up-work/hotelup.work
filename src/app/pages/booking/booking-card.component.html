@@ -20,20 +20,24 @@
 		</section>
 	} @else if (loading()) {
 		<section class="card empty-state"><p>Завантажуємо бронювання…</p></section>
-	} @else if (booking()) {
-		<nav class="tabs" aria-label="Розділи картки">
-			<ul>
-				@for (tab of tabs; track tab; let first = $first) {
-					<li>
-						@if (first) {
-							<span class="tab current" aria-current="page">{{ tab }}</span>
-						} @else {
-							<button class="tab" type="button" disabled title="Скоро">{{ tab }}</button>
-						}
-					</li>
-				}
-			</ul>
-		</nav>
+	} @else if (booking(); as bk) {
+		@if (tabs.length > 1) {
+			<nav class="tabs" aria-label="Розділи картки">
+				<ul>
+					@for (tab of tabs; track tab.id) {
+						<li>
+							@if (tab.id === activeTab()) {
+								<span class="tab current" aria-current="page">{{ tab.label }}</span>
+							} @else if (tab.live || tab.demo) {
+								<button class="tab" type="button" (click)="activeTab.set(tab.id)">{{ tab.label }}</button>
+							} @else {
+								<button class="tab" type="button" disabled title="Скоро">{{ tab.label }}</button>
+							}
+						</li>
+					}
+				</ul>
+			</nav>
+		}
 
 		@if (readOnly()) {
 			<p class="notice" role="note">
@@ -41,6 +45,47 @@
 			</p>
 		}
 
+		@switch (activeTab()) {
+			@case ('guests') {
+				<app-booking-guests [readOnly]="readOnly()" />
+			}
+			@case ('charges') {
+				<app-booking-charges [booking]="bk" [readOnly]="readOnly()" />
+			}
+			@case ('balance') {
+				<app-booking-balance [booking]="bk" [readOnly]="readOnly()" [canPay]="canPay" />
+			}
+			@case ('tasks') {
+				<app-booking-tasks [readOnly]="readOnly()" />
+			}
+			@case ('registration') {
+				<app-booking-document kind="registration" [booking]="bk" />
+			}
+			@case ('confirmation') {
+				<app-booking-document kind="confirmation" [booking]="bk" />
+			}
+			@case ('cancellation') {
+				<app-booking-document kind="cancellation" [booking]="bk" />
+			}
+			@case ('rental') {
+				<app-booking-records tab="rental" [readOnly]="readOnly()" />
+			}
+			@case ('expenses') {
+				<app-booking-records tab="expenses" [readOnly]="readOnly()" />
+			}
+			@case ('transfer') {
+				<app-booking-records tab="transfer" [readOnly]="readOnly()" />
+			}
+			@case ('calls') {
+				<app-booking-records tab="calls" [readOnly]="readOnly()" />
+			}
+			@case ('keys') {
+				<app-booking-records tab="keys" [readOnly]="readOnly()" />
+			}
+			@case ('vouchers') {
+				<app-booking-records tab="vouchers" [readOnly]="readOnly()" />
+			}
+			@default {
 		<div class="columns">
 			@for (column of columns; track $index) {
 				<div class="column">
@@ -52,10 +97,9 @@
 									<div
 										class="field"
 										[class.wide]="f.wide"
-										[class.soon]="f.soon"
-										[class.invalid]="fieldError()[f.key]"
+											[class.invalid]="fieldError()[f.key]"
 										[class.check]="f.kind === 'check'"
-										[class.lifted]="f.soon || f.kind === 'select' || f.kind === 'date' || f.kind === 'time' || f.kind === 'readonly'"
+											[class.lifted]="f.kind === 'select' || f.kind === 'date' || f.kind === 'time' || f.kind === 'readonly'"
 									>
 										@switch (f.kind) {
 											@case ('select') {
@@ -139,7 +183,7 @@
 													[attr.step]="f.kind === 'money' ? '0.01' : null"
 													[attr.autocomplete]="f.autocomplete ?? 'off'"
 													[attr.spellcheck]="f.kind === 'email' ? 'false' : null"
-													[attr.placeholder]="f.soon ? 'Скоро' : ' '"
+														placeholder=" "
 													[disabled]="isOff(f)"
 													[value]="value(f.key)"
 													[attr.aria-invalid]="fieldError()[f.key] ? 'true' : null"
@@ -162,6 +206,46 @@
 				</div>
 			}
 		</div>
+
+		@if (demo) {
+			<section class="card log">
+				<h2>Журнал приміток ({{ demoStore.notes().length }})</h2>
+				<ul>
+					@for (n of demoStore.notes(); track n.id) {
+						<li>
+							<b>{{ n.author }}</b> <span>{{ n.at }}</span>
+							<p>{{ n.text }}</p>
+						</li>
+					}
+				</ul>
+				@if (!readOnly()) {
+					<form class="log-add" (submit)="addNote($event, noteText)">
+						<textarea #noteText rows="2" maxlength="300" placeholder="Нова примітка для персоналу" aria-label="Нова примітка"></textarea>
+						<button class="button primary" type="submit">Додати примітку</button>
+					</form>
+				}
+			</section>
+			<details class="card history">
+				<summary>Історія змін ({{ demoStore.history().length }})</summary>
+				<ul>
+					@for (e of historyDesc(); track $index) {
+						<li><span>{{ e.at }}</span> <b>{{ e.actor }}</b>: {{ e.text }}</li>
+					}
+				</ul>
+			</details>
+		}
+
+		@if (created()) {
+			<p class="audit">
+				@if (demo) {
+					Заброньовано: <b>{{ demoStore.bookedBy }}</b> · {{ created() }} · Остання зміна: <b>{{ demoStore.lastChange().actor }}</b> · {{ demoStore.lastChange().at }}
+				} @else {
+					Створено: {{ created() }}
+				}
+			</p>
+		}
+			}
+		}
 	} @else {
 		<section class="card empty-state">
 			<h2>Бронювання не знайдено</h2>

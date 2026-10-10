@@ -14,8 +14,15 @@ import {
 import { HotelService } from '../../feature/firebase/hotel.service';
 import { RoomRecord, RoomsService } from '../../feature/firebase/rooms.service';
 import { nightsBetween, roomIsFree } from '../../shared/booking-rules';
-import { canCurrent } from '../../shared/role';
-import { CARD_TABS, COLUMNS, FieldDef, NOT_SET } from './booking-card.fields';
+import { canCurrent, isLiveSession } from '../../shared/role';
+import { BookingDemoStore, DEMO_BOOKING_ID } from './booking-card.demo';
+import { COLUMNS, FieldDef, NOT_SET, TabId, columnsFor, tabsFor } from './booking-card.fields';
+import { BalanceTabComponent } from './tabs/balance-tab.component';
+import { ChargesTabComponent } from './tabs/charges-tab.component';
+import { DocumentTabComponent } from './tabs/document-tab.component';
+import { GuestsTabComponent } from './tabs/guests-tab.component';
+import { RecordsTabComponent } from './tabs/records-tab.component';
+import { TasksTabComponent } from './tabs/tasks-tab.component';
 
 type SaveState = 'saving' | 'saved' | 'error';
 type Plan = { patch: BookingPatch } | { error: string };
@@ -34,6 +41,9 @@ const MAX_MONEY = 100_000_000;
 /** Typing pauses this long before the field is saved; leaving the field saves at once. */
 const TYPING_DELAY_MS = 700;
 const SAVED_FLASH_MS = 2500;
+
+/** Fields that exist only in the demo; a real booking has nowhere to save them. */
+const DEMO_ONLY: ReadonlySet<string> = new Set(COLUMNS.flat().flatMap((section) => section.fields.filter((f) => f.live === false).map((f) => f.key)));
 
 /** Text fields that are saved as typed or picked, with their length limit in `firestore.rules` (default 100). */
 const TEXT_KEYS: ReadonlySet<string> = new Set<string>([...BOOKING_TEXT_KEYS, 'rate', 'source', 'phone', 'email', 'notes', 'housekeepingNote']);
@@ -72,20 +82,25 @@ function amount(raw: string, max: number): number | null {
 }
 
 /**
- * Real hotels: one booking as an editable card (`hotels/{hotelId}/bookings/{id}`, opened with `?id=`).
+ * One booking as an editable card. Real hotels: `hotels/{hotelId}/bookings/{id}`, opened with `?id=`, only
+ * fields that are saved. Demo: one seeded booking in memory (`BookingDemoStore`) with every field and tab.
  * Every field saves on its own: text after a typing pause or on leaving the field, lists, dates and
  * switches at once. A change that breaks a rule (room busy, over capacity, paid above total) is not
  * sent; the field shows why and keeps what was typed. Money received is never typed here: `paid`
- * follows the payment journal. Fields without data behind them yet are listed as disabled placeholders.
+ * follows the payment journal. Fields and tabs without data behind them yet are hidden from real hotels.
  */
 @Component({
-	selector: 'app-booking-live',
-	imports: [AppShellComponent, RouterLink],
-	templateUrl: './booking-live.component.html',
-	styleUrl: './booking-live.component.scss',
+	selector: 'app-booking-card',
+	imports: [AppShellComponent, RouterLink, GuestsTabComponent, ChargesTabComponent, BalanceTabComponent, TasksTabComponent, DocumentTabComponent, RecordsTabComponent],
+	providers: [BookingDemoStore],
+	templateUrl: './booking-card.component.html',
+	styleUrl: './booking-card.component.scss',
 	host: { '(window:beforeunload)': 'warnBeforeLeaving($event)' },
 })
-export class BookingLiveComponent {
+export class BookingCardComponent {
+	/** The demo has no Firestore: the card runs on seeded data kept in memory. */
+	protected readonly demo = !isLiveSession();
+	protected readonly demoStore = inject(BookingDemoStore);
 	private readonly _bookingsService = inject(BookingsService);
 	private readonly _roomsService = inject(RoomsService);
 	private readonly _hotel = inject(HotelService);
@@ -102,17 +117,24 @@ export class BookingLiveComponent {
 		return `Номер ${b.roomNumber} · ${shortDate(b.checkIn)} – ${shortDate(b.checkOut)} · ${nightsLabel(this.nights())}`;
 	});
 
-	protected readonly tabs = CARD_TABS;
 	protected readonly money = money;
 	protected readonly shortDate = shortDate;
 	protected readonly statusLabel = STATUS_LABEL;
 	protected readonly canChange = canCurrent('changeBooking');
 	/** Money figures only for roles that see guest bills. */
 	protected readonly showFinance = canCurrent('guestBill');
-	protected readonly columns = COLUMNS.map((column) => column.filter((section) => !section.finance || this.showFinance)).filter((column) => column.length);
+	protected readonly columns = columnsFor(this.demo, this.showFinance);
+	protected readonly tabs = tabsFor(this.demo, this.showFinance);
+	protected readonly activeTab = signal<TabId>('card');
+	protected readonly canPay = canCurrent('collectPayment');
+	protected readonly historyDesc = computed(() => [...this.demoStore.history()].reverse());
+	protected readonly created = computed(() => {
+		const at = this.booking()?.createdAt;
+		return at ? new Intl.DateTimeFormat('uk-UA', { dateStyle: 'long', timeStyle: 'short' }).format(at) : '';
+	});
 
 	private readonly _queryParams = toSignal(this._route.queryParamMap);
-	protected readonly bookingId = computed(() => this._queryParams()?.get('id') ?? '');
+	protected readonly bookingId = computed(() => (this.demo ? DEMO_BOOKING_ID : (this._queryParams()?.get('id') ?? '')));
 
 	protected readonly rooms = signal<RoomRecord[]>([]);
 	private readonly _bookings = signal<BookingRecord[]>([]);
@@ -158,9 +180,17 @@ export class BookingLiveComponent {
 	});
 
 	constructor() {
+		effect(() => {
+			if (!this.demo) return;
+			this.rooms.set(this.demoStore.rooms());
+			this._bookings.set(this.demoStore.bookings());
+			this._roomsLoaded.set(true);
+			this._bookingsLoaded.set(true);
+		});
+
 		effect((onCleanup) => {
 			const hotelId = this.hotelId();
-			if (!hotelId) return;
+			if (this.demo || !hotelId) return;
 			this.rooms.set([]);
 			this._bookings.set([]);
 			this._roomsLoaded.set(false);
@@ -217,7 +247,10 @@ export class BookingLiveComponent {
 	protected display(key: string): string {
 		const b = this.booking();
 		if (!b) return '';
-		if (key === 'balance') return b.total > b.paid ? `До сплати ${money(b.total - b.paid)}` : 'Сплачено повністю';
+		const services = this.demo ? this.demoStore.servicesTotal() : 0;
+		if (key === 'services') return money(services);
+		const due = b.total + services - b.paid;
+		if (key === 'balance') return due > 0 ? `До сплати ${money(due)}` : 'Сплачено повністю';
 		return money(key === 'paid' ? b.paid : b.total);
 	}
 
@@ -230,12 +263,13 @@ export class BookingLiveComponent {
 	}
 
 	protected isOff(field: FieldDef): boolean {
-		if (field.soon || this.readOnly()) return true;
+		if (this.readOnly()) return true;
 		return field.key === 'bedNumber' && this.value('byBed') !== 'true';
 	}
 
 	private _read(key: string, b: BookingRecord | null = this.booking()): string {
 		if (!b) return '';
+		if (this.demo && DEMO_ONLY.has(key)) return this.demoStore.extras()[key] ?? '';
 		const stored = b as unknown as Record<string, unknown>;
 		switch (key) {
 			case 'nights':
@@ -286,11 +320,23 @@ export class BookingLiveComponent {
 		const raw = this._draft()[key];
 		const booking = this.booking();
 		const hotelId = this.hotelId();
-		if (raw === undefined || !booking || !hotelId || this.readOnly()) return;
+		if (raw === undefined || !booking || (!hotelId && !this.demo) || this.readOnly()) return;
 
 		if (raw === this._read(key)) {
 			this._dropDraft(key, raw);
 			this._mark(key, null);
+			return;
+		}
+		if (this.demo && DEMO_ONLY.has(key)) {
+			const text = raw.trim();
+			if (text.length > 100) {
+				this._mark(key, 'error', 'Не більше 100 символів');
+				return;
+			}
+			this.demoStore.setExtra(key, text);
+			this.demoStore.log(`Змінено: ${this._label(key)}`);
+			this._dropDraft(key, raw);
+			this._flashSaved(key);
 			return;
 		}
 		const plan = this._plan(key, raw, booking);
@@ -300,20 +346,35 @@ export class BookingLiveComponent {
 		}
 		this._mark(key, 'saving');
 		try {
-			await this._bookingsService.update(hotelId, booking.id, plan.patch);
+			if (this.demo) this.demoStore.update(plan.patch, this._label(key));
+			else await this._bookingsService.update(hotelId!, booking.id, plan.patch);
 			this._dropDraft(key, raw);
-			this._mark(key, 'saved');
-			this._timers.set(
-				key,
-				setTimeout(() => {
-					this._timers.delete(key);
-					if (this.saveState()[key] === 'saved') this._mark(key, null);
-				}, SAVED_FLASH_MS),
-			);
+			this._flashSaved(key);
 		} catch (error) {
 			console.error('Booking autosave failed', error);
 			this._mark(key, 'error', 'Не вдалося зберегти. Перевірте зʼєднання і спробуйте ще раз.');
 		}
+	}
+
+	private _flashSaved(key: string): void {
+		this._mark(key, 'saved');
+		this._timers.set(
+			key,
+			setTimeout(() => {
+				this._timers.delete(key);
+				if (this.saveState()[key] === 'saved') this._mark(key, null);
+			}, SAVED_FLASH_MS),
+		);
+	}
+
+	private _label(key: string): string {
+		return COLUMNS.flat().flatMap((section) => section.fields).find((f) => f.key === key)?.label ?? key;
+	}
+
+	protected addNote(event: Event, field: HTMLTextAreaElement): void {
+		event.preventDefault();
+		this.demoStore.addNote(field.value);
+		field.value = '';
 	}
 
 	protected warnBeforeLeaving(event: BeforeUnloadEvent): void {

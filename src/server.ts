@@ -42,7 +42,13 @@ app.use((req, res, next) => {
 	angularApp
 		.handle(req)
 		.then((response) => (response ? writeResponseToNodeResponse(response, res) : next()))
-		.catch(next);
+		.catch((error) => {
+			// The browser dropped the request mid-render (refresh, redirect, hot reload): nothing to report.
+			if (error?.name === 'AbortError') {
+				return;
+			}
+			next(error);
+		});
 });
 
 /**
