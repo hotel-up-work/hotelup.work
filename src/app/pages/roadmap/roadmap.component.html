@@ -1,0 +1,103 @@
+<header>
+	<a class="brand" routerLink="/" aria-label="Hotel Upwork, головна сторінка">
+		<span class="mark">H</span>
+		<span>Hotel <strong>Upwork</strong><small>Система управління готелем</small></span>
+	</a>
+	<nav aria-label="Головна навігація">
+		<a routerLink="/">Продукт</a>
+		<a routerLink="/pricing">Ціни</a>
+	</nav>
+	<div class="header-actions">
+		<a class="login" routerLink="/demo">Демо ↗</a>
+	</div>
+</header>
+
+<main>
+	<section class="intro">
+		<p class="eyebrow">ДОРОЖНЯ КАРТА CRM · ЧЕРНЕТКА ДЛЯ ОБГОВОРЕННЯ</p>
+		<h1>Релізи Hotel Upwork</h1>
+		<p>
+			Перший реліз уже працює на реальних даних після входу. Наступні — що треба побудувати, у
+			запропонованому порядку. Позначка «Є в демо» означає, що екран уже намальовано в
+			<a routerLink="/demo">демо</a> на вигаданих даних.
+		</p>
+	</section>
+
+	<section class="releases" aria-label="Релізи">
+		<div class="tabs" role="tablist" aria-label="Релізи">
+			@for (r of releases; track r.key) {
+				<button
+					type="button"
+					role="tab"
+					[id]="'tab-' + r.key"
+					[attr.aria-selected]="activeKey() === r.key"
+					[attr.aria-controls]="'panel-' + r.key"
+					[attr.tabindex]="activeKey() === r.key ? 0 : -1"
+					[attr.data-status]="r.status"
+					(click)="activeKey.set(r.key)"
+					(keydown)="onTabKey($event)"
+				>
+					<span class="tab-number">{{ r.number === '—' ? 'Пізніше' : 'Реліз ' + r.number }}</span>
+					<span class="tab-name">{{ r.name }}</span>
+				</button>
+			}
+		</div>
+
+		@let r = active();
+		<article class="panel" role="tabpanel" [id]="'panel-' + r.key" [attr.aria-labelledby]="'tab-' + r.key">
+			<div class="panel-head">
+				<div class="panel-meta">
+					<span class="badge" [attr.data-status]="r.status">{{ statusLabel[r.status] }}</span>
+					<span class="count">{{ itemCount(r.key) }} {{ r.status === 'released' ? 'можливостей' : 'пунктів' }}</span>
+				</div>
+				<h2>
+					@if (r.number !== '—') {
+						<span>Реліз {{ r.number }}.</span>
+					}
+					{{ r.name }}
+				</h2>
+				<p class="goal">{{ r.goal }}</p>
+				@if (r.after?.length) {
+					<p class="after">
+						<span>Після:</span>
+						@for (n of r.after; track n) {
+							<button type="button" class="dep" (click)="openRelease(n)">
+								Реліз {{ n }} · {{ releaseName[n] }}
+							</button>
+						}
+					</p>
+				}
+			</div>
+
+			<h3 class="sr-only">{{ r.status === 'released' ? 'Що вже працює' : 'Що реалізуємо' }}</h3>
+			<div class="groups">
+				@for (g of r.groups; track g.title) {
+					<section class="group">
+						<div class="group-head">
+							<h4>{{ g.title }}</h4>
+							@if (g.demo) {
+								<span class="demo-tag">Є в демо</span>
+							}
+						</div>
+						<ul [class.done]="r.status === 'released'">
+							@for (item of g.items; track item) {
+								<li>{{ item }}</li>
+							}
+						</ul>
+					</section>
+				}
+			</div>
+
+			@if (r.questions?.length) {
+				<div class="questions">
+					<h4>Обговорити</h4>
+					<ul>
+						@for (q of r.questions; track q) {
+							<li>{{ q }}</li>
+						}
+					</ul>
+				</div>
+			}
+		</article>
+	</section>
+</main>

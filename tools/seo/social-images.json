@@ -3,6 +3,7 @@
   {"route":"pricing", "slug":"pricing", "title":"Тариф для вашого готелю", "subtitle":"Start · Pro · Enterprise", "kind":"pricing"},
   {"route":"pitch", "slug":"pitch", "title":"Менше втрат. Більше контролю.", "subtitle":"Рішення для щоденних викликів готелю", "kind":"chart"},
   {"route":"proposal", "slug":"proposal", "title":"Прямі бронювання для вашого готелю", "subtitle":"Власний сайт і система управління", "kind":"calendar"},
+  {"route":"roadmap", "slug":"roadmap", "title":"Дорожня карта CRM", "subtitle":"Що працює, що в демо і що далі", "kind":"flow"},
   {"route":"login", "slug":"login", "title":"Вхід до Hotel Upwork", "subtitle":"Ваш готель завжди поруч", "kind":"form"},
   {"route":"demo", "slug":"demo", "title":"Спробуйте готель у дії", "subtitle":"Демо системи за роллю та тарифом", "kind":"grid"},
   {"route":"dashboard", "slug":"dashboard", "title":"Огляд готелю", "subtitle":"Заїзди, номери, оплати та завдання", "kind":"chart"},

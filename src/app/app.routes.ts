@@ -82,6 +82,19 @@ export const routes: Routes = [
 		loadComponent: () => import('./pages/proposal/proposal.component').then((m) => m.ProposalComponent),
 	},
 	{
+		path: 'roadmap',
+		data: {
+			meta: {
+				title: 'Дорожня карта CRM · Hotel Upwork',
+				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/roadmap.jpg'),
+				description: 'Hotel Upwork: релізи CRM — що вже працює і що будуємо далі.',
+				robots: 'noindex, nofollow',
+			},
+		},
+		loadComponent: () => import('./pages/roadmap/roadmap.component').then((m) => m.RoadmapComponent),
+	},
+	{
 		path: 'login',
 		data: {
 			meta: {

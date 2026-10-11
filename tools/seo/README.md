@@ -1,6 +1,6 @@
 # Social images
 
-The 29 page-specific JPEG cards in `src/assets/seo/` are 1200 × 630 pixels.
+The 30 page-specific JPEG cards in `src/assets/seo/` are 1200 × 630 pixels.
 Every prerendered page uses a card through `data.meta.image` in `src/app/app.routes.ts`.
 Hotel-specific `/proposal/:slug` pages share the proposal card. The default image
 and initial HTML metadata use the home card. Existing indexing rules still apply.
