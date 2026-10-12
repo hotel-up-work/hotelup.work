@@ -4,7 +4,15 @@
 	<h2>{{ room ? 'Редагувати номер ' + room.number : 'Додати номер' }}</h2>
 	<form
 		class="crm-form"
-		(submit)="$event.preventDefault(); submit(numberInput.value, floorInput.valueAsNumber, capacityInput.valueAsNumber, priceInput.valueAsNumber, areaInput.valueAsNumber, extraGuestsInput.valueAsNumber, extraPriceInput.valueAsNumber)"
+		(submit)="
+			$event.preventDefault();
+			submit(numberInput.value, floorInput.valueAsNumber, capacityInput.valueAsNumber, priceInput.valueAsNumber, areaInput.valueAsNumber, extraGuestsInput.valueAsNumber, extraPriceInput.valueAsNumber, {
+				building: buildingInput.value,
+				bathroom: bathroomSelect.value,
+				balcony: balconySelect.value,
+				view: viewInput.value,
+			})
+		"
 	>
 		<label [class.full]="!!room">
 			Номер / назва
@@ -46,6 +54,37 @@
 		<label>
 			Площа, м² (необовʼязково)
 			<input #areaInput name="area" type="number" min="1" [value]="room ? (room.area ?? '') : (d?.area ?? '')" />
+		</label>
+		<label>
+			Корпус (необовʼязково)
+			<input #buildingInput name="building" maxlength="50" placeholder="Корпус 2" [value]="room?.building ?? ''" />
+		</label>
+		<label>
+			Санвузол
+			<select #bathroomSelect name="bathroom">
+				<option value="" [selected]="!room?.bathroom">Не задано</option>
+				@for (o of bathroomOptions; track o) {
+					<option [selected]="o === room?.bathroom">{{ o }}</option>
+				}
+			</select>
+		</label>
+		<label>
+			Балкон
+			<select #balconySelect name="balcony">
+				<option value="" [selected]="!room?.balcony">Не задано</option>
+				@for (o of balconyOptions; track o) {
+					<option [selected]="o === room?.balcony">{{ o }}</option>
+				}
+			</select>
+		</label>
+		<label>
+			Вид з вікна
+			<input #viewInput name="view" maxlength="50" list="room-view-options" placeholder="Місто" [value]="room?.view ?? ''" />
+			<datalist id="room-view-options">
+				@for (o of viewOptions; track o) {
+					<option [value]="o"></option>
+				}
+			</datalist>
 		</label>
 		@if (room && room.type !== typeName()) {
 			<p class="full crm-note">Ліжка та зручності буде взято з типу «{{ typeName() }}».</p>

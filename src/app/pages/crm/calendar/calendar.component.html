@@ -1,12 +1,16 @@
 <app-shell activeNav="calendar" greetingTitle="" greetingSubtitle="">
-	<div class="topbar-legend" topbar-center aria-label="Умовні позначення">
-		<span><i class="lg-confirmed"></i>Підтверджено</span>
-		<span><i class="lg-checkedin"></i>Заїхав</span>
-		<span><i class="lg-checkedout"></i>Виїхав</span>
-		<span><i class="lg-pending"></i>Очікує</span>
-		<span><i class="lg-cancelled"></i>Скасовано</span>
-		<span><i class="lg-blocked"></i>Недоступно</span>
-	</div>
+	<button
+		class="icon-button legend-toggle"
+		topbar-center
+		[class.active]="legendOpen()"
+		[attr.aria-expanded]="legendOpen()"
+		aria-controls="cal-legend"
+		[attr.aria-label]="legendOpen() ? 'Сховати умовні позначення' : 'Показати умовні позначення'"
+		[attr.title]="legendOpen() ? 'Сховати умовні позначення' : 'Умовні позначення'"
+		(click)="toggleLegend()"
+	>
+		<app-icon name="info" />
+	</button>
 	<div class="topbar-buttons" topbar-actions>
 		<button class="button secondary" (click)="goToday()">Сьогодні</button>
 		@if (live) {
@@ -18,27 +22,58 @@
 
 	<div class="cal-toolbar cal-desktop">
 		<div class="cal-nav">
-			<button class="icon-button" aria-label="Попередній період" (click)="prevRange()"><app-icon name="left" /></button>
+			<button class="icon-button" aria-label="Попередній місяць" title="Попередній місяць" (click)="prevMonth()"><app-icon name="double-left" /></button>
+			<button class="icon-button" aria-label="Попередній період" title="Попередній період" (click)="prevRange()"><app-icon name="left" /></button>
 			<b>{{ rangeLabel() }}</b>
-			<button class="icon-button" aria-label="Наступний період" (click)="nextRange()"><app-icon name="right" /></button>
+			<button class="icon-button" aria-label="Наступний період" title="Наступний період" (click)="nextRange()"><app-icon name="right" /></button>
+			<button class="icon-button" aria-label="Наступний місяць" title="Наступний місяць" (click)="nextMonth()"><app-icon name="double-right" /></button>
+			<label class="cal-date" title="Перейти до дати">
+				<app-icon name="calendar" />
+				<input type="date" aria-label="Перейти до дати" [value]="viewStart()" (change)="goToDate($any($event.target).value)" />
+			</label>
 			<div class="cal-views" role="group" aria-label="Кількість днів">
 				<button [class.active]="viewDays() === 7" (click)="setViewDays(7)">7 днів</button>
 				<button [class.active]="viewDays() === 14" (click)="setViewDays(14)">14 днів</button>
 				<button [class.active]="viewDays() === 30" (click)="setViewDays(30)">30 днів</button>
 			</div>
+			<button class="cal-density" [class.active]="compact()" [attr.aria-pressed]="compact()" (click)="toggleCompact()">Компактно</button>
 		</div>
 		<div class="cal-toolbar-right">
+			@if (auditItems().length) {
+				<div class="filters-wrap">
+					<button class="button audit-button" [attr.aria-expanded]="auditOpen()" (click)="auditOpen.set(!auditOpen()); filtersOpen.set(false)">
+						<app-icon name="attention" />Нічний аудит · {{ auditItems().length }}
+					</button>
+					@if (auditOpen()) {
+						<div class="filters-panel audit-panel">
+							<h4>Потребує відмітки</h4>
+							<p class="form-note">Стан бронювань не збігається з датами. Відкрийте бронювання та відмітьте заїзд, виїзд або скасування.</p>
+							@for (item of auditItems(); track item.booking.id) {
+								<button class="result-item" (click)="openAuditItem(item)">
+									<span>
+										<b>{{ item.booking.name }} · № {{ item.booking.room }}</b>
+										<small>
+											{{ item.kind === 'overstay' ? 'Не відмічено виїзд · мав виїхати ' + shortDate(item.booking.end) : 'Не відмічено заїзд · заїзд був ' + shortDate(item.booking.start) }}
+										</small>
+									</span>
+									<span>Відкрити →</span>
+								</button>
+							}
+						</div>
+					}
+				</div>
+			}
 			<div class="cal-search">
 				<app-icon name="search" />
 				<input [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Знайти гостя або бронювання" />
 			</div>
 			<div class="filters-wrap">
-				<button class="button secondary" (click)="toggleFilters()"><app-icon name="filter" />Фільтри</button>
+				<button class="button secondary" (click)="toggleFilters(); auditOpen.set(false)"><app-icon name="filter" />Фільтри</button>
 				@if (filtersOpen()) {
 					<div class="filters-panel">
 						<section>
 							<h4>Статус бронювання</h4>
-							@for (s of [['confirmed','Підтверджено'],['pending','Очікує'],['checkedin','Заїхав'],['checkedout','Виїхав'],['cancelled','Скасовано']]; track s[0]) {
+							@for (s of [['confirmed','Підтверджено'],['pending','Очікує'],['checkedin','Заїхав'],['checkedout','Виїхав'],['waitlist','Лист очікування'],['cancelled','Скасовано']]; track s[0]) {
 								<label>
 									<input
 										type="checkbox"
@@ -82,8 +117,68 @@
 			<a class="button primary" routerLink="/rooms">Перейти до номерів</a>
 		</div>
 	} @else {
-	<div class="cal-wrap cal-desktop">
-		<div class="cal-grid" [style.grid-template-columns]="'170px repeat(' + dateRange().length + ', minmax(88px,1fr))'">
+	<div class="cal-layout cal-desktop">
+	@if (legendOpen()) {
+		<aside id="cal-legend" class="cal-legend" aria-label="Умовні позначення">
+			<section>
+				<h4>Колір бронювання</h4>
+				<ul class="legend-list">
+					<li><i class="sw stage-booking"></i>Бронювання</li>
+					@if (showFinance) {
+						<li><i class="sw stage-prepaid"></i>Бронювання з передоплатою</li>
+					}
+					<li><i class="sw stage-arriving"></i>Заїзд сьогодні або раніше, не відмічено</li>
+					<li><i class="sw stage-staying"></i>Проживає</li>
+					<li><i class="sw stage-departing"></i>Виїзд сьогодні</li>
+					<li><i class="sw stage-checkedout"></i>Виїхав</li>
+					<li><i class="sw stage-waitlist"></i>Лист очікування (номер не займає)</li>
+					<li><i class="sw stage-conflict"></i>Конфлікт поселення</li>
+					<li><i class="sw stage-booking pending"></i>Пунктир: очікує підтвердження</li>
+				</ul>
+			</section>
+			<section>
+				<h4>Позначки в бронюванні</h4>
+				<ul class="legend-list">
+					<li><app-icon name="star" />VIP-гість</li>
+					<li><app-icon name="ban" />Гість у чорному списку</li>
+					@if (showFinance) {
+						<li><app-icon class="icon-debt" name="coin" />Гість має заборгованість</li>
+					}
+					<li><app-icon name="briefcase" />Платить компанія за гостя</li>
+					<li><app-icon name="shield" />Гарантована оплата</li>
+					<li><app-icon name="meal" />Заплановано харчування</li>
+					<li><app-icon name="swap" />Категорія номера відрізняється від категорії оплати</li>
+					<li><app-icon name="lock" />Номер закріплено за гостем</li>
+					<li><app-icon name="clock" />Пізній виїзд</li>
+				</ul>
+			</section>
+			<section>
+				<h4>Номер недоступний</h4>
+				<ul class="legend-list">
+					<li><i class="sw kind-repair"></i>Ремонт, не для продажу</li>
+					<li><i class="sw kind-service"></i>Службове використання</li>
+					<li><i class="sw kind-out"></i>Не експлуатується</li>
+					<li><i class="sw kind-other"></i>Технічні роботи, інше</li>
+				</ul>
+			</section>
+			<section>
+				<h4>Стан номера (крапка біля номера)</h4>
+				<ul class="legend-list">
+					<li><i class="room-dot rs-ready"></i>Готовий</li>
+					<li><i class="room-dot rs-occupied"></i>Зайнятий</li>
+					<li><i class="room-dot rs-light-cleaning"></i>Легке прибирання: гість проживає кілька днів</li>
+					<li><i class="room-dot rs-needs-cleaning"></i>Потребує прибирання після виїзду</li>
+					<li><i class="room-dot rs-cleaning"></i>Прибирається</li>
+					<li><i class="room-dot rs-unavailable"></i>Недоступний</li>
+				</ul>
+			</section>
+		</aside>
+	}
+	<div class="cal-wrap" [class.compact]="compact()">
+		<div
+			class="cal-grid"
+			[style.grid-template-columns]="compact() ? '120px repeat(' + dateRange().length + ', minmax(54px,1fr))' : '170px repeat(' + dateRange().length + ', minmax(88px,1fr))'"
+		>
 			<div class="cal-head-room">НОМЕР</div>
 			@for (d of dateRange(); track d) {
 				<div class="cal-head-cell" [class.weekend]="isWeekend(d)" [class.today]="d === TODAY">
@@ -94,7 +189,15 @@
 				@if (row.kind === 'group') {
 					<div class="cal-group-label" [style.grid-row]="row.row">{{ row.label }}</div>
 				} @else {
-					<div class="cal-room-cell" [style.grid-row]="row.row"><b>{{ row.room.number }}</b><span>{{ row.room.type }} · {{ row.room.cap }}</span></div>
+					<div
+						class="cal-room-cell"
+						[style.grid-row]="row.row"
+						(mouseenter)="showRoomHover($event, row.room)"
+						(mouseleave)="hideRoomHover()"
+					>
+						<b><i [class]="'room-dot rs-' + row.room.status" [attr.title]="roomStatusLabel(row.room.status)"></i>{{ row.room.number }}</b>
+						<span>{{ row.room.type }} · {{ row.room.cap }}</span>
+					</div>
 					@for (d of dateRange(); track d; let ci = $index) {
 						<div
 							class="cal-day-cell"
@@ -113,7 +216,9 @@
 				}
 			}
 			@for (blk of blockedOverlays(); track blk.room + blk.start) {
-				<div class="cal-blocked" [style.grid-row]="blk.row" [style.grid-column]="blk.colStart + ' / ' + blk.colEnd">Недоступно<br />{{ blk.reason }}</div>
+				<div [class]="'cal-blocked kind-' + blk.kind" [style.grid-row]="blk.row" [style.grid-column]="blk.colStart + ' / ' + blk.colEnd" [attr.title]="blk.label">
+					{{ blk.label }}
+				</div>
 			}
 			@if (ghostBlock(); as g) {
 				<div
@@ -125,13 +230,14 @@
 					[style.margin-right]="'calc(4px + ' + g.insetRight + '%)'"
 				>
 					<b>+ Бронювання</b>
-					<div class="bb-meta"><span>{{ dayNum(g.start) }}–{{ dayNum(g.end) }} · 2 гост.</span></div>
+					<div class="bb-meta"><span>{{ stayRange(g.start, g.end) }} · 2 гост.</span></div>
 				</div>
 			}
 			@for (blk of bookingBlocks(); track blk.booking.id) {
 				<div
 					class="booking-block"
-					[class]="'status-' + blk.booking.status"
+					[class]="'stage-' + blk.stage + (blk.lane ? ' lane-' + blk.lane : '')"
+					[class.pending]="blk.booking.status === 'pending'"
 					[class.selected]="selectedId() === blk.booking.id"
 					[class.match]="blk.match"
 					[attr.draggable]="canChange && blk.booking.status !== 'cancelled'"
@@ -141,35 +247,187 @@
 					[style.margin-right]="'calc(4px + ' + blk.insetRight + '%)'"
 					tabindex="0"
 					role="button"
-					[attr.aria-label]="'Бронювання ' + blk.booking.name"
+					[attr.aria-label]="'Бронювання ' + blk.booking.name + ' · ' + stageLabel(blk.stage) + (blk.badges.length ? ' · ' + badgeText(blk.badges) : '')"
 					(click)="openSidePanel(blk.booking.id)"
+					(keydown.enter)="openSidePanel(blk.booking.id)"
 					(dragstart)="onDragStart($event, blk.booking.id)"
 					(mouseenter)="showHover($event, blk.booking)"
 					(mouseleave)="hideHover()"
 				>
-					<b>{{ blk.booking.name }}</b>
-					<div class="bb-meta">
-						<span>{{ dayNum(blk.booking.start) }}–{{ dayNum(blk.booking.end) }} · {{ blk.booking.guests }} гост.</span>
-						@if (showFinance && blk.booking.paid < blk.booking.total && blk.booking.status !== 'cancelled') {
-							<span class="bb-unpaid" title="Не оплачено"></span>
-						}
-					</div>
+					@if (blk.stage === 'waitlist' || blk.stage === 'cancelled') {
+						<b [appFitName]="blk.booking.name"
+							><span class="bb-name">{{ blk.booking.name }}</span><span class="bb-short" aria-hidden="true">{{ surnameFirst(blk.booking.name) }}</span></b
+						>
+					} @else {
+						<!-- Full name; when it does not fit the block (measured), the surname comes first and the rest is cut with "…". -->
+						<b [appFitName]="blk.booking.name">
+							@for (bd of blk.badges; track bd.icon) {
+								<app-icon class="bb-icon" style="width: 11px; height: 11px" [class.icon-debt]="bd.icon === 'coin'" [name]="bd.icon" />
+							}
+							<span class="bb-name">{{ blk.booking.name }}</span><span class="bb-short" aria-hidden="true">{{ surnameFirst(blk.booking.name) }}</span>
+						</b>
+						<div class="bb-meta">
+							<span
+								[attr.title]="'Бронювання ' + bookingNo(blk.booking) + ' · заїзд ' + shortDate(blk.booking.start) + ', виїзд ' + shortDate(blk.booking.end) + ' · ' + guestsLabel(blk.booking.guests)"
+								>{{ bookingNo(blk.booking) }} · {{ stayRange(blk.booking.start, blk.booking.end) }} · {{ blk.booking.guests }} гост.</span
+							>
+						</div>
+					}
 				</div>
 			}
 		</div>
 	</div>
+	</div>
+
+	@if (roomDetails(); as rd) {
+		<div class="hover-card room-card" [style.left.px]="rd.x" [style.top.px]="rd.y" role="tooltip">
+			<div class="rc-head">
+				<b>Номер {{ rd.room.number }}</b>
+				<span [class]="'rc-status rs-' + rd.room.status">{{ roomStatusLabel(rd.room.status) }}</span>
+			</div>
+			<p>{{ rd.room.type }}</p>
+			@if (rd.description) {
+				<p class="rc-desc">{{ rd.description }}</p>
+			}
+			<dl class="rc-grid">
+				<dt>Корпус</dt>
+				<dd>{{ rd.room.building || 'Не задано' }}</dd>
+				<dt>Поверх</dt>
+				<dd>{{ rd.room.floor || '—' }}</dd>
+				<dt>Основних місць</dt>
+				<dd>{{ rd.room.capacity }}</dd>
+				<dt>Додаткові місця</dt>
+				<dd>
+					@if (rd.room.extraGuests) {
+						{{ rd.room.extraGuests }} за доплату{{ showFinance ? ' · ' + money(rd.room.extraGuestPrice) + ' / ніч за особу' : '' }}
+					} @else {
+						Немає, лише основні місця
+					}
+				</dd>
+				<dt>Максимум гостей</dt>
+				<dd>{{ rd.room.capacity + rd.room.extraGuests }}{{ rd.room.extraGuests ? ' (' + rd.room.capacity + ' + ' + rd.room.extraGuests + ' дод.)' : '' }}</dd>
+				<dt>Ліжка</dt>
+				<dd>{{ rd.room.beds || 'Не задано' }}</dd>
+				<dt>Площа</dt>
+				<dd>{{ rd.room.area ? rd.room.area + ' м²' : 'Не задано' }}</dd>
+				<dt>Санвузол</dt>
+				<dd>{{ rd.room.bathroom || 'Не задано' }}</dd>
+				<dt>Балкон</dt>
+				<dd>{{ rd.room.balcony || 'Не задано' }}</dd>
+				<dt>Вид</dt>
+				<dd>{{ rd.room.view || 'Не задано' }}</dd>
+				@if (showFinance) {
+					<dt>Ціна за ніч</dt>
+					<dd>{{ money(rd.room.price) }}</dd>
+				}
+			</dl>
+			<h6>Властивості</h6>
+			<p>{{ rd.room.amenities.length ? rd.room.amenities.join(', ') : 'Не задано' }}</p>
+			<h6>Зараз</h6>
+			@if (rd.current; as c) {
+				<p><b>{{ c.name }}</b> · {{ statusLabel(c.status) }}<br />до {{ shortDate(c.end) }}, {{ guestsLabel(c.guests) }}</p>
+				@let room = addable(rd.room, c.guests);
+				<p class="rc-addable" [class.none]="!room.total">
+					@if (room.total) {
+						Можна додати ще {{ guestsLabel(room.total) }}{{ room.paid ? ' (' + room.paid + ' за доплату)' : '' }}
+					} @else {
+						Номер заповнений: додати гостей не можна
+					}
+				</p>
+			} @else if (rd.block && rd.block.start <= TODAY) {
+				<p>Недоступний: {{ rd.block.reason }}</p>
+			} @else {
+				<p>Вільний</p>
+			}
+			@if (rd.next; as n) {
+				<h6>Наступний заїзд</h6>
+				<p><b>{{ n.name }}</b> · {{ shortDate(n.start) }} – {{ shortDate(n.end) }}</p>
+			}
+			@if (rd.block; as bl) {
+				<h6>Блокування</h6>
+				<p>{{ bl.reason }} · {{ shortDate(bl.start) }} – {{ shortDate(bl.last) }}{{ bl.note ? ' · ' + bl.note : '' }}</p>
+			}
+		</div>
+	}
 
 	@if (hover(); as h) {
-		<div class="hover-card" [style.left.px]="h.x" [style.top.px]="h.y">
-			<b>{{ h.booking.name }}</b>
-			<p>Номер {{ h.booking.room }} · {{ roomOf(h.booking.room)?.type }}</p>
-			<p>{{ shortDate(h.booking.start) }} – {{ shortDate(h.booking.end) }}</p>
-			<p>{{ nightsLabel(dayDiff(h.booking.start, h.booking.end)) }} · {{ guestsLabel(h.booking.guests) }}</p>
-			@if (showFinance) {
-				<div class="hc-amount">{{ money(h.booking.total) }}</div>
-				<p>{{ paymentLabel(h.booking) }}</p>
+		@let hb = h.booking;
+		<div class="hover-card booking-card" [style.left.px]="h.x" [style.top.px]="h.y" role="tooltip">
+			<div class="rc-head">
+				<b>{{ hb.name }}</b>
+				<span [class]="'bc-stage stage-' + stageOf(hb)">{{ stageLabel(stageOf(hb)) }}</span>
+			</div>
+			<p>Бронювання {{ bookingNo(hb) }} · {{ peopleLabel(hb) }}</p>
+
+			<div class="bc-moves">
+				<div title="Заїзд" aria-label="Заїзд">
+					<app-icon name="arrival" />
+					<span>
+						<b>{{ dayLabel(hb.start) }}</b>
+						<em>{{ hb.status === 'checkedin' || hb.status === 'checkedout' ? 'з ' : 'після ' }}{{ checkInLabel(hb) }}</em>
+					</span>
+				</div>
+				<div title="Виїзд" aria-label="Виїзд">
+					<app-icon name="departure" />
+					<span>
+						<b>{{ dayLabel(hb.end) }}</b>
+						<em>до {{ checkOutTimeLabel(hb) }}{{ hb.lateCheckoutHour ? ' · пізній' : '' }}</em>
+					</span>
+				</div>
+			</div>
+
+			<dl class="rc-grid">
+				<dt>Кімната</dt>
+				<dd>{{ hb.room }} · {{ roomOf(hb.room)?.type }}</dd>
+				<dt>Ночей</dt>
+				<dd>{{ dayDiff(hb.start, hb.end) }}</dd>
+				<dt>Статус</dt>
+				<dd>{{ statusLabel(hb.status) }}</dd>
+				@if (showFinance) {
+					<dt>Нараховано</dt>
+					<dd>{{ money(hb.total) }}</dd>
+					<dt>Оплачено</dt>
+					<dd>{{ money(hb.paid) }}</dd>
+					<dt>Баланс</dt>
+					<dd [class.bc-debt]="hb.paid < hb.total">{{ hb.paid < hb.total ? '−' + money(hb.total - hb.paid) : money(0) }}</dd>
+					@if (hb.depositBalance) {
+						<dt>Депозит</dt>
+						<dd>{{ money(hb.depositBalance) }}</dd>
+					}
+				}
+				<dt>Прейскурант</dt>
+				<dd>{{ hb.rate || 'Не задано' }}</dd>
+				@if (hb.mealPlan) {
+					<dt>Харчування</dt>
+					<dd>{{ hb.mealPlan }}</dd>
+				}
+				<dt>Джерело</dt>
+				<dd>{{ hb.source || 'Не задано' }}</dd>
+				@if (hb.manager) {
+					<dt>Менеджер</dt>
+					<dd>{{ hb.manager }}</dd>
+				}
+				@if (hb.companyOperator) {
+					<dt>Компанія</dt>
+					<dd>{{ hb.companyOperator }}</dd>
+				}
+				@if (hb.phone) {
+					<dt>Телефон</dt>
+					<dd>{{ hb.phone }}</dd>
+				}
+			</dl>
+			@if (hb.notes) {
+				<h6>Коментар</h6>
+				<p class="bc-note">{{ hb.notes }}</p>
 			}
-			<p>{{ h.booking.source }}</p>
+			@let marks = cardMarks(hb);
+			@if (marks.length) {
+				<ul class="hc-marks">
+					@for (bd of marks; track bd.icon) {
+						<li><app-icon [class.icon-debt]="bd.icon === 'coin'" [name]="bd.icon" />{{ bd.title }}</li>
+					}
+				</ul>
+			}
 		</div>
 	}
 
@@ -225,7 +483,21 @@
 			@if (b) {
 				<span class="pill" [class.ready]="b.status === 'checkedin'" [class.gold]="b.status === 'pending'">{{ statusLabel(b.status) }}</span>
 				<h2>{{ b.name }}</h2>
-				<p>{{ b.phone || 'Телефон не вказано' }}{{ b.email ? ' · ' + b.email : '' }}</p>
+				<p>{{ bookingNo(b) }} · {{ b.phone || 'Телефон не вказано' }}{{ b.email ? ' · ' + b.email : '' }}</p>
+				@let marks = panelMarks(b);
+				@if (marks.length) {
+					<ul class="sp-marks">
+						@for (bd of marks; track bd.icon) {
+							<li><app-icon [class.icon-debt]="bd.icon === 'coin'" [name]="bd.icon" />{{ bd.title }}</li>
+						}
+					</ul>
+				}
+				@if (conflictIds().has(b.id)) {
+					<p class="sp-warning" role="alert">Конфлікт поселення: у номері {{ b.room }} на ці дати є інше бронювання або блокування. Перемістіть одне з них.</p>
+				}
+				@if (b.status === 'waitlist') {
+					<p class="form-note">Лист очікування: бронювання не займає номер. Підтвердіть його, коли номер звільниться, або перетягніть у вільний номер.</p>
+				}
 				<h5>Проживання</h5>
 				<div class="detail-grid">
 					<div><small>Номер</small><b>{{ b.room }} · {{ roomOf(b.room)?.type }}</b></div>
@@ -260,6 +532,12 @@
 					} @else {
 						<a class="button primary full" routerLink="/booking" [queryParams]="{ id: b.id }">Відкрити картку бронювання</a>
 					}
+					@if (b.status === 'cancelled') {
+						<button class="button primary" [disabled]="!ready()" (click)="rebook(b)">Забронювати знову</button>
+					}
+					@if (canChange && b.status === 'waitlist') {
+						<button class="button primary" [disabled]="saving()" (click)="setStatus(b.id, 'confirmed')">Підтвердити з листа очікування</button>
+					}
 					@if (canChange && b.status === 'pending') {
 						<button class="button primary" [disabled]="saving()" (click)="setStatus(b.id, 'confirmed')">Підтвердити бронювання</button>
 					}
@@ -272,13 +550,13 @@
 					@if (canExtendStay(b)) {
 						<button class="button secondary" (click)="openExtendStay(b.id)">Пізній виїзд</button>
 					}
-					@if (canChange && b.status !== 'cancelled') {
+					@if (canChange && b.status !== 'cancelled' && !b.roomLocked) {
 						<button class="button secondary" (click)="requestRoomChange()">Змінити номер</button>
 					}
 					@if (!live) {
 						<button class="button secondary" (click)="dialogView.set({ kind: 'message', bookingId: b.id })">Надіслати повідомлення</button>
 					}
-					@if (canCollect && b.paid < b.total && b.status !== 'cancelled') {
+					@if (canCollect && b.paid < b.total && b.status !== 'cancelled' && b.status !== 'waitlist') {
 						<button class="button secondary" (click)="dialogView.set({ kind: 'payment', bookingId: b.id })">Додати оплату</button>
 					}
 					@if (canChange && b.status !== 'cancelled') {
@@ -358,12 +636,13 @@
 							<select name="status" [ngModel]="f.status" (ngModelChange)="patchForm({ status: $event })">
 								<option value="confirmed">Підтверджено</option>
 								<option value="pending">Очікує підтвердження</option>
+								<option value="waitlist">Лист очікування (номер зайнятий)</option>
 							</select>
 						</label>
 					} @else {
 						<p class="full form-note">Бронювання буде створено зі статусом «Очікує підтвердження» — його підтверджує адміністратор.</p>
 					}
-					@if (canCollect) {
+					@if (canCollect && f.status !== 'waitlist') {
 						<label [class.full]="!canChange">
 							Оплата
 							<select name="payment" [ngModel]="f.payment" (ngModelChange)="patchForm({ payment: $event })">

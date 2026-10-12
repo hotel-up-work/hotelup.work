@@ -2,7 +2,7 @@ import { Component, DestroyRef, computed, effect, inject, signal, type Type } fr
 import { FormsModule } from '@angular/forms';
 import { ModalService, type Modal } from '@wawjs/ngx-ui';
 import { AppShellComponent } from '../../../layouts/app-shell/app-shell.component';
-import { BookingRecord, BookingsService } from '../../../feature/firebase/bookings.service';
+import { BookingRecord, BookingsService, holdsRoom } from '../../../feature/firebase/bookings.service';
 import { HotelService } from '../../../feature/firebase/hotel.service';
 import { localDay, methodLabel, PAYMENT_METHODS, PaymentRecord, PaymentsService, type PaymentMethod } from '../../../feature/firebase/payments.service';
 import { IconComponent } from '../../../shared/icon/icon.component';
@@ -121,7 +121,7 @@ export class PaymentsLiveComponent {
 	/** Bookings that still owe money, soonest arrival first. Cancelled ones owe nothing. */
 	protected readonly outstanding = computed(() =>
 		this._bookings()
-			.filter((b) => b.status !== 'cancelled' && b.total > b.paid)
+			.filter((b) => holdsRoom(b.status) && b.total > b.paid)
 			.sort((a, b) => a.checkIn.localeCompare(b.checkIn)),
 	);
 

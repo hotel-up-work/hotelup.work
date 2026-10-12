@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AppShellComponent } from '../../../layouts/app-shell/app-shell.component';
-import { BookingInput, BookingPatch, BookingRecord, BookingsService, BookingStatus, checkOutPatch } from '../../../feature/firebase/bookings.service';
+import { BookingInput, BookingPatch, BookingRecord, BookingsService, BookingStatus, checkOutPatch, holdsRoom } from '../../../feature/firebase/bookings.service';
 import { GuestsService } from '../../../feature/firebase/guests.service';
 import { HotelService } from '../../../feature/firebase/hotel.service';
 import { HotelSettingsService } from '../../../feature/firebase/hotel-settings.service';
@@ -11,6 +11,7 @@ import { localDay, PaymentMethod, PaymentsService } from '../../../feature/fireb
 import { RoomRecord, RoomsService, RoomStatus } from '../../../feature/firebase/rooms.service';
 import { SubmissionRecord, SubmissionsService } from '../../../feature/firebase/submissions.service';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { FitNameDirective } from './fit-name.directive';
 import { limitRoomsToPlan } from '../../../shared/plan';
 import { canCurrent, isLiveSession } from '../../../shared/role';
 
@@ -24,6 +25,25 @@ interface Room {
 	price: number;
 	/** Stored status; `unavailable` is a technical block. */
 	status: RoomStatus;
+	floor: number;
+	beds: string;
+	area: number | null;
+	/** Places beyond `capacity`, and what each costs per night. */
+	extraGuests: number;
+	extraGuestPrice: number;
+	amenities: string[];
+	/** Building or wing, bathroom, balcony and view ('' = not set). */
+	building: string;
+	bathroom: string;
+	balcony: string;
+	view: string;
+}
+
+/** Room details shown when the pointer is on a room's cell (like the legacy chessboard's room tooltip). */
+interface RoomHover {
+	room: Room;
+	x: number;
+	y: number;
 }
 
 type Status = BookingStatus;
@@ -48,6 +68,41 @@ interface Booking {
 	submissionId?: string;
 	/** Check-out as booked, when an early check-out shortened the stay. */
 	plannedCheckOut?: string;
+	guestId?: string;
+	guarantee?: string;
+	mealPlan?: string;
+	companyOperator?: string;
+	/** Room type the guest pays for; differs from the room's type when they were moved up or down. */
+	rateCategory?: string;
+	roomLocked?: boolean;
+	/** Number in the channel the booking came from (Booking.com etc.); shown instead of the internal id. */
+	externalNumber?: string;
+	adults?: number;
+	children?: number;
+	/** Planned arrival / departure time, `HH:MM`; the hotel's 14:00 / 11:00 when not set. */
+	checkInTime?: string;
+	checkOutTime?: string;
+	rate?: string;
+	manager?: string;
+	depositBalance?: number;
+	/** From the guest's tags (`VIP`, `Чорний список`); the demo seeds them on the booking. */
+	vip?: boolean;
+	blacklisted?: boolean;
+}
+
+/**
+ * Where the stay is today, which sets the block's colour (like the legacy chessboard): a plain booking,
+ * one with money taken, arriving today, in the house, leaving today, gone, on the waitlist, cancelled,
+ * or in conflict with another stay or a room block in the same room.
+ */
+type Stage = 'booking' | 'prepaid' | 'arriving' | 'staying' | 'departing' | 'checkedout' | 'waitlist' | 'cancelled' | 'conflict';
+
+/** Kinds of room block, picked from the block reason the Rooms page saves. */
+type BlockKind = 'repair' | 'service' | 'out' | 'other';
+
+interface Badge {
+	icon: string;
+	title: string;
 }
 
 interface Blocked {
@@ -56,6 +111,7 @@ interface Blocked {
 	start: string;
 	end: string;
 	reason: string;
+	note?: string;
 }
 
 type DialogView =
@@ -67,6 +123,12 @@ type DialogView =
 	| { kind: 'extend-stay'; bookingId: string }
 	| { kind: 'cancel'; bookingId: string }
 	| null;
+
+/** Night-audit item: something the desk should have marked but hasn't. */
+interface AuditItem {
+	booking: Booking;
+	kind: 'overstay' | 'no-show';
+}
 
 interface BookingForm {
 	name: string;
@@ -83,15 +145,19 @@ interface BookingForm {
 	payment: 'none' | 'half' | 'full';
 	/** How the money taken at booking time is received. */
 	method: PaymentMethod;
-	status: 'confirmed' | 'pending';
+	status: 'confirmed' | 'pending' | 'waitlist';
 	notes: string;
 	/** Website request this booking is created from. */
 	submission: { id: string; label: string; message: string; roomType: string } | null;
 }
 
-const DEMO_TODAY = '2026-09-17';
 const CHECKIN_HOUR = 14;
 const CHECKOUT_HOUR = 11;
+const ALL_STATUSES: Status[] = ['confirmed', 'pending', 'checkedin', 'checkedout', 'cancelled', 'waitlist'];
+const COMPACT_KEY = 'calendar.compact';
+const LEGEND_KEY = 'calendar.legend';
+const VIP_TAG = 'VIP';
+const BLACKLIST_TAG = 'Чорний список';
 const LATE_CHECKOUT_OPTIONS = [12, 14, 16, 18];
 const MS = 86400000;
 
@@ -115,21 +181,65 @@ const DEMO_ROOMS: { number: string; type: string; cap: string }[] = [
 const BASE_PRICE: Record<string, number> = { Стандарт: 1600, Покращений: 2000, Люкс: 2400, Апартаменти: 3200 };
 const SOURCES = ['Пряме бронювання', 'Сайт', 'Instagram', 'Google', 'Телефон', 'Booking.com', 'Walk-in', 'Інше'];
 
-const SEED_BOOKINGS: Omit<Booking, 'roomId'>[] = [
-	{ id: '2001', room: '204', name: 'Анна Коваленко', phone: '+380 67 123 45 67', email: 'anna@example.com', start: '2026-09-17', end: '2026-09-20', guests: 2, total: 4800, paid: 4800, status: 'confirmed', source: 'Instagram', notes: 'Потрібен тихий номер. Очікуваний час прибуття: 13:30.' },
-	{ id: '2002', room: '103', name: 'Олег Бондар', phone: '+380 50 222 11 33', email: '', start: '2026-09-17', end: '2026-09-18', guests: 1, total: 2400, paid: 1200, status: 'checkedin', source: 'Телефон', notes: '' },
-	{ id: '2003', room: '202', name: 'Марія Петренко', phone: '+380 63 456 78 90', email: '', start: '2026-09-17', end: '2026-09-21', guests: 2, total: 9600, paid: 9600, status: 'confirmed', source: 'Booking.com', notes: '' },
-	{ id: '2004', room: '205', name: 'Ірина Шевченко', phone: '+380 97 654 32 10', email: '', start: '2026-09-18', end: '2026-09-20', guests: 2, total: 4800, paid: 0, status: 'pending', source: 'Пряме бронювання', notes: 'Заїзд орієнтовно ввечері.' },
-	{ id: '2005', room: '106', name: 'Дмитро Левченко', phone: '+380 66 111 22 33', email: '', start: '2026-09-19', end: '2026-09-23', guests: 2, total: 8000, paid: 4000, status: 'confirmed', source: 'Google', notes: '' },
-	{ id: '2006', room: '101', name: 'Олена Романюк', phone: '+380 68 222 33 44', email: '', start: '2026-09-20', end: '2026-09-22', guests: 1, total: 3200, paid: 3200, status: 'confirmed', source: 'Сайт', notes: '' },
-	{ id: '2007', room: '302', name: 'Максим Ткаченко', phone: '+380 63 333 44 55', email: '', start: '2026-09-21', end: '2026-09-24', guests: 4, total: 9600, paid: 4800, status: 'pending', source: 'Booking.com', notes: '' },
-	{ id: '2008', room: '107', name: 'Андрій Мельник', phone: '+380 50 444 55 66', email: '', start: '2026-09-22', end: '2026-09-24', guests: 2, total: 4000, paid: 4000, status: 'confirmed', source: 'Пряме бронювання', notes: '' },
-	{ id: '2009', room: '203', name: 'Наталія Коваль', phone: '+380 97 555 66 77', email: '', start: '2026-09-23', end: '2026-09-27', guests: 3, total: 9600, paid: 9600, status: 'confirmed', source: 'Google', notes: '' },
-	{ id: '2010', room: '104', name: 'Тарас Гончар', phone: '+380 66 777 88 99', email: '', start: '2026-09-18', end: '2026-09-19', guests: 2, total: 1600, paid: 0, status: 'cancelled', source: 'Instagram', notes: 'Скасовано гостем.' },
-	{ id: '2011', room: '201', name: 'Юлія Савчук', phone: '+380 68 888 99 00', email: '', start: '2026-09-24', end: '2026-09-27', guests: 2, total: 7200, paid: 7200, status: 'confirmed', source: 'Walk-in', notes: '' },
-	{ id: '2012', room: '102', name: 'Віктор Коваль', phone: '+380 63 999 00 11', email: '', start: '2026-09-25', end: '2026-09-28', guests: 2, total: 4800, paid: 2400, status: 'pending', source: 'Телефон', notes: '' },
-];
-const DEMO_BLOCKED: Blocked[] = [{ room: '301', start: '2026-09-25', end: '2026-09-28', reason: 'Ремонт' }];
+/**
+ * Demo stays, dated from today so the grid always has people around the current day: offsets are days
+ * from today (0 = today). Built when the page opens, not at build time.
+ */
+function seedBookings(): Omit<Booking, 'roomId'>[] {
+	const day = (n: number) => addDays(DEMO_TODAY(), n);
+	const stays: Omit<Booking, 'roomId'>[] = [
+		{ id: '2001', room: '204', name: 'Злата Вербицька', phone: '+380 00 000 00 01', email: 'guest-2001@example.com', start: day(0), end: day(3), guests: 2, total: 4800, paid: 4800, status: 'confirmed', source: 'Instagram', notes: 'Потрібен тихий номер. Очікуваний час прибуття: 13:30.', vip: true, guarantee: 'Гарантована', mealPlan: 'Сніданок (BB)', roomLocked: true },
+		{ id: '2002', room: '103', name: 'Арсен Кушнір', phone: '+380 00 000 00 02', email: '', start: day(0), end: day(1), guests: 1, total: 2400, paid: 1200, status: 'checkedin', source: 'Телефон', notes: '' },
+		{ id: '2003', room: '202', name: 'Мілана Остапенко', phone: '+380 00 000 00 03', email: '', start: day(-3), end: day(4), guests: 2, total: 16800, paid: 9600, status: 'checkedin', source: 'Booking.com', notes: '', vip: true, externalNumber: '4471203', mealPlan: 'Напівпансіон (HB)' },
+		{ id: '2004', room: '205', name: 'Ярина Довгань', phone: '+380 00 000 00 04', email: '', start: day(1), end: day(3), guests: 2, total: 4800, paid: 0, status: 'pending', source: 'Пряме бронювання', notes: 'Заїзд орієнтовно ввечері.' },
+		{ id: '2005', room: '106', name: 'Всеволод Гаврилюк', phone: '+380 00 000 00 05', email: '', start: day(2), end: day(6), guests: 2, total: 8000, paid: 4000, status: 'confirmed', source: 'Google', notes: '', companyOperator: 'ТОВ «Приклад-Агро» (демо)', rateCategory: 'Стандарт' },
+		{ id: '2006', room: '101', name: 'Есмеральда Чорновол', phone: '+380 00 000 00 06', email: '', start: day(3), end: day(5), guests: 1, total: 3200, paid: 3200, status: 'confirmed', source: 'Сайт', notes: '' },
+		{ id: '2007', room: '302', name: 'Святогор Мазур', phone: '+380 00 000 00 07', email: '', start: day(4), end: day(7), guests: 4, total: 9600, paid: 4800, status: 'pending', source: 'Booking.com', notes: '' },
+		{ id: '2008', room: '107', name: 'Любомир Ничипорук', phone: '+380 00 000 00 08', email: '', start: day(5), end: day(7), guests: 2, total: 4000, paid: 4000, status: 'confirmed', source: 'Пряме бронювання', notes: '', guarantee: 'Гарантована' },
+		{ id: '2013', room: '105', name: 'Радомир Савула', phone: '+380 00 000 01 13', email: '', start: day(-5), end: day(0), guests: 1, total: 8000, paid: 8000, status: 'checkedin', source: 'Телефон', notes: 'Виїзд сьогодні.', mealPlan: 'Повний пансіон (FB)' },
+		{ id: '2014', room: '108', name: 'Северина Ткачук', phone: '+380 00 000 01 14', email: '', start: day(-2), end: day(-1), guests: 2, total: 2000, paid: 0, status: 'checkedin', source: 'Walk-in', notes: 'Не відмічено виїзд.' },
+		{ id: '2015', room: '205', name: 'Боримир Лозинський', phone: '+380 00 000 01 15', email: '', start: day(-1), end: day(1), guests: 1, total: 4800, paid: 2400, status: 'confirmed', source: 'Booking.com', notes: 'Не прибув у день заїзду.', blacklisted: true },
+		{ id: '2016', room: '201', name: 'Ладислав Гнатів', phone: '+380 00 000 01 16', email: '', start: day(4), end: day(8), guests: 2, total: 9600, paid: 0, status: 'waitlist', source: 'Сайт', notes: 'Чекає на звільнення люксу.' },
+		{ id: '2017', room: '203', name: 'Аделіна Стефурак', phone: '+380 00 000 01 17', email: '', start: day(8), end: day(11), guests: 2, total: 7200, paid: 3600, status: 'confirmed', source: 'Booking.com', notes: 'Прийшло з каналу поверх наявного бронювання.', externalNumber: '4471877' },
+		{ id: '2018', room: '101', name: 'Зореслава Білик', phone: '+380 00 000 01 18', email: '', start: day(-2), end: day(2), guests: 2, total: 6400, paid: 6400, status: 'checkedin', source: 'Сайт', notes: '', mealPlan: 'Сніданок (BB)' },
+		{ id: '2019', room: '102', name: 'Ассоль Кучерява', phone: '+380 00 000 01 19', email: '', start: day(-1), end: day(3), guests: 2, total: 6400, paid: 3200, status: 'checkedin', source: 'Google', notes: '', vip: true },
+		{ id: '2020', room: '104', name: 'Остромир Возняк', phone: '+380 00 000 02 20', email: '', start: day(-4), end: day(1), guests: 1, total: 8000, paid: 8000, status: 'checkedin', source: 'Телефон', notes: '', companyOperator: 'ТОВ «Приклад-Тур» (демо)' },
+		{ id: '2021', room: '106', name: 'Мирослава Дейнека', phone: '+380 00 000 02 21', email: '', start: day(-1), end: day(2), guests: 2, total: 6000, paid: 6000, status: 'checkedin', source: 'Instagram', notes: '', guarantee: 'Гарантована' },
+		{ id: '2022', room: '107', name: 'Звенислав Лисюк', phone: '+380 00 000 02 22', email: '', start: day(0), end: day(4), guests: 2, total: 8000, paid: 2000, status: 'confirmed', source: 'Booking.com', notes: 'Прибуття після 18:00.', externalNumber: '4472915' },
+		{ id: '2023', room: '203', name: 'Вероніка Остапчук', phone: '+380 00 000 02 23', email: '', start: day(-2), end: day(3), guests: 2, total: 12000, paid: 12000, status: 'checkedin', source: 'Пряме бронювання', notes: '', mealPlan: 'Все включено (AI)' },
+		{ id: '2024', room: '201', name: 'Ростислав Дячун', phone: '+380 00 000 02 24', email: '', start: day(-3), end: day(2), guests: 2, total: 12000, paid: 6000, status: 'checkedin', source: 'Сайт', notes: '', rateCategory: 'Покращений' },
+		{ id: '2025', room: '301', name: 'Уляна Федорів', phone: '+380 00 000 02 25', email: '', start: day(-1), end: day(5), guests: 4, total: 19200, paid: 9600, status: 'checkedin', source: 'Google', notes: 'Сімʼя з дітьми.', lateCheckoutHour: 14 },
+		{ id: '2009', room: '203', name: 'Віолета Яцків', phone: '+380 00 000 00 09', email: '', start: day(6), end: day(10), guests: 3, total: 9600, paid: 9600, status: 'confirmed', source: 'Google', notes: '' },
+		{ id: '2010', room: '104', name: 'Орест Пилипчук', phone: '+380 00 000 01 10', email: '', start: day(1), end: day(2), guests: 2, total: 1600, paid: 0, status: 'cancelled', source: 'Instagram', notes: 'Скасовано гостем.' },
+		{ id: '2011', room: '201', name: 'Ульяна Семенко', phone: '+380 00 000 01 11', email: '', start: day(7), end: day(10), guests: 2, total: 7200, paid: 7200, status: 'confirmed', source: 'Walk-in', notes: '' },
+		{ id: '2012', room: '102', name: 'Емануїл Грицай', phone: '+380 00 000 01 12', email: '', start: day(8), end: day(11), guests: 2, total: 4800, paid: 2400, status: 'pending', source: 'Телефон', notes: '' },
+	];
+	// Terms the desk fills on the booking card: rate, manager, the adults/children split and planned times.
+	const times: Record<string, { checkInTime?: string; checkOutTime?: string; adults?: number; children?: number }> = {
+		'2001': { checkInTime: '13:30' },
+		'2022': { checkInTime: '18:30' },
+		'2004': { checkInTime: '21:00' },
+		'2013': { checkOutTime: '10:00' },
+		'2025': { adults: 2, children: 2, checkOutTime: '12:00' },
+		'2003': { checkOutTime: '09:30' },
+	};
+	return stays.map((b, i) => ({
+		rate: ['Стандартний', 'Rack rate', 'Для сайту', 'Корпоративний'][i % 4],
+		manager: ['Менеджер Демо 1', 'Менеджер Демо 2', 'Менеджер Демо 3'][i % 3],
+		adults: b.guests,
+		children: 0,
+		...times[b.id],
+		...b,
+	}));
+}
+
+function demoBlocks(): Blocked[] {
+	const day = (n: number) => addDays(DEMO_TODAY(), n);
+	return [
+		{ room: '301', start: day(8), end: day(11), reason: 'Ремонт' },
+		{ room: '302', start: day(10), end: day(13), reason: 'Службове використання' },
+	];
+}
 
 const toDate = (s: string) => new Date(s + 'T00:00:00Z');
 const addDays = (s: string, n: number) => {
@@ -145,18 +255,70 @@ const monthLabel = (s: string) =>
 	new Intl.DateTimeFormat('uk-UA', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(toDate(s));
 const isWeekend = (s: string) => [0, 6].includes(toDate(s).getUTCDay());
 const dayNum = (s: string) => Number(s.slice(-2));
-const initials = (n: string) =>
-	n
-		.split(' ')
-		.slice(0, 2)
-		.map((p) => p[0])
-		.join('');
+const monthShort = (s: string) => new Intl.DateTimeFormat('uk-UA', { month: 'short', timeZone: 'UTC' }).format(toDate(s));
+/** Stay dates for a block: `10–14 жовт.`, or `28 вер. – 3 жовт.` across months (check-in – check-out). */
+const stayRange = (start: string, end: string) =>
+	start.slice(0, 7) === end.slice(0, 7)
+		? `${dayNum(start)}–${dayNum(end)} ${monthShort(end)}`
+		: `${dayNum(start)} ${monthShort(start)} – ${dayNum(end)} ${monthShort(end)}`;
+/** `Радомир Савула` → `Савула Радомир`: in a narrow block the surname is read first and the first name is cut. */
+const surnameFirst = (n: string) => {
+	const parts = n.trim().split(/\s+/);
+	return parts.length > 1 ? [parts[parts.length - 1], ...parts.slice(0, -1)].join(' ') : n;
+};
 const money = (n: number) => new Intl.NumberFormat('uk-UA').format(n) + ' ₴';
 const statusLabel = (s: Status) =>
-	({ confirmed: 'Підтверджено', pending: 'Очікує підтвердження', checkedin: 'Заїхав', checkedout: 'Виїхав', cancelled: 'Скасовано' })[s];
+	({ confirmed: 'Підтверджено', pending: 'Очікує підтвердження', checkedin: 'Заїхав', checkedout: 'Виїхав', cancelled: 'Скасовано', waitlist: 'Лист очікування' })[s];
+const STAGE_LABEL: Record<Stage, string> = {
+	booking: 'Бронювання',
+	prepaid: 'Бронювання з передоплатою',
+	arriving: 'Очікується заїзд',
+	staying: 'Проживає',
+	departing: 'Виїзд сьогодні',
+	checkedout: 'Виїхав',
+	waitlist: 'Лист очікування',
+	cancelled: 'Скасовано',
+	conflict: 'Конфлікт поселення',
+};
+/** First day of the month `n` months from the one `s` is in. */
+const addMonths = (s: string, n: number) => {
+	const d = toDate(s);
+	d.setUTCMonth(d.getUTCMonth() + n, 1);
+	return d.toISOString().slice(0, 10);
+};
+const blockKind = (reason: string): BlockKind =>
+	reason === 'Ремонт'
+		? 'repair'
+		: reason === 'Службове використання' || reason === 'Приватне використання'
+			? 'service'
+			: reason === 'Не експлуатується'
+				? 'out'
+				: 'other';
+const blockLabel = (reason: string) =>
+	({ repair: 'Ремонт · не для продажу', service: 'Службове використання', out: 'Не експлуатується', other: reason || 'Недоступно' })[blockKind(reason)];
+/** A calendar view switch chosen earlier in this browser; off when storage is unavailable (prerender, private window). */
+function readFlag(key: string): boolean {
+	try {
+		return typeof localStorage !== 'undefined' && localStorage.getItem(key) === '1';
+	} catch {
+		return false;
+	}
+}
+
+function writeFlag(key: string, on: boolean): void {
+	try {
+		localStorage.setItem(key, on ? '1' : '0');
+	} catch {
+		// Storage blocked (private window): the choice lasts for this visit only.
+	}
+}
+/** Two date ranges (exclusive ends) share a night. */
+const overlaps = (a: { start: string; end: string }, b: { start: string; end: string }) => a.start < b.end && a.end > b.start;
 const paymentLabel = (b: Booking) => (b.paid <= 0 ? 'Не оплачено' : b.paid < b.total ? 'Частково оплачено' : 'Оплачено');
 /** `YYYY-MM-DD` in the browser's time zone. */
 const localDate = (date: Date) => new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+/** The demo runs on the real date, so its stays sit around today. */
+const DEMO_TODAY = () => localDate(new Date());
 
 /** Ukrainian plural: 1 ніч, 2 ночі, 5 ночей. */
 function plural(n: number, one: string, few: string, many: string): string {
@@ -167,21 +329,83 @@ function plural(n: number, one: string, few: string, many: string): string {
 const nightsLabel = (n: number) => `${n} ${plural(n, 'ніч', 'ночі', 'ночей')}`;
 const guestsLabel = (n: number) => `${n} ${plural(n, 'гість', 'гості', 'гостей')}`;
 
+/** Invented room details for the demo, by type. */
+const DEMO_TYPE_DETAILS: Record<
+	string,
+	{ beds: string; area: number; extraGuests: number; amenities: string[]; description: string; bathroom: string; balcony: string; view: string }
+> = {
+	Стандарт: { beds: 'Двоспальне ліжко', area: 18, extraGuests: 0, amenities: ['Wi-Fi', 'Телевізор'], description: 'Затишний номер для двох.', bathroom: 'Душ', balcony: 'Без балкона', view: 'Двір' },
+	Покращений: { beds: 'Двоспальне ліжко + диван', area: 24, extraGuests: 1, amenities: ['Wi-Fi', 'Телевізор', 'Кондиціонер', 'Міні-бар'], description: 'Просторіший номер із зоною відпочинку.', bathroom: 'Душ', balcony: 'Французький балкон', view: 'Місто' },
+	Люкс: { beds: 'King size + диван', area: 36, extraGuests: 1, amenities: ['Wi-Fi', 'Телевізор', 'Кондиціонер', 'Міні-бар'], description: 'Дві кімнати з вітальнею.', bathroom: 'Душ і ванна', balcony: 'Балкон', view: 'Фортеця' },
+	Апартаменти: { beds: '2 двоспальні ліжка', area: 52, extraGuests: 2, amenities: ['Wi-Fi', 'Кухня', 'Пральна машина', 'Кондиціонер'], description: 'Апартаменти з кухнею для сімʼї або компанії.', bathroom: 'Ванна', balcony: 'Тераса', view: 'Річка' },
+};
+/** Rooms whose guests stay several days get a stay-over tidy; rooms after a check-out need a full clean. */
+const DEMO_ROOM_STATUS: Record<string, RoomStatus> = {
+	'101': 'light-cleaning',
+	'202': 'light-cleaning',
+	'301': 'light-cleaning',
+	'103': 'needs-cleaning',
+	'105': 'cleaning',
+	'108': 'needs-cleaning',
+};
+
 function demoRooms(): Room[] {
-	return DEMO_ROOMS.map((r) => ({
-		id: r.number,
-		number: r.number,
-		type: r.type,
-		cap: r.cap,
-		capacity: Number(r.cap.match(/(\d)(?!.*\d)/)?.[1] ?? 2),
-		price: BASE_PRICE[r.type],
-		status: 'ready',
-	}));
+	return DEMO_ROOMS.map((r) => {
+		const details = DEMO_TYPE_DETAILS[r.type];
+		return {
+			id: r.number,
+			number: r.number,
+			type: r.type,
+			cap: r.cap,
+			capacity: Number(r.cap.match(/(\d)(?!.*\d)/)?.[1] ?? 2),
+			price: BASE_PRICE[r.type],
+			status: DEMO_ROOM_STATUS[r.number] ?? 'ready',
+			floor: Number(r.number[0]),
+			beds: details.beds,
+			area: details.area,
+			extraGuests: details.extraGuests,
+			extraGuestPrice: details.extraGuests ? 600 : 0,
+			amenities: details.amenities,
+			// Floors 1–2 in the main building, the rest in the new wing.
+			building: Number(r.number[0]) <= 2 ? 'Головний корпус' : 'Корпус 2',
+			bathroom: details.bathroom,
+			balcony: details.balcony,
+			// Odd rooms of the standard type look at the street, even ones at the yard.
+			view: r.type === 'Стандарт' && Number(r.number) % 2 ? 'Місто' : details.view,
+		};
+	});
 }
 
 function toRoom(r: RoomRecord): Room {
-	return { id: r.id, number: r.number, type: r.type, cap: guestsLabel(r.capacity), capacity: r.capacity, price: r.price, status: r.status };
+	return {
+		id: r.id,
+		number: r.number,
+		type: r.type,
+		cap: guestsLabel(r.capacity),
+		capacity: r.capacity,
+		price: r.price,
+		status: r.status,
+		floor: r.floor,
+		beds: r.beds,
+		area: r.area,
+		extraGuests: r.extraGuests,
+		extraGuestPrice: r.extraGuestPrice,
+		amenities: r.amenities,
+		building: r.building ?? '',
+		bathroom: r.bathroom ?? '',
+		balcony: r.balcony ?? '',
+		view: r.view ?? '',
+	};
 }
+
+const ROOM_STATUS_LABEL: Record<RoomStatus, string> = {
+	ready: 'Готовий',
+	occupied: 'Зайнятий',
+	'light-cleaning': 'Легке прибирання',
+	'needs-cleaning': 'Потребує прибирання',
+	cleaning: 'Прибирається',
+	unavailable: 'Недоступний',
+};
 
 function toBooking(r: BookingRecord): Booking {
 	return {
@@ -202,12 +426,26 @@ function toBooking(r: BookingRecord): Booking {
 		lateCheckoutHour: r.lateCheckoutHour ?? undefined,
 		submissionId: r.submissionId,
 		plannedCheckOut: r.plannedCheckOut,
+		guestId: r.guestId,
+		guarantee: r.guarantee,
+		mealPlan: r.mealPlan,
+		companyOperator: r.companyOperator,
+		rateCategory: r.rateCategory,
+		roomLocked: r.roomLocked,
+		externalNumber: r.externalNumber,
+		adults: r.adults,
+		children: r.children,
+		checkInTime: r.checkInTime,
+		checkOutTime: r.checkOutTime,
+		rate: r.rate,
+		manager: r.manager,
+		depositBalance: r.depositBalance,
 	};
 }
 
 @Component({
 	selector: 'app-calendar',
-	imports: [AppShellComponent, IconComponent, FormsModule, RouterLink],
+	imports: [AppShellComponent, IconComponent, FormsModule, RouterLink, FitNameDirective],
 	templateUrl: './calendar.component.html',
 	styleUrl: './calendar.component.scss',
 })
@@ -238,7 +476,7 @@ export class CalendarComponent {
 	protected readonly canChange = canCurrent('changeBooking');
 	protected readonly canCollect = canCurrent('collectPayment') && this.showFinance;
 
-	protected readonly TODAY = this.live ? localDate(new Date()) : DEMO_TODAY;
+	protected readonly TODAY = localDate(new Date());
 	protected readonly SOURCES = SOURCES;
 	protected readonly LATE_CHECKOUT_OPTIONS = LATE_CHECKOUT_OPTIONS;
 	protected readonly money = money;
@@ -246,16 +484,19 @@ export class CalendarComponent {
 	protected readonly weekdayShort = weekdayShort;
 	protected readonly isWeekend = isWeekend;
 	protected readonly dayNum = dayNum;
+	protected readonly stayRange = stayRange;
 	protected readonly dayDiff = dayDiff;
-	protected readonly initials = initials;
+	protected readonly surnameFirst = surnameFirst;
 	protected readonly statusLabel = statusLabel;
 	protected readonly paymentLabel = paymentLabel;
 	protected readonly nightsLabel = nightsLabel;
 	protected readonly guestsLabel = guestsLabel;
+	protected readonly stageLabel = (stage: Stage) => STAGE_LABEL[stage];
+	protected readonly badgeText = (badges: Badge[]) => badges.map((b) => b.title).join(', ');
 
 	protected readonly rooms = signal<Room[]>(this.live ? [] : limitRoomsToPlan(demoRooms()));
-	private readonly _bookings = signal<Booking[]>(this.live ? [] : SEED_BOOKINGS.map((b) => ({ ...b, roomId: b.room })));
-	private readonly _blocks = signal<Blocked[]>(this.live ? [] : DEMO_BLOCKED);
+	private readonly _bookings = signal<Booking[]>(this.live ? [] : seedBookings().map((b) => ({ ...b, roomId: b.room })));
+	private readonly _blocks = signal<Blocked[]>(this.live ? [] : demoBlocks());
 	private readonly _roomsLoaded = signal(!this.live);
 	private readonly _bookingsLoaded = signal(!this.live);
 	protected readonly loadError = signal('');
@@ -263,22 +504,38 @@ export class CalendarComponent {
 	/** Writes are possible: always in the demo; for a real hotel once rooms and bookings have loaded. */
 	protected readonly ready = computed(() => !this.live || (!!this.hotelId() && !this.loading() && !this.loadError()));
 
-	/** Bookings with the room number resolved from the room, so a renumbered room stays in sync. */
+	/** Tags of each guest profile (live only), for the VIP and blacklist marks on their bookings. */
+	private readonly _guestTags = signal(new Map<string, string[]>());
+
+	/** Bookings with the room number resolved from the room, so a renumbered room stays in sync, and the guest's VIP / blacklist tags. */
 	protected readonly bookings = computed(() => {
 		const numbers = new Map(this.rooms().map((r) => [r.id, r.number]));
+		const tags = this._guestTags();
 		return this._bookings().map((b) => {
 			const number = numbers.get(b.roomId);
-			return number && number !== b.room ? { ...b, room: number } : b;
+			const guestTags = b.guestId ? tags.get(b.guestId) : undefined;
+			if (!(number && number !== b.room) && !guestTags) return b;
+			return {
+				...b,
+				room: number || b.room,
+				...(guestTags ? { vip: guestTags.includes(VIP_TAG), blacklisted: guestTags.includes(BLACKLIST_TAG) } : {}),
+			};
 		});
 	});
 	protected readonly blocked = this._blocks.asReadonly();
 
-	protected readonly viewStart = signal(this.TODAY);
+	/** First visible day: yesterday, so this morning's departures and the stays already running show next to today. */
+	protected readonly viewStart = signal(addDays(this.TODAY, -1));
 	protected readonly viewDays = signal(14);
 	protected readonly search = signal('');
-	protected readonly statusFilter = signal(new Set<Status>(['confirmed', 'pending', 'checkedin', 'checkedout', 'cancelled']));
+	protected readonly statusFilter = signal(new Set<Status>(ALL_STATUSES));
 	protected readonly hiddenTypes = signal(new Set<string>());
 	protected readonly filtersOpen = signal(false);
+	/** Legend panel left of the grid, opened from the topbar. Remembered per browser. */
+	protected readonly legendOpen = signal(readFlag(LEGEND_KEY));
+	protected readonly auditOpen = signal(false);
+	/** Dense grid: shorter rows and narrower days, so about three weeks fit on screen. Remembered per browser. */
+	protected readonly compact = signal(readFlag(COMPACT_KEY));
 	protected readonly mobileDate = signal(this.TODAY);
 	protected readonly mobileDays = signal(1);
 	protected readonly selectedId = signal<string | null>(null);
@@ -289,12 +546,77 @@ export class CalendarComponent {
 	protected readonly saving = signal(false);
 	protected readonly toastMessage = signal('');
 	protected readonly hover = signal<{ booking: Booking; x: number; y: number } | null>(null);
+	protected readonly roomHover = signal<RoomHover | null>(null);
+	/** Room type descriptions by name (live: from Settings → room types; demo: invented). */
+	private readonly _typeDescriptions = signal(
+		new Map<string, string>(this.live ? [] : Object.entries(DEMO_TYPE_DETAILS).map(([type, d]) => [type, d.description])),
+	);
+	protected readonly roomStatusLabel = (s: RoomStatus) => ROOM_STATUS_LABEL[s];
+
+	/** Everything the room tooltip shows: the room itself, its type, block, who is in it and who comes next. */
+	protected readonly roomDetails = computed(() => {
+		const hover = this.roomHover();
+		if (!hover) return null;
+		const room = hover.room;
+		const today = this.TODAY;
+		const stays = this.bookings()
+			.filter((b) => b.room === room.number && holdsRoom(b.status))
+			.sort((a, b) => a.start.localeCompare(b.start));
+		const current = stays.find((b) => b.start <= today && b.end > today) ?? stays.find((b) => b.status === 'checkedin');
+		const next = stays.find((b) => b.start > today);
+		const block = this.blocked().find((bl) => bl.room === room.number && bl.end > today);
+		return {
+			...hover,
+			description: this._typeDescriptions().get(room.type) ?? '',
+			current,
+			next,
+			// A block's end is exclusive in the grid; people read the last blocked day.
+			block: block ? { ...block, last: addDays(block.end, -1) } : undefined,
+		};
+	});
 
 	private _toastTimer?: ReturnType<typeof setTimeout>;
 	private _dragId: string | null = null;
 	/** Submission id already taken from the URL, so a re-run of the effect doesn't open it twice. */
 	private _handledSubmission: string | null = null;
 	private readonly _queryParams = toSignal(this._route.queryParamMap);
+
+	/** Stays that share a night with another stay or a room block in the same room (an import or a channel can create them). */
+	protected readonly conflictIds = computed(() => {
+		const ids = new Set<string>();
+		const byRoom = new Map<string, Booking[]>();
+		for (const b of this.bookings()) {
+			if (!holdsRoom(b.status)) continue;
+			byRoom.set(b.room, [...(byRoom.get(b.room) ?? []), b]);
+		}
+		for (const [room, list] of byRoom) {
+			const blocks = this.blocked().filter((bl) => bl.room === room);
+			list.forEach((b, i) => {
+				if (blocks.some((bl) => overlaps(b, bl))) ids.add(b.id);
+				for (const other of list.slice(i + 1)) {
+					if (overlaps(b, other)) {
+						ids.add(b.id);
+						ids.add(other.id);
+					}
+				}
+			});
+		}
+		return ids;
+	});
+
+	/**
+	 * Night audit: guests still in the house after their check-out day, and stays whose arrival day
+	 * has passed without a check-in (same rules as the Dashboard's "Потребує уваги").
+	 */
+	protected readonly auditItems = computed<AuditItem[]>(() => {
+		const today = this.TODAY;
+		const items: AuditItem[] = [];
+		for (const b of this.bookings()) {
+			if (b.status === 'checkedin' && b.end < today) items.push({ booking: b, kind: 'overstay' });
+			else if ((b.status === 'pending' || b.status === 'confirmed') && b.start < today && b.end > today) items.push({ booking: b, kind: 'no-show' });
+		}
+		return items.sort((a, b) => a.booking.start.localeCompare(b.booking.start));
+	});
 
 	/** Room types in the order their first room appears. */
 	protected readonly groupOrder = computed(() => [...new Set(this.rooms().map((r) => r.type))]);
@@ -329,6 +651,9 @@ export class CalendarComponent {
 				.map((r) => [r.room.number, r.row]),
 		);
 		const q = this.search().trim().toLocaleLowerCase('uk-UA');
+		const conflicts = this.conflictIds();
+		/** Conflicting stays split their row: the earlier one on top, the next one below. */
+		const lanes = new Map<string, number>();
 		const blocks: {
 			booking: Booking;
 			row: number;
@@ -337,8 +662,13 @@ export class CalendarComponent {
 			match: boolean;
 			insetLeft: number;
 			insetRight: number;
+			stage: Stage;
+			lane: 'top' | 'bottom' | null;
+			badges: Badge[];
 		}[] = [];
-		for (const b of this.visibleBookings()) {
+		// Earlier stays first, so conflict lanes alternate by date.
+		const sorted = [...this.visibleBookings()].sort((a, b) => a.start.localeCompare(b.start));
+		for (const b of sorted) {
 			const row = rowsByRoom.get(b.room);
 			if (row === undefined) continue;
 			const rawStart = dayDiff(this.viewStart(), b.start);
@@ -355,7 +685,13 @@ export class CalendarComponent {
 			const checkoutHour = b.lateCheckoutHour ?? CHECKOUT_HOUR;
 			const insetLeft = showCheckinEdge ? (CHECKIN_HOUR / 24 / totalCols) * 100 : 0;
 			const insetRight = showCheckoutEdge ? ((24 - checkoutHour) / 24 / totalCols) * 100 : 0;
-			blocks.push({ booking: b, row, colStart, colEnd, match, insetLeft, insetRight });
+			let lane: 'top' | 'bottom' | null = null;
+			if (conflicts.has(b.id)) {
+				const n = lanes.get(b.room) ?? 0;
+				lanes.set(b.room, n + 1);
+				lane = n % 2 === 0 ? 'top' : 'bottom';
+			}
+			blocks.push({ booking: b, row, colStart, colEnd, match, insetLeft, insetRight, stage: this.stageOf(b), lane, badges: this.badges(b) });
 		}
 		return blocks;
 	});
@@ -410,7 +746,7 @@ export class CalendarComponent {
 				const s = Math.max(0, dayDiff(this.viewStart(), bl.start));
 				const e = Math.min(dates.length, dayDiff(this.viewStart(), bl.end));
 				if (e <= 0 || s >= dates.length) return null;
-				return { ...bl, row, colStart: s + 2, colEnd: e + 2 };
+				return { ...bl, row, colStart: s + 2, colEnd: e + 2, kind: blockKind(bl.reason), label: blockLabel(bl.reason) };
 			})
 			.filter((x): x is NonNullable<typeof x> => x !== null);
 	});
@@ -419,7 +755,7 @@ export class CalendarComponent {
 		const dates = Array.from({ length: this.mobileDays() }, (_, i) => addDays(this.mobileDate(), i));
 		return this.rooms().map((r) => {
 			const booking = this.bookings().find(
-				(x) => x.room === r.number && x.status !== 'cancelled' && dates.some((d) => d >= x.start && d < x.end),
+				(x) => x.room === r.number && holdsRoom(x.status) && dates.some((d) => d >= x.start && d < x.end),
 			);
 			const blocked = this.blocked().find((x) => x.room === r.number && dates.some((d) => d >= x.start && d < x.end));
 			return { room: r, booking, blocked };
@@ -459,6 +795,7 @@ export class CalendarComponent {
 			this.loadError.set('');
 			this.selectedId.set(null);
 			this.hiddenTypes.set(new Set());
+			this._guestTags.set(new Map());
 			const onError = (error: Error) => {
 				// Most often missing rules for hotels/{id}/bookings: deploy firestore.rules.
 				console.error('Calendar listener failed', error);
@@ -472,7 +809,7 @@ export class CalendarComponent {
 						records
 							.filter((r) => r.block)
 							// A room block's last day is inclusive; the calendar's ranges end on the departure day.
-							.map((r) => ({ room: r.number, start: r.block!.start, end: addDays(r.block!.end, 1), reason: r.block!.reason })),
+							.map((r) => ({ room: r.number, start: r.block!.start, end: addDays(r.block!.end, 1), reason: r.block!.reason, note: r.block!.note })),
 					);
 					this._roomsLoaded.set(true);
 				},
@@ -486,9 +823,23 @@ export class CalendarComponent {
 				},
 				onError,
 			);
+			// Guest tags only decorate the blocks (VIP, blacklist); the calendar works without them.
+			const stopGuests = this._guestsService.listen(
+				hotelId,
+				(guests) => this._guestTags.set(new Map(guests.map((g) => [g.id, g.tags]))),
+				(error) => console.error('Guest tags listener failed', error),
+			);
+			// Type descriptions only fill the room tooltip.
+			const stopTypes = this._roomsService.listenTypes(
+				hotelId,
+				(types) => this._typeDescriptions.set(new Map(types.map((t) => [t.name, t.description]))),
+				(error) => console.error('Room types listener failed', error),
+			);
 			onCleanup(() => {
 				stopRooms();
 				stopBookings();
+				stopGuests();
+				stopTypes();
 			});
 		});
 
@@ -513,16 +864,58 @@ export class CalendarComponent {
 	protected occupied(room: string, date: string): boolean {
 		const nextDay = addDays(date, 1);
 		if (this.blocked().some((bl) => bl.room === room && date < bl.end && nextDay > bl.start)) return true;
-		return this.bookings().some(
-			(b) => b.room === room && b.status !== 'cancelled' && date < b.end && nextDay > b.start,
-		);
+		return this.bookings().some((b) => b.room === room && holdsRoom(b.status) && date < b.end && nextDay > b.start);
 	}
 
 	private bookingsOverlap(room: string, start: string, end: string, excludeId: string | null): boolean {
 		if (this.blocked().some((bl) => bl.room === room && start < bl.end && end > bl.start)) return true;
 		return this.bookings().some(
-			(b) => b.room === room && b.id !== excludeId && b.status !== 'cancelled' && start < b.end && end > b.start,
+			(b) => b.room === room && b.id !== excludeId && holdsRoom(b.status) && start < b.end && end > b.start,
 		);
+	}
+
+	protected stageOf(b: Booking): Stage {
+		if (b.status === 'cancelled' || b.status === 'waitlist') return b.status;
+		if (this.conflictIds().has(b.id)) return 'conflict';
+		if (b.status === 'checkedout') return 'checkedout';
+		if (b.status === 'checkedin') return b.end <= this.TODAY ? 'departing' : 'staying';
+		if (b.start <= this.TODAY) return 'arriving';
+		// Money taken is finance data: roles without the guest bill see a plain booking.
+		return this.showFinance && b.paid > 0 ? 'prepaid' : 'booking';
+	}
+
+	/** Small marks inside a block, in the order the eye should read them: people first, then money, then terms. */
+	protected badges(b: Booking): Badge[] {
+		const list: Badge[] = [];
+		if (b.blacklisted) list.push({ icon: 'ban', title: 'Гість у чорному списку' });
+		if (b.vip) list.push({ icon: 'star', title: 'VIP-гість' });
+		if (this.showFinance && holdsRoom(b.status) && b.paid < b.total) list.push({ icon: 'coin', title: `Борг гостя: ${money(b.total - b.paid)}` });
+		if (b.companyOperator) list.push({ icon: 'briefcase', title: `Платить компанія: ${b.companyOperator}` });
+		if (b.guarantee === 'Гарантована') list.push({ icon: 'shield', title: 'Гарантована оплата' });
+		if (b.mealPlan && !b.mealPlan.includes('(RO)')) list.push({ icon: 'meal', title: `Харчування: ${b.mealPlan}` });
+		const roomType = this.roomOf(b.room)?.type;
+		if (b.rateCategory && roomType && b.rateCategory !== roomType) {
+			list.push({ icon: 'swap', title: `Оплачено як «${b.rateCategory}», живе в «${roomType}»` });
+		}
+		if (b.roomLocked) list.push({ icon: 'lock', title: 'Номер закріплено за гостем' });
+		if (b.lateCheckoutHour) list.push({ icon: 'clock', title: `Пізній виїзд до ${b.lateCheckoutHour}:00` });
+		return list;
+	}
+
+	/** Marks for the booking hover card, without the ones its rows already say: debt (Баланс), company, meal plan, late check-out. */
+	protected cardMarks(b: Booking): Badge[] {
+		return this.badges(b).filter((m) => !['coin', 'briefcase', 'meal', 'clock'].includes(m.icon));
+	}
+
+	/** Marks for the side panel: debt is left out where the "Оплата" block already shows it. */
+	protected panelMarks(b: Booking): Badge[] {
+		return this.badges(b).filter((m) => !(this.showFinance && m.icon === 'coin'));
+	}
+
+	/** Number shown on the block: the channel's number when there is one, else the booking id (shortened for Firestore ids). */
+	protected bookingNo(b: Booking): string {
+		if (b.externalNumber) return '№' + b.externalNumber;
+		return '№' + (this.live ? b.id.slice(0, 6).toUpperCase() : b.id);
 	}
 
 	protected alternativesFor(type: string, start: string, end: string, excludeRoom: string, excludeId?: string): Room[] {
@@ -539,9 +932,41 @@ export class CalendarComponent {
 		this.viewStart.set(addDays(this.viewStart(), this.viewDays()));
 	}
 
+	protected prevMonth(): void {
+		this.viewStart.set(addMonths(this.viewStart(), -1));
+	}
+
+	protected nextMonth(): void {
+		this.viewStart.set(addMonths(this.viewStart(), 1));
+	}
+
+	protected goToDate(date: string): void {
+		if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+		this.viewStart.set(date);
+		this.mobileDate.set(date);
+	}
+
 	protected goToday(): void {
-		this.viewStart.set(this.TODAY);
+		this.viewStart.set(addDays(this.TODAY, -1));
 		this.mobileDate.set(this.TODAY);
+	}
+
+	protected toggleCompact(): void {
+		this.compact.set(!this.compact());
+		writeFlag(COMPACT_KEY, this.compact());
+	}
+
+	protected toggleLegend(): void {
+		this.legendOpen.set(!this.legendOpen());
+		writeFlag(LEGEND_KEY, this.legendOpen());
+	}
+
+	/** Night audit item: show the stay in the grid and open it. */
+	protected openAuditItem(item: AuditItem): void {
+		this.auditOpen.set(false);
+		const first = this.viewStart();
+		if (item.booking.start < first || item.booking.start >= addDays(first, this.viewDays())) this.viewStart.set(item.booking.start);
+		this.openSidePanel(item.booking.id);
 	}
 
 	protected setViewDays(days: number): void {
@@ -581,7 +1006,7 @@ export class CalendarComponent {
 	}
 
 	protected resetFilters(): void {
-		this.statusFilter.set(new Set<Status>(['confirmed', 'pending', 'checkedin', 'checkedout', 'cancelled']));
+		this.statusFilter.set(new Set<Status>(ALL_STATUSES));
 		this.hiddenTypes.set(new Set());
 	}
 
@@ -618,6 +1043,23 @@ export class CalendarComponent {
 		const { start: oldStart, end } = this.bookingForm();
 		const nights = oldStart && end ? dayDiff(oldStart, end) : 1;
 		this.patchForm({ start, end: start ? addDays(start, Math.max(1, nights)) : end });
+	}
+
+	/** A cancelled stay booked again: the form opens with the same guest, room and dates (a busy room offers alternatives on save). */
+	protected rebook(b: Booking): void {
+		if (!this.ready()) return;
+		this.closeSidePanel();
+		this.formError.set('');
+		this.bookingForm.set({
+			...this._emptyForm(b.start, b.room),
+			name: b.name,
+			phone: b.phone,
+			email: b.email,
+			guests: b.guests,
+			end: b.end,
+			source: b.source || this._emptyForm(b.start).source,
+		});
+		this.dialogView.set({ kind: 'quick-booking' });
 	}
 
 	protected openQuickBooking(room: string | null, date: string): void {
@@ -665,11 +1107,61 @@ export class CalendarComponent {
 	protected showHover(event: MouseEvent, booking: Booking): void {
 		const target = event.currentTarget as HTMLElement;
 		const rect = target.getBoundingClientRect();
-		this.hover.set({ booking, x: Math.min(window.innerWidth - 236, rect.left), y: rect.bottom + 8 + window.scrollY });
+		// Below the block; above it when the card would run off the bottom of the screen.
+		const below = rect.bottom + 8;
+		const y = below + 470 > window.innerHeight ? Math.max(8, rect.top - 478) : below;
+		this.hover.set({ booking, x: Math.max(8, Math.min(window.innerWidth - 326, rect.left)), y });
+	}
+
+	/** Arrival time: as planned on the booking, else the hotel's check-in hour. */
+	protected checkInLabel(b: Booking): string {
+		return b.checkInTime || `${CHECKIN_HOUR}:00`;
+	}
+
+	/** Departure time: a late check-out wins, then the planned time, then the hotel's check-out hour. */
+	protected checkOutTimeLabel(b: Booking): string {
+		if (b.lateCheckoutHour) return `${String(b.lateCheckoutHour).padStart(2, '0')}:00`;
+		return b.checkOutTime || `${CHECKOUT_HOUR}:00`;
+	}
+
+	/** `пн, 12 жовт.` plus `сьогодні` / `завтра` / `вчора` when close, so arrivals and departures read at a glance. */
+	protected dayLabel(date: string): string {
+		const full = new Intl.DateTimeFormat('uk-UA', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }).format(toDate(date));
+		const near = ({ [-1]: 'вчора', 0: 'сьогодні', 1: 'завтра' } as Record<number, string>)[dayDiff(this.TODAY, date)];
+		return near ? `${full} · ${near}` : full;
+	}
+
+	/** `2 дорослих, 1 дитина` when the split is known, else the head count. */
+	protected peopleLabel(b: Booking): string {
+		if (b.adults === undefined) return guestsLabel(b.guests);
+		const adults = `${b.adults} ${plural(b.adults, 'дорослий', 'дорослих', 'дорослих')}`;
+		const kids = b.children ? `, ${b.children} ${plural(b.children, 'дитина', 'дитини', 'дітей')}` : '';
+		return adults + kids;
 	}
 
 	protected hideHover(): void {
 		this.hover.set(null);
+	}
+
+	/** Room tooltip right of the room cell, kept on screen near the bottom edge. */
+	protected showRoomHover(event: MouseEvent, room: Room): void {
+		const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+		this.roomHover.set({ room, x: rect.right + 8, y: Math.max(8, Math.min(rect.top, window.innerHeight - 600)) });
+	}
+
+	/**
+	 * How many more people fit with `guests` already in the room: free main places first, then extra places
+	 * (each charged at the room's extra-guest price). `paid` is how many of those would be extra.
+	 */
+	protected addable(room: Room, guests: number): { total: number; paid: number } {
+		const freeMain = Math.max(0, room.capacity - guests);
+		const usedExtra = Math.max(0, guests - room.capacity);
+		const paid = Math.max(0, room.extraGuests - usedExtra);
+		return { total: freeMain + paid, paid };
+	}
+
+	protected hideRoomHover(): void {
+		this.roomHover.set(null);
 	}
 
 	protected onDragStart(event: DragEvent, id: string): void {
@@ -693,6 +1185,10 @@ export class CalendarComponent {
 		const newStart = date;
 		const newEnd = addDays(newStart, nights);
 		if (room === b.room && newStart === b.start) return;
+		if (b.roomLocked && room !== b.room) {
+			this.toast(`Номер ${b.room} закріплено за гостем: змініть дати в цьому ж номері або зніміть закріплення в картці бронювання.`);
+			return;
+		}
 		if (this.bookingsOverlap(room, newStart, newEnd, b.id)) {
 			this.dialogView.set({ kind: 'conflict', room, start: newStart, end: newEnd, type: this.roomOf(room)!.type, moveId: b.id });
 			return;
@@ -800,13 +1296,15 @@ export class CalendarComponent {
 		if (this.live && guests > room.capacity) {
 			return this.formError.set(`У номері ${room.number} може жити не більше ${guestsLabel(room.capacity)}.`);
 		}
-		if (this.bookingsOverlap(room.number, f.start, f.end, null)) {
+		// A waitlisted stay waits for this very room, so it may overlap.
+		const waitlist = this.canChange && f.status === 'waitlist';
+		if (!waitlist && this.bookingsOverlap(room.number, f.start, f.end, null)) {
 			this.dialogView.set({ kind: 'conflict', room: room.number, start: f.start, end: f.end, type: room.type });
 			return;
 		}
 
 		const total = Math.max(0, Math.round(this.formTotal()));
-		const paid = !this.canCollect ? 0 : f.payment === 'full' ? total : f.payment === 'half' ? Math.round(total / 2) : 0;
+		const paid = !this.canCollect || waitlist ? 0 : f.payment === 'full' ? total : f.payment === 'half' ? Math.round(total / 2) : 0;
 		const input: BookingInput = {
 			roomId: room.id,
 			roomNumber: room.number,
@@ -958,9 +1456,14 @@ export class CalendarComponent {
 
 	protected async setStatus(id: string, status: Status): Promise<void> {
 		if (!this.canChange || this.saving()) return;
+		const b = this.booking(id);
+		// Off the waitlist only into a free room: otherwise the stay would double-book it.
+		if (b?.status === 'waitlist' && holdsRoom(status) && this.bookingsOverlap(b.room, b.start, b.end, b.id)) {
+			this.toast(`Номер ${b.room} ще зайнятий на ці дати. Перетягніть бронювання у вільний номер, потім підтвердіть.`);
+			return;
+		}
 		this.saving.set(true);
 		// Checking out before the booked departure frees the remaining nights; the booked date is kept.
-		const b = this.booking(id);
 		const out = status === 'checkedout' && b ? checkOutPatch({ checkIn: b.start, checkOut: b.end, plannedCheckOut: b.plannedCheckOut }, this.TODAY) : null;
 		const earlyEnd = out?.early ?? '';
 		const early = !!out?.early;
@@ -977,7 +1480,7 @@ export class CalendarComponent {
 			this.toast('Виїзд відмічено, але статус номера не змінено. Позначте номер як «Потребує прибирання» на сторінці «Номери».');
 		} else {
 			this.toast(
-				{ checkedin: 'Заїзд відмічено', checkedout: early ? `Виїзд відмічено · номер вільний з ${shortDate(earlyEnd)}, потребує прибирання` : 'Виїзд відмічено · номер потребує прибирання', pending: '', confirmed: 'Бронювання підтверджено', cancelled: '' }[status],
+				{ checkedin: 'Заїзд відмічено', checkedout: early ? `Виїзд відмічено · номер вільний з ${shortDate(earlyEnd)}, потребує прибирання` : 'Виїзд відмічено · номер потребує прибирання', pending: '', confirmed: 'Бронювання підтверджено', cancelled: '', waitlist: 'Бронювання перенесено в лист очікування' }[status],
 			);
 		}
 	}
@@ -1010,9 +1513,9 @@ export class CalendarComponent {
 	}
 
 	protected canExtendStay(b: Booking): boolean {
-		if (!this.canChange || b.status === 'cancelled') return false;
+		if (!this.canChange || !holdsRoom(b.status)) return false;
 		const roomTakenAfter = this.bookings().some(
-			(x) => x.id !== b.id && x.room === b.room && x.status !== 'cancelled' && x.start === b.end,
+			(x) => x.id !== b.id && x.room === b.room && holdsRoom(x.status) && x.start === b.end,
 		);
 		const blockedAfter = this.blocked().some((bl) => bl.room === b.room && bl.start === b.end);
 		return !roomTakenAfter && !blockedAfter;

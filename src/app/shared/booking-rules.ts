@@ -1,14 +1,14 @@
-import type { BookingRecord } from '../feature/firebase/bookings.service';
+import { holdsRoom, type BookingRecord } from '../feature/firebase/bookings.service';
 import type { RoomRecord } from '../feature/firebase/rooms.service';
 
 /**
  * Whether `room` can host a stay from `start` to `end` (both `YYYY-MM-DD`; the guest leaves on `end`).
  * Another active booking overlaps when it starts before this stay ends and ends after it starts; a
- * cancelled booking never blocks. A room block's last day is inclusive.
+ * cancelled or waitlisted booking never blocks. A room block's last day is inclusive.
  */
 export function roomIsFree(room: RoomRecord, bookings: BookingRecord[], start: string, end: string): boolean {
 	if (room.block && start <= room.block.end && end > room.block.start) return false;
-	return !bookings.some((b) => b.roomId === room.id && b.status !== 'cancelled' && start < b.checkOut && end > b.checkIn);
+	return !bookings.some((b) => b.roomId === room.id && holdsRoom(b.status) && start < b.checkOut && end > b.checkIn);
 }
 
 export function nightsBetween(start: string, end: string): number {

@@ -9,6 +9,7 @@ import {
 	BookingRecord,
 	BookingStatus,
 	BookingsService,
+	holdsRoom,
 	isoAddDays,
 } from '../../../feature/firebase/bookings.service';
 import { HotelService } from '../../../feature/firebase/hotel.service';
@@ -55,6 +56,7 @@ const STATUS_LABEL: Record<BookingStatus, string> = {
 	checkedin: 'Заїхав',
 	checkedout: 'Виїхав',
 	cancelled: 'Скасовано',
+	waitlist: 'Лист очікування',
 };
 
 const money = (n: number) => new Intl.NumberFormat('uk-UA').format(n) + ' ₴';
@@ -174,7 +176,7 @@ export class BookingCardComponent {
 		return [...this.rooms()]
 			.sort((a, c) => a.number.localeCompare(c.number, 'uk', { numeric: true }))
 			.map((r) => {
-				const busy = r.id !== b.roomId && !roomIsFree(r, others, b.checkIn, b.checkOut);
+				const busy = holdsRoom(b.status) && r.id !== b.roomId && !roomIsFree(r, others, b.checkIn, b.checkOut);
 				return { value: r.id, label: `${r.number} · ${r.type}${busy ? ' (зайнято)' : ''}`, disabled: busy };
 			});
 	});
@@ -256,7 +258,9 @@ export class BookingCardComponent {
 
 	protected options(field: FieldDef): Option[] {
 		if (field.key === 'roomId') return this._roomOptions();
-		const list = (field.options ?? []).map((value) => ({ value, label: value }));
+		// The room types the hotel has: a guest may be charged for another category than the room they stay in.
+		const values = field.key === 'rateCategory' ? [...new Set(this.rooms().map((r) => r.type))] : (field.options ?? []);
+		const list = values.map((value) => ({ value, label: value }));
 		const current = this.value(field.key);
 		const known = current === NOT_SET || list.some((o) => o.value === current);
 		return [{ value: NOT_SET, label: 'Не визначено' }, ...list, ...(known ? [] : [{ value: current, label: current }])];
@@ -290,6 +294,8 @@ export class BookingCardComponent {
 				return String(b.bedNumber ?? 1);
 			case 'byBed':
 				return b.byBed ? 'true' : '';
+			case 'roomLocked':
+				return b.roomLocked ? 'true' : '';
 			default:
 				if ((BOOKING_MONEY_KEYS as readonly string[]).includes(key)) return String(stored[key] ?? 0);
 				return String(stored[key] ?? '');
@@ -441,7 +447,7 @@ export class BookingCardComponent {
 				if (!room) return { error: 'Оберіть номер зі списку' };
 				const tooMany = this._capacity(room, b.guests);
 				if (tooMany) return { error: tooMany };
-				if (!roomIsFree(room, this._others(b), b.checkIn, b.checkOut)) return { error: `Номер ${room.number} зайнятий на ці дати` };
+				if (holdsRoom(b.status) && !roomIsFree(room, this._others(b), b.checkIn, b.checkOut)) return { error: `Номер ${room.number} зайнятий на ці дати` };
 				return { patch: { roomId: room.id, roomNumber: room.number } };
 			}
 			case 'adults':
@@ -465,6 +471,8 @@ export class BookingCardComponent {
 			}
 			case 'byBed':
 				return { patch: { byBed: raw === 'true' } };
+			case 'roomLocked':
+				return { patch: { roomLocked: raw === 'true' } };
 			case 'bedNumber': {
 				const n = wholeNumber(raw, 1, 50);
 				return n === null ? { error: 'Місце від 1 до 50' } : { patch: { bedNumber: n } };
@@ -499,7 +507,7 @@ export class BookingCardComponent {
 	/** New dates for the stay; the room must be free and the total follows the nights at the same price per night. */
 	private _stay(b: BookingRecord, checkIn: string, checkOut: string): Plan {
 		const room = this.room();
-		if (room && !roomIsFree(room, this._others(b), checkIn, checkOut)) return { error: `Номер ${room.number} зайнятий на ці дати` };
+		if (room && holdsRoom(b.status) && !roomIsFree(room, this._others(b), checkIn, checkOut)) return { error: `Номер ${room.number} зайнятий на ці дати` };
 		const was = nightsBetween(b.checkIn, b.checkOut);
 		const now = nightsBetween(checkIn, checkOut);
 		const total = was > 0 ? Math.round((b.total / was) * now) : b.total;

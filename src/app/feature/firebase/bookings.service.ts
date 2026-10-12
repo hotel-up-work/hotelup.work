@@ -3,7 +3,11 @@ import { collection, doc, onSnapshot, serverTimestamp, Timestamp, updateDoc, wri
 import { FirebaseService } from './firebase.service';
 import { localDay, paymentFields, type PaymentMethod, type Recorder } from './payments.service';
 
-export type BookingStatus = 'pending' | 'confirmed' | 'checkedin' | 'checkedout' | 'cancelled';
+/** `waitlist`: the guest waits for a room to free up; it is drawn in the Calendar but does not take the room. */
+export type BookingStatus = 'pending' | 'confirmed' | 'checkedin' | 'checkedout' | 'cancelled' | 'waitlist';
+
+/** Whether a booking takes its room on its dates: cancelled and waitlisted bookings never do. */
+export const holdsRoom = (status: BookingStatus) => status !== 'cancelled' && status !== 'waitlist';
 
 /** Text details of the booking card, picked from built-in lists or typed; all optional, up to 100 characters. */
 export const BOOKING_TEXT_KEYS = [
@@ -20,6 +24,10 @@ export const BOOKING_TEXT_KEYS = [
 	'contractTerms',
 	'paymentType',
 	'payMethod',
+	/** `Гарантована` / `Не гарантована`. */
+	'guarantee',
+	/** Room type the guest pays for, when it differs from the room they stay in. */
+	'rateCategory',
 ] as const;
 export type BookingTextKey = (typeof BOOKING_TEXT_KEYS)[number];
 /** Money details of the booking card; plain numbers the front desk types in. */
@@ -63,6 +71,8 @@ export interface BookingInput extends BookingDetails {
 	/** Booked per bed, with the bed's number. */
 	byBed?: boolean;
 	bedNumber?: number;
+	/** The guest must stay in this room: the Calendar refuses to move the booking to another one. */
+	roomLocked?: boolean;
 	/** People beyond the room's capacity, charged at the room's extra-guest price. */
 	extraGuests?: number;
 	/** Note for housekeeping. */
@@ -95,6 +105,7 @@ export interface BookingPatch extends BookingDetails {
 	extraGuests?: number;
 	byBed?: boolean;
 	bedNumber?: number;
+	roomLocked?: boolean;
 	housekeepingNote?: string;
 	total?: number;
 	paid?: number;
@@ -104,7 +115,7 @@ export interface BookingPatch extends BookingDetails {
 	plannedCheckOut?: string;
 }
 
-const BOOKING_STATUSES: BookingStatus[] = ['pending', 'confirmed', 'checkedin', 'checkedout', 'cancelled'];
+const BOOKING_STATUSES: BookingStatus[] = ['pending', 'confirmed', 'checkedin', 'checkedout', 'cancelled', 'waitlist'];
 
 const str = (value: unknown): string => (typeof value === 'string' ? value : '');
 const num = (value: unknown, fallback: number): number => (typeof value === 'number' ? value : fallback);
@@ -139,6 +150,7 @@ function toBooking(id: string, data: DocumentData): BookingRecord {
 		rate: str(data['rate']) || undefined,
 		byBed: data['byBed'] === true ? true : undefined,
 		bedNumber: typeof data['bedNumber'] === 'number' ? data['bedNumber'] : undefined,
+		roomLocked: data['roomLocked'] === true ? true : undefined,
 		extraGuests: typeof data['extraGuests'] === 'number' ? data['extraGuests'] : undefined,
 		housekeepingNote: str(data['housekeepingNote']) || undefined,
 		lateCheckoutHour: typeof data['lateCheckoutHour'] === 'number' ? data['lateCheckoutHour'] : null,

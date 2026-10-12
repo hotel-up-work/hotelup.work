@@ -123,7 +123,8 @@ export class AppShellComponent {
 		});
 	});
 
-	protected readonly adminNavItems = computed(() => (this.role() ? ADMIN_NAV_ITEMS.filter((item) => ADMIN_PAGES.includes(item.key)) : []));
+	/** Admin tools are for real accounts only; the demo never lists them. */
+	protected readonly adminNavItems = computed(() => (this.role() && this.live ? ADMIN_NAV_ITEMS.filter((item) => ADMIN_PAGES.includes(item.key)) : []));
 
 	protected readonly deniedNotice = signal(this._readDeniedNotice());
 

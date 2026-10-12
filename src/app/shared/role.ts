@@ -58,8 +58,8 @@ export const PAGE_LABEL: Record<string, string> = {
 export const LIVE_PAGES: string[] = ['dashboard', 'submissions', 'calendar', 'new-booking', 'booking', 'guests', 'payments', 'settings'];
 
 /**
- * Admin tools (`src/app/pages/admin`, CRM.md → Admin pages). For now every signed-in session opens them,
- * whatever its role or plan, demo or real account; they are not gated by ROLE_PAGES, PLAN_PAGES or LIVE_PAGES.
+ * Admin tools (`src/app/pages/admin`, CRM.md → Admin pages). Real accounts only (`adminGuard`), whatever their
+ * role or plan; the demo neither lists nor opens them. Not gated by ROLE_PAGES, PLAN_PAGES or LIVE_PAGES.
  */
 export const ADMIN_PAGES: string[] = ['publish-panorama'];
 

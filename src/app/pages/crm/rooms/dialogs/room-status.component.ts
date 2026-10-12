@@ -3,6 +3,7 @@ import type { ModalSave, Room, RoomStatus } from '../rooms.interface';
 
 const STATUS_OPTIONS: { value: RoomStatus; label: string }[] = [
 	{ value: 'ready', label: 'Готовий' },
+	{ value: 'light-cleaning', label: 'Легке прибирання (гість проживає)' },
 	{ value: 'needs-cleaning', label: 'Потребує прибирання' },
 	{ value: 'cleaning', label: 'Прибирається' },
 	{ value: 'occupied', label: 'Зайнятий' },

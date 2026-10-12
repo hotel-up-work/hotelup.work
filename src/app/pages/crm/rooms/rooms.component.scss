@@ -554,7 +554,17 @@ h1 {
 		color: var(--green);
 	}
 
-	&.needs-cleaning,
+	// Red: clean after a check-out before the next guest; orange: stay-over tidy with the guest in; gold: in progress.
+	&.needs-cleaning {
+		background: #fde6e6;
+		color: #c23b3b;
+	}
+
+	&.light-cleaning {
+		background: #fdebd8;
+		color: #b8600f;
+	}
+
 	&.cleaning {
 		background: var(--gold-bg);
 		color: var(--gold-ink);

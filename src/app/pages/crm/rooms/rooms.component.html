@@ -22,6 +22,7 @@
 						<h4>Статус</h4>
 						<label><input type="checkbox" [checked]="statusFilter().has('ready')" (change)="toggleStatusFilter('ready', $any($event.target).checked)" />Вільний / Готовий</label>
 						<label><input type="checkbox" [checked]="statusFilter().has('occupied')" (change)="toggleStatusFilter('occupied', $any($event.target).checked)" />Зайнятий</label>
+						<label><input type="checkbox" [checked]="statusFilter().has('light-cleaning')" (change)="toggleStatusFilter('light-cleaning', $any($event.target).checked)" />Легке прибирання</label>
 						<label><input type="checkbox" [checked]="statusFilter().has('needs-cleaning')" (change)="toggleStatusFilter('needs-cleaning', $any($event.target).checked)" />Потребує прибирання</label>
 						<label><input type="checkbox" [checked]="statusFilter().has('cleaning')" (change)="toggleStatusFilter('cleaning', $any($event.target).checked)" />Прибирається</label>
 						<label><input type="checkbox" [checked]="statusFilter().has('unavailable')" (change)="toggleStatusFilter('unavailable', $any($event.target).checked)" />Недоступний</label>
@@ -192,6 +193,12 @@
 									@case ('ready') {
 										<div class="rc-sub">{{ r.nextArrival ? 'Наступний заїзд: ' + r.nextArrival : 'Вільний зараз' }}</div>
 									}
+									@case ('light-cleaning') {
+										@if (showGuestAndFinance && r.guest) {
+											<div class="rc-guest">{{ r.guest }}</div>
+										}
+										<div class="rc-sub">Гість проживає · поточне прибирання{{ r.assigned ? ' · ' + r.assigned : '' }}</div>
+									}
 									@case ('needs-cleaning') {
 										@if (!live) {
 											<div class="rc-sub">Виїзд: {{ r.checkoutTime || '-' }}</div>
@@ -219,6 +226,9 @@
 											@if (showGuestAndFinance) {
 												<button (click)="quickBook(); $event.stopPropagation()">Створити бронювання</button>
 											}
+										}
+										@case ('light-cleaning') {
+											<button class="primary" [disabled]="saving()" (click)="finishLightCleaning(r.number); $event.stopPropagation()">Прибрано</button>
 										}
 										@case ('needs-cleaning') {
 											@if (live) {
@@ -279,10 +289,10 @@
 								<td>{{ r.capacity }} гості</td>
 								@if (showGuestAndFinance) {
 									<td><b>{{ money(r.price) }}</b></td>
-									<td>{{ r.status === 'occupied' ? r.guest : '-' }}</td>
+									<td>{{ r.status === 'occupied' || r.status === 'light-cleaning' ? r.guest : '-' }}</td>
 								}
 								<td>{{ r.status === 'ready' && r.nextArrival ? r.nextArrival : r.status === 'occupied' && r.nextGuest ? r.nextStart : '-' }}</td>
-								<td>{{ r.status === 'cleaning' ? 'Прибирається' : r.status === 'needs-cleaning' ? 'Потребує прибирання' : '-' }}</td>
+								<td>{{ r.status === 'cleaning' || r.status === 'needs-cleaning' || r.status === 'light-cleaning' ? statusLabel(r.status) : '-' }}</td>
 								<td><span class="status-tag" [class]="r.status">{{ statusLabel(r.status) }}</span></td>
 								<td class="row-menu-wrap">
 									<button aria-label="Дії" (click)="$event.stopPropagation(); openRoomPanel(r.number)">⋯</button>

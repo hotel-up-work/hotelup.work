@@ -2,7 +2,7 @@ import { Component, computed, ElementRef, inject, signal, viewChild, effect } fr
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AppShellComponent } from '../../../layouts/app-shell/app-shell.component';
-import { BookingRecord, BookingsService, checkOutPatch } from '../../../feature/firebase/bookings.service';
+import { BookingRecord, BookingsService, checkOutPatch, holdsRoom } from '../../../feature/firebase/bookings.service';
 import { HotelService } from '../../../feature/firebase/hotel.service';
 import { PaymentRecord, PaymentsService } from '../../../feature/firebase/payments.service';
 import { RoomRecord, RoomsService, RoomStatus } from '../../../feature/firebase/rooms.service';
@@ -138,6 +138,7 @@ const localDate = (date: Date) => new Date(date.getTime() - date.getTimezoneOffs
 const ROOM_STATUS_LABEL: Record<RoomStatus, string> = {
 	ready: 'Готовий',
 	occupied: 'Зайнятий',
+	'light-cleaning': 'Легке прибирання',
 	'needs-cleaning': 'Потребує прибирання',
 	cleaning: 'Прибирається',
 	unavailable: 'Недоступний',
@@ -439,13 +440,13 @@ export class DashboardComponent {
 	protected readonly balanceOf = balanceOf;
 
 	protected bookingStatusLabel(b: BookingRecord): string {
-		return { pending: 'Очікує', confirmed: 'Підтверджено', checkedin: 'Заїхав', checkedout: 'Виїхав', cancelled: 'Скасовано' }[b.status];
+		return { pending: 'Очікує', confirmed: 'Підтверджено', checkedin: 'Заїхав', checkedout: 'Виїхав', cancelled: 'Скасовано', waitlist: 'Лист очікування' }[b.status];
 	}
 
 	protected readonly lArrivals = computed(() => arrivalsOn(this.liveBookings(), this.today));
 	protected readonly lDepartures = computed(() => departuresOn(this.liveBookings(), this.today));
 	protected readonly lStates = computed(() => this.liveRooms().map((room) => ({ room, state: this._roomState(room) })));
-	protected readonly lUnpaid = computed(() => this.liveBookings().filter((b) => b.status !== 'cancelled' && balanceOf(b) > 0));
+	protected readonly lUnpaid = computed(() => this.liveBookings().filter((b) => holdsRoom(b.status) && balanceOf(b) > 0));
 
 	protected readonly lKpis = computed<LiveKpi[]>(() => {
 		const states = this.lStates();

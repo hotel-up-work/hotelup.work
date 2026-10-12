@@ -13,9 +13,31 @@
 	--radius: 10px;
 	--surface: #fafafa;
 	--surface-hover: #eeeef0;
-	--status-checkedin: #2b2c30;
 	--focus-ring: #b28d42;
 	--text-strong: #3a3b40;
+	// Stay stages: pastel fill, a deeper border of the same hue, dark text of that hue.
+	--st-booking-bg: #e4f0fc;
+	--st-booking-bd: #9cc6ef;
+	--st-booking-ink: #1f4f7a;
+	--st-prepaid-bg: #dcf4f7;
+	--st-prepaid-bd: #82d0dc;
+	--st-prepaid-ink: #165e69;
+	--st-arriving-bg: #fdf3cf;
+	--st-arriving-bd: #e6c45a;
+	--st-arriving-ink: #6b5312;
+	--st-staying-bg: #d8f3e0;
+	--st-staying-bd: #7ccb94;
+	--st-staying-ink: #1d5c33;
+	--st-departing-bg: #fde8da;
+	--st-departing-bd: #f1a676;
+	--st-departing-ink: #8a3f12;
+	--st-done-bg: #f1f2f4;
+	--st-done-bd: #d6d8dd;
+	--st-done-ink: #6f7178;
+	--conflict-bg: #fde6e6;
+	--conflict: #d65252;
+	--weekend-bg: #fbf8f4;
+	--today-bg: #fdf9f0;
 
 	display: block;
 	color: var(--ink);
@@ -37,9 +59,30 @@
 	--silver: #3a3b41;
 	--green: #82b199;
 	--green-bg: #16241d;
-	--status-checkedin: #45464c;
 	--focus-ring: #c9a361;
 	--text-strong: #d4d5d9;
+	--st-booking-bg: #1a2a3b;
+	--st-booking-bd: #3f6c96;
+	--st-booking-ink: #b9d8f5;
+	--st-prepaid-bg: #15302f;
+	--st-prepaid-bd: #2f7d86;
+	--st-prepaid-ink: #a8e4ec;
+	--st-arriving-bg: #33291a;
+	--st-arriving-bd: #9c7f33;
+	--st-arriving-ink: #f0d78f;
+	--st-staying-bg: #17301f;
+	--st-staying-bd: #3b8a55;
+	--st-staying-ink: #aee6be;
+	--st-departing-bg: #35221a;
+	--st-departing-bd: #a86a43;
+	--st-departing-ink: #f5c7a6;
+	--st-done-bg: #222328;
+	--st-done-bd: #3a3b41;
+	--st-done-ink: #9a9ba3;
+	--conflict-bg: #3a1c1c;
+	--conflict: #ec7f7f;
+	--weekend-bg: #1c1d22;
+	--today-bg: #24211b;
 }
 
 * {
@@ -350,7 +393,7 @@ dialog {
 	align-items: center;
 	justify-content: space-between;
 	gap: 16px;
-	margin: 22px 0 18px;
+	margin: 12px 0;
 	flex-wrap: wrap;
 }
 
@@ -469,53 +512,49 @@ dialog {
 	margin-top: 6px;
 }
 
-.legend,
-.topbar-legend {
+// Legend panel (optional) and the grid side by side, both as tall as the screen below the toolbar.
+.cal-layout {
 	display: flex;
-	gap: 14px;
-	flex-wrap: wrap;
-	font-size: 10px;
-	color: var(--muted);
-	margin: 0;
+	gap: 12px;
+	align-items: stretch;
+}
 
-	span {
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
+.cal-legend {
+	flex: 0 0 236px;
+	height: calc(100dvh - 136px);
+	min-height: 240px;
+	overflow-y: auto;
+	padding: 16px;
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	background: var(--white);
+
+	section + section {
+		margin-top: 18px;
+		padding-top: 16px;
+		border-top: 1px solid var(--line);
 	}
 
-	i {
-		width: 11px;
-		height: 11px;
-		border-radius: 3px;
-		display: inline-block;
+	h4 {
+		font-size: 10px;
+		letter-spacing: 0.6px;
+		color: var(--muted);
+		margin: 0 0 8px;
+		text-transform: uppercase;
 	}
 
-	.lg-confirmed,
-	.lg-checkedout,
-	.lg-cancelled {
-		background: var(--white);
-		border: 1px solid var(--line);
-	}
-
-	.lg-checkedin {
-		background: var(--status-checkedin);
-	}
-
-	.lg-pending {
-		background: var(--gold-bg);
-		border: 1px solid var(--gold);
-	}
-
-	.lg-blocked {
-		background: repeating-linear-gradient(45deg, #e7e7ea, #e7e7ea 3px, #f4f4f5 3px, #f4f4f5 7px);
+	.legend-list li {
+		font-size: 11px;
+		line-height: 1.35;
 	}
 }
 
 .cal-wrap {
+	flex: 1;
+	min-width: 0;
 	overflow: auto;
-	/* The wrap scrolls both ways, so the sticky date row sticks to its top, not the page's. */
-	max-height: calc(100dvh - 190px);
+	/* The wrap scrolls both ways, so the sticky date row sticks to its top, not the page's. It fills the screen below the toolbar. */
+	height: calc(100dvh - 136px);
 	min-height: 240px;
 	border: 1px solid var(--line);
 	border-radius: var(--radius);
@@ -541,7 +580,8 @@ dialog {
 	z-index: 5;
 
 	&.weekend {
-		background: var(--white);
+		background: var(--weekend-bg);
+		color: #b0705a;
 	}
 
 	&.today {
@@ -617,6 +657,65 @@ dialog {
 	min-height: 56px;
 	position: relative;
 	background: var(--white);
+
+	&.weekend {
+		background: var(--weekend-bg);
+	}
+
+	// Today runs down the whole grid, like the header cell.
+	&.today {
+		background: var(--today-bg);
+		box-shadow:
+			inset 1px 0 var(--gold),
+			inset -1px 0 var(--gold);
+	}
+}
+
+// Compact density: about three weeks on screen, one line per stay.
+.cal-wrap.compact {
+	.cal-day-cell {
+		min-height: 32px;
+	}
+
+	.cal-head-cell {
+		padding: 6px 2px;
+	}
+
+	.cal-room-cell {
+		padding: 6px 10px;
+
+		b {
+			font-size: 12px;
+		}
+
+		span {
+			display: none;
+		}
+	}
+
+	.cal-group-label {
+		padding: 4px 10px;
+	}
+
+	.booking-block {
+		margin-top: 3px;
+		margin-bottom: 3px;
+		padding: 4px 7px;
+
+		.bb-meta {
+			display: none;
+		}
+
+		b {
+			margin: 0;
+		}
+	}
+
+	.cal-blocked {
+		margin-top: 3px;
+		margin-bottom: 3px;
+		padding: 4px 7px;
+	}
 }
 
 // The hover preview of a new booking: a block in the same place and size as the real one, drawn as an outline.
@@ -663,44 +762,135 @@ dialog {
 		gap: 6px;
 		color: #8f9096;
 		font-size: 9px;
-	}
 
-	&.status-checkedin {
-		background: var(--status-checkedin);
-		color: var(--white);
-		border-color: var(--status-checkedin);
-
-		.bb-meta {
-			color: #c9cacd;
+		span {
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
 		}
 	}
 
-	&.status-pending {
-		background: var(--gold-bg);
-		border-color: var(--gold);
-		color: #6d5324;
+	b {
+		line-height: 14px;
 	}
 
-	&.status-checkedout {
-		background: var(--surface);
-		color: #75767e;
-		border-color: var(--line);
+	// Sized in the template too: app-icon's own host style would otherwise keep it at 20px and push the row taller.
+	b app-icon.bb-icon {
+		vertical-align: -2px;
+		margin-right: 2px;
+		opacity: 0.85;
 	}
 
-	&.status-cancelled {
+	// One pastel per stage (see the --st-* tokens).
+	@each $stage, $key in (booking: booking, prepaid: prepaid, arriving: arriving, staying: staying, departing: departing, checkedout: done) {
+		&.stage-#{$stage} {
+			background: var(--st-#{$key}-bg);
+			border-color: var(--st-#{$key}-bd);
+			color: var(--st-#{$key}-ink);
+
+			.bb-meta {
+				color: var(--st-#{$key}-ink);
+				opacity: 0.75;
+			}
+		}
+	}
+
+	&.stage-cancelled {
 		background: var(--white);
 		color: #9d9ea3;
 		text-decoration: line-through;
 		opacity: 0.7;
 	}
 
-	.bb-unpaid {
-		width: 6px;
-		height: 6px;
-		border-radius: 50%;
-		background: var(--gold);
-		display: inline-block;
-		margin-left: 5px;
+	&.stage-conflict {
+		background: var(--conflict-bg);
+		border-color: var(--conflict);
+		border-style: dashed;
+		color: var(--conflict);
+	}
+
+	// Neither takes the room: a thin strip along the bottom of the row, so the free days above stay clickable for a new booking.
+	&.stage-waitlist,
+	&.stage-cancelled {
+		align-self: end;
+		z-index: 4;
+		height: 18px;
+		margin-bottom: 2px;
+		padding: 0 7px;
+		background: var(--white);
+		border: 1px dashed var(--muted);
+		color: var(--muted);
+		opacity: 0.95;
+
+		b {
+			font-size: 9px;
+			font-weight: 700;
+			line-height: 16px;
+			margin: 0;
+		}
+	}
+
+	// Cancelled reads apart from the waitlist: solid grey edge, struck-through name.
+	&.stage-cancelled {
+		border: 1px solid var(--line);
+		opacity: 0.8;
+	}
+
+	// Two stays in one room on the same night: each takes half the row so both stay visible.
+	&.lane-top,
+	&.lane-bottom {
+		height: calc(50% - 5px);
+		padding-top: 2px;
+		padding-bottom: 2px;
+
+		.bb-meta {
+			display: none;
+		}
+
+		b {
+			margin: 0;
+		}
+	}
+
+	&.lane-top {
+		align-self: start;
+	}
+
+	&.lane-bottom {
+		align-self: end;
+	}
+
+	&.pending {
+		border-style: dashed;
+	}
+
+	// Full name when it fits; otherwise (measured by appFitName) surname first, cut by the ellipsis on <b>.
+	container-type: inline-size;
+
+	.bb-short {
+		display: none;
+	}
+
+	b.tight {
+		.bb-name {
+			display: none;
+		}
+
+		.bb-short {
+			display: inline;
+		}
+	}
+
+	// Only room for a surname: icons give way (the hover card still lists them).
+	@container (max-width: 72px) {
+		.bb-meta {
+			display: none;
+		}
+
+		// app-icon sets its display inline on the host, so only !important hides it.
+		app-icon.bb-icon {
+			display: none !important;
+		}
 	}
 
 	&.selected {
@@ -723,10 +913,214 @@ dialog {
 	border-radius: 6px;
 	margin: 4px;
 	font-size: 9px;
+	font-weight: 700;
 	padding: 7px 9px;
-	background: repeating-linear-gradient(45deg, #eceded, #eceded 4px, #f6f6f7 4px, #f6f6f7 9px);
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
 	color: #8d8e94;
 	border: 1px solid var(--line);
+}
+
+// Room blocks: dense warm hatch for repair, light green for staff use, flat grey when out of service.
+.kind-repair,
+.legend-list .sw.kind-repair {
+	background: repeating-linear-gradient(45deg, #efe6d6, #efe6d6 4px, #f8f4ec 4px, #f8f4ec 9px);
+	color: #8b6c30;
+}
+
+.kind-service,
+.legend-list .sw.kind-service {
+	background: repeating-linear-gradient(90deg, #e3ece5, #e3ece5 3px, #f3f7f4 3px, #f3f7f4 8px);
+	color: #5e7865;
+}
+
+.kind-out,
+.legend-list .sw.kind-out {
+	background: #e7e7ea;
+	color: #75767e;
+}
+
+.kind-other,
+.legend-list .sw.kind-other {
+	background: repeating-linear-gradient(45deg, #eceded, #eceded 4px, #f6f6f7 4px, #f6f6f7 9px);
+}
+
+:host-context([data-theme='dark']) {
+	.kind-repair,
+	.legend-list .sw.kind-repair {
+		background: repeating-linear-gradient(45deg, #2e271b, #2e271b 4px, #24211b 4px, #24211b 9px);
+		color: #e6cd94;
+	}
+
+	.kind-service,
+	.legend-list .sw.kind-service {
+		background: repeating-linear-gradient(90deg, #1b2a21, #1b2a21 3px, #16211b 3px, #16211b 8px);
+		color: #82b199;
+	}
+
+	.kind-out,
+	.legend-list .sw.kind-out {
+		background: #2c2d33;
+		color: #9a9ba3;
+	}
+
+	.kind-other,
+	.legend-list .sw.kind-other {
+		background: repeating-linear-gradient(45deg, #26272d, #26272d 4px, #1e1f24 4px, #1e1f24 9px);
+	}
+}
+
+.cal-date {
+	position: relative;
+	display: inline-flex;
+	width: 34px;
+	height: 34px;
+	align-items: center;
+	justify-content: center;
+	color: var(--muted);
+	border-radius: 6px;
+	cursor: pointer;
+
+	&:hover,
+	&:focus-within {
+		background: var(--surface-hover);
+	}
+
+	app-icon {
+		width: 18px;
+		height: 18px;
+	}
+
+	// The native picker sits invisibly over the icon, so a click opens it.
+	input {
+		position: absolute;
+		inset: 0;
+		opacity: 0;
+		cursor: pointer;
+	}
+}
+
+.cal-density {
+	margin-left: 4px;
+	padding: 8px 12px;
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--muted);
+	background: var(--white);
+	border: 1px solid var(--line);
+	border-radius: 7px;
+
+	&.active {
+		background: var(--gold-bg);
+		color: var(--gold-ink);
+		border-color: var(--gold);
+	}
+}
+
+.audit-button {
+	background: var(--conflict-bg);
+	color: var(--conflict);
+	border: 1px solid var(--conflict);
+}
+
+.audit-panel {
+	width: 340px;
+	max-height: 420px;
+	overflow: auto;
+
+	.form-note {
+		margin: 0 0 10px;
+	}
+}
+
+.legend-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+
+	li {
+		display: flex;
+		align-items: center;
+		gap: 9px;
+		font-size: 12px;
+		color: var(--text-strong);
+		margin: 6px 0;
+	}
+
+	app-icon {
+		width: 14px;
+		height: 14px;
+		color: var(--muted);
+	}
+
+	.sw {
+		width: 22px;
+		height: 12px;
+		border-radius: 3px;
+		border: 1px solid var(--line);
+		flex-shrink: 0;
+		background: var(--white);
+
+		@each $stage, $key in (booking: booking, prepaid: prepaid, arriving: arriving, staying: staying, departing: departing, checkedout: done) {
+			&.stage-#{$stage} {
+				background: var(--st-#{$key}-bg);
+				border-color: var(--st-#{$key}-bd);
+			}
+		}
+
+		&.stage-waitlist {
+			height: 6px;
+			border: 1px dashed var(--muted);
+		}
+
+		&.stage-conflict {
+			background: var(--conflict-bg);
+			border-color: var(--conflict);
+		}
+
+		&.pending {
+			border-style: dashed;
+		}
+	}
+}
+
+.hc-marks,
+.sp-marks {
+	list-style: none;
+	padding: 0;
+	margin: 8px 0 0;
+
+	li {
+		display: flex;
+		align-items: center;
+		gap: 7px;
+		font-size: 11px;
+		color: var(--text-strong);
+		margin: 3px 0;
+	}
+
+	app-icon {
+		width: 13px;
+		height: 13px;
+		color: var(--muted);
+	}
+}
+
+.sp-marks {
+	margin-bottom: 8px;
+
+	li {
+		font-size: 12px;
+	}
+}
+
+.sp-warning {
+	padding: 10px 12px;
+	border-radius: 6px;
+	background: var(--conflict-bg);
+	color: var(--conflict);
+	font-size: 12px;
 }
 
 .hover-card {
@@ -988,8 +1382,14 @@ dialog {
 	}
 }
 
-.topbar-legend {
+// Opens the legend panel; sits at the left of the topbar, where the shell puts the page's own controls.
+.legend-toggle {
 	margin-right: auto;
+
+	&.active {
+		background: var(--gold-bg);
+		color: var(--gold-ink);
+	}
 }
 
 .topbar-buttons {
@@ -997,9 +1397,10 @@ dialog {
 	gap: 10px;
 }
 
-@media (max-width: 1100px) {
-	.topbar-legend {
-		display: none;
+@media (max-width: 740px) {
+	// The grid (and so the legend) is desktop only; phones get day cards.
+	.legend-toggle {
+		visibility: hidden;
 	}
 }
 
@@ -1012,4 +1413,228 @@ dialog {
 			display: none;
 		}
 	}
+}
+
+// Room tooltip: everything about the room on hover over its cell.
+.room-card,
+.booking-card {
+	width: 290px;
+
+	.rc-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+
+		b {
+			margin: 0;
+		}
+	}
+
+	.rc-desc {
+		margin-top: 6px;
+		color: var(--text-strong);
+	}
+
+	.rc-grid {
+		display: grid;
+		grid-template-columns: auto 1fr;
+		gap: 3px 12px;
+		margin: 10px 0 0;
+		font-size: 11px;
+
+		dt {
+			color: var(--muted);
+		}
+
+		dd {
+			margin: 0;
+			color: var(--text-strong);
+			font-weight: 600;
+		}
+	}
+
+	h6 {
+		margin: 10px 0 2px;
+		font-size: 9px;
+		letter-spacing: 0.6px;
+		text-transform: uppercase;
+		color: var(--muted);
+	}
+
+	p b {
+		display: inline;
+		font-size: 11px;
+		margin: 0;
+		color: var(--text-strong);
+	}
+}
+
+.rc-status {
+	padding: 2px 8px;
+	border-radius: 999px;
+	font-size: 10px;
+	font-weight: 700;
+	border: 1px solid currentColor;
+}
+
+// Housekeeping state: dot in the room cell and the badge in the tooltip.
+.room-dot {
+	display: inline-block;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	margin-right: 6px;
+	vertical-align: 2px;
+	background: currentColor;
+}
+
+.rs-ready {
+	color: #3f9a5e;
+}
+
+.rs-occupied {
+	color: #3b7fc4;
+}
+
+// Red: full clean after a check-out; orange: stay-over tidy while the guest stays.
+.rs-needs-cleaning {
+	color: #d64545;
+}
+
+.rs-light-cleaning {
+	color: #e8892b;
+}
+
+.rs-cleaning {
+	color: #c9a227;
+}
+
+.rs-unavailable {
+	color: #9a9ba3;
+}
+
+// Guest debt is the one mark the desk must not miss: red wherever it shows, full strength on the blocks.
+app-icon.icon-debt,
+.legend-list app-icon.icon-debt,
+.hc-marks app-icon.icon-debt,
+.sp-marks app-icon.icon-debt,
+.booking-block b app-icon.bb-icon.icon-debt {
+	color: var(--conflict);
+	opacity: 1;
+}
+
+// On a block the debt mark is a solid red coin, readable on every stage colour.
+.booking-block b app-icon.bb-icon.icon-debt {
+	background: var(--conflict);
+	color: #fff;
+	border-radius: 50%;
+}
+
+// Booking tooltip: arrival and departure first and large, then the terms, like the legacy chessboard card.
+.booking-card {
+	width: 310px;
+
+	.rc-head b {
+		font-size: 14px;
+	}
+
+	.rc-grid {
+		margin-top: 10px;
+	}
+
+	.bc-note {
+		color: var(--text-strong);
+		white-space: pre-line;
+	}
+
+	.rc-grid dd.bc-debt {
+		color: var(--conflict);
+	}
+}
+
+.bc-stage {
+	flex-shrink: 0;
+	padding: 2px 8px;
+	border-radius: 999px;
+	font-size: 10px;
+	font-weight: 700;
+	border: 1px solid var(--line);
+
+	@each $stage, $key in (booking: booking, prepaid: prepaid, arriving: arriving, staying: staying, departing: departing, checkedout: done) {
+		&.stage-#{$stage} {
+			background: var(--st-#{$key}-bg);
+			border-color: var(--st-#{$key}-bd);
+			color: var(--st-#{$key}-ink);
+		}
+	}
+
+	&.stage-conflict {
+		background: var(--conflict-bg);
+		border-color: var(--conflict);
+		color: var(--conflict);
+	}
+}
+
+// Check-in and check-out side by side: one glance, half the height of stacked boxes.
+.bc-moves {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 6px;
+	margin-top: 8px;
+
+	> div {
+		display: flex;
+		align-items: center;
+		gap: 7px;
+		padding: 6px 8px;
+		border-radius: 7px;
+		background: var(--surface);
+		border: 1px solid var(--line);
+		min-width: 0;
+	}
+
+	span {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+	}
+
+	app-icon {
+		width: 18px;
+		height: 18px;
+		color: var(--gold-ink);
+	}
+
+	b {
+		font-size: 11px;
+		line-height: 1.3;
+		margin: 0;
+		color: var(--text-strong);
+	}
+
+	em {
+		font-style: normal;
+		font-size: 12px;
+		font-weight: 800;
+		line-height: 1.3;
+		color: var(--ink);
+	}
+}
+
+.room-card .rc-addable {
+	margin-top: 4px;
+	color: var(--st-staying-ink);
+	font-weight: 600;
+
+	&.none {
+		color: var(--muted);
+	}
+}
+
+// Tall tooltips never run off a short screen.
+.room-card,
+.booking-card {
+	max-height: calc(100dvh - 16px);
+	overflow: hidden;
 }

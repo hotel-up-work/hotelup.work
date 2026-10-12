@@ -147,8 +147,9 @@ data today.
 ## Admin pages — tools outside the role model
 
 Admin tools live in `src/app/pages/admin/` and are listed in `ADMIN_PAGES` (`src/app/shared/role.ts`).
-**For now every signed-in session opens them**: any role, any plan, demo or real account
-(`sessionGuard` in `role.guard.ts`; no session → `/login`). They are not part of `ROLE_PAGES`,
+**Real accounts only**: any role and any plan of a real account opens them (`adminGuard` in
+`role.guard.ts`; no session → `/login`). **The demo never shows them**: the sidebar does not list them and
+opening the URL in the demo goes to `/dashboard`. They are not part of `ROLE_PAGES`,
 `PLAN_PAGES` or `LIVE_PAGES`. The sidebar lists them at the top, above Календар, separated by a line.
 Narrow access (e.g. owner/manager only) here first when it is decided.
 
@@ -366,11 +367,40 @@ Purpose: see room availability by date, manage bookings, move/extend stays, quic
 | ---------------------------------------------- | -------------------- |
 | Toolbar (date range, view length, search, filters) | Same as page |
 | Legend + main grid (rooms × dates)              | Same as page |
-| Hover preview card on booking blocks            | Same as page, **except** price/payment status only with `guestBill` |
+| Hover card on booking blocks: name, stage, number, adults/children; **check-in and check-out first and large** (weekday, date, "сьогодні/завтра/вчора", time: planned `checkInTime`/`checkOutTime`, else 14:00/11:00, a late check-out wins); room, nights, status, rate, meal plan, source, manager, company, phone, comment, marks | Same as page, **except** charged / paid / balance / deposit only with `guestBill` |
+| Room tooltip on the room cell (status, type and description, building, floor, places and extra places, beds, area, bathroom, balcony, view, amenities, guest now, next arrival, block) and a housekeeping status dot | Same as page, **except** room and extra-place prices only with `guestBill` |
 | Mobile day/3-day cards                          | Same as page |
 | Booking side panel: guest & stay info, source, notes, actions | Same as page |
 | **Booking side panel: payment block ("Оплата") + "Додати оплату", unpaid badges** | **`guestBill` only** — hidden for `sales` |
 | Quick-booking / conflict / move / message / payment / extend dialogs | Same as page |
+| Night audit button (overstays, missed check-ins) | Same as page; fixing an item needs `changeBooking` |
+
+**Grid conventions** (like the legacy HMS chessboard):
+
+- **Block colour = stay stage**, worked out from status and dates against today: booking; booking with
+  prepayment (`paid > 0`, shown only with `guestBill`, otherwise a plain booking); arriving (check-in today
+  or earlier, not checked in); staying; departing (checked in, check-out today or earlier); checked out;
+  waitlist (thin strip, does not take the room); cancelled; **conflict** (an active stay shares a night with
+  another active stay or a room block in the same room; the two stays split the row). `pending` is drawn
+  with a dashed border.
+- **Marks in a block:** blacklisted guest and VIP (guest tags `Чорний список` / `VIP`), debt (`paid < total`,
+  `guestBill` only), company pays (`companyOperator`), guaranteed (`guarantee = Гарантована`), meal plan
+  (`mealPlan` other than RO), paid category ≠ room type (`rateCategory`), room fixed for the guest
+  (`roomLocked`), late check-out. The block label is the guest name plus `externalNumber` or the booking id.
+- **Room blocks by reason:** `Ремонт` = repair, not for sale; `Службове використання` (old `Приватне
+  використання`) = staff use; `Не експлуатується` = out of service; anything else neutral.
+- **Waitlist:** `changeBooking` roles may create a `waitlist` booking on a busy room (no payment is taken).
+  It never blocks the room anywhere (`holdsRoom`). "Підтвердити з листа очікування" works only when the
+  room is free on those dates.
+- **Cancelled stays** are a thin struck-through strip at the bottom of the row, so their free days take a
+  click for a new booking. Their side panel offers "Забронювати знову" (anyone who opens Calendar): the
+  booking form opens with the same guest, contacts, room, dates and guests; a busy room offers alternatives.
+- **Room fixed for the guest** (`roomLocked`): dragging the booking to another room is refused and
+  "Змінити номер" is hidden; dates can still change in the same room.
+- **Navigation:** ‹ › by period, « » by month, a date picker, 7/14/30 days, and a compact density
+  remembered per browser.
+- **Night audit:** checked-in guests past their check-out day, and pending/confirmed stays whose arrival
+  day passed without a check-in. Each item opens the booking.
 
 **Booking data contract** (live; enforced by `firestore.rules`, written by `BookingsService` in
 `src/app/feature/firebase/bookings.service.ts`). Only the hotel's owners (`ownerUids`) can read or
@@ -380,9 +410,9 @@ write; roles per hotel are not built yet.
   renumbered), `roomNumber` (display copy), `guestName` (1–200; the phone when no name was given),
   `checkIn`, `checkOut` (`YYYY-MM-DD`, `checkOut > checkIn`; the room is free for the next stay from
   the check-out day), `guests` (int 1–50, ≤ the room's capacity plus its extra places, checked in the client), `total`
-  and `paid` (`0 ≤ paid ≤ total`), `status` (`pending | confirmed | checkedin | checkedout | cancelled`), optional
+  and `paid` (`0 ≤ paid ≤ total`), `status` (`pending | confirmed | checkedin | checkedout | cancelled | waitlist`; `waitlist` never takes the room), optional
   `phone`, `email`, `source`, `notes` (≤1000), `submissionId`, `plannedCheckOut` (original check-out after an early departure), `guestId` (the guest profile, see Guest data contract), `lateCheckoutHour` (12–23), and, set by the New booking page: `adults` (≥1) and `children` (≥0) that add up to `guests`, `checkInTime` / `checkOutTime` (`HH:MM`), `extraGuests` (people beyond capacity, 0–20), `rate` (price list name, ≤50, informational), `byBed` with `bedNumber` (1–50, informational: availability is still per room), `housekeepingNote` (≤300),
-  and, set by the booking card (`/booking?id=`): `childrenPaid` (0–`children`), text details up to 100 characters (`accommodationType`, `mealPlan`, `citizenship`, `contactPerson`, `manager`, `privilegeCategory`, `visitPurpose`, `externalNumber`, `companyOperator`, `companySource`, `contractTerms`, `paymentType`, `payMethod`) and numbers 0–100 000 000 (`creditLimit`, `creditRemainder`, `depositBalance`; plain figures the desk types in, not calculated).
+  and, set by the booking card (`/booking?id=`): `childrenPaid` (0–`children`), text details up to 100 characters (`accommodationType`, `mealPlan`, `citizenship`, `contactPerson`, `manager`, `privilegeCategory`, `visitPurpose`, `externalNumber`, `companyOperator`, `companySource`, `contractTerms`, `paymentType`, `payMethod`, `guarantee`, `rateCategory`), `roomLocked` (bool) and numbers 0–100 000 000 (`creditLimit`, `creditRemainder`, `depositBalance`; plain figures the desk types in, not calculated).
   `createdAt`, `updatedAt` (server time on every write). Bookings are never deleted.
 - **Booking card** (`booking-card.component`, `changeBooking` roles edit, others read; a cancelled booking is read-only): every field autosaves on its own (text after a 700 ms pause or on leaving the field, lists/dates/switches at once). Unsaveable changes are not sent and show the reason next to the field: room busy on the dates, guests over the room's capacity plus extra places, total below `paid`, check-out not after check-in. Changing the dates keeps the price per night (the total follows the nights); editing "Ціна за ніч" sets `total` = price × nights. `paid` is read-only on the card and follows the payments journal. Money block needs `guestBill`. Dropdown lists are built into the code (`booking-card.fields.ts`). **One card, two modes** — see "Booking card: live and demo" below.
 - Overlaps are prevented in the client (other active bookings and room blocks; a block's last day
@@ -551,8 +581,13 @@ write; roles per hotel are not built yet.
   amenities.
 - `hotels/{hotelId}/rooms/{id}`: `number` (≤8, unique per hotel, checked in the client),
   `type` (type name), `floor` (int), `capacity` (int 1–50), `price` (≥0), optional `extraGuests`/`extraGuestPrice` (copied from the type, editable per room), `status`
-  (`ready | occupied | needs-cleaning | cleaning | unavailable`), optional `beds`, `area`,
-  `amenities[]`, `block` (`{reason, start, end, note}` with ISO dates, end ≥ start; set only
+  (`ready | occupied | light-cleaning | needs-cleaning | cleaning | unavailable`; `light-cleaning` is a
+  stay-over tidy while the guest stays several days, shown orange, and "Прибрано" returns the room to
+  occupied (a real hotel: `ready`, occupancy comes from bookings); `needs-cleaning` is the full clean after
+  a check-out, shown red), optional `beds`, `area`,
+  `amenities[]`, `building`, `bathroom` (`Душ | Ванна | Душ і ванна`), `balcony` (`Балкон | Тераса |
+  Французький балкон | Без балкона`), `view` (picked or typed; all four ≤50, set in the room form, shown in
+  the Calendar room tooltip), `block` (`{reason, start, end, note}` with ISO dates, end ≥ start; set only
   while `unavailable`), `lastCleanedAt` (set when cleaning finishes or status goes back to
   ready), `createdAt`, `updatedAt` (server time on every write).
 - **Occupancy comes from bookings (real hotels).** A room shows "occupied" while a booking in it
@@ -872,7 +907,7 @@ Added with live Calendar bookings on 2 October 2026 (not yet verified in the run
 - Account hotels and active hotel: `src/app/feature/firebase/hotel.service.ts`,
   switcher in `src/app/layouts/app-shell/`
 - Route guard: `src/app/shared/role.guard.ts`
-- Admin pages: `src/app/pages/admin/` (`ADMIN_PAGES` in `role.ts`, `sessionGuard`); CRM pages: `src/app/pages/crm/`; public pages: `src/app/pages/public/`
+- Admin pages: `src/app/pages/admin/` (`ADMIN_PAGES` in `role.ts`, `adminGuard`); CRM pages: `src/app/pages/crm/`; public pages: `src/app/pages/public/`
 - Route declarations: `src/app/app.routes.ts`
 - Server-rendering mode per route (protected pages are client-only, not prerendered):
   `src/app/app.routes.server.ts`

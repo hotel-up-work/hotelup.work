@@ -13,7 +13,8 @@ import {
 } from 'firebase/firestore';
 import { FirebaseService } from './firebase.service';
 
-export type RoomStatus = 'ready' | 'occupied' | 'needs-cleaning' | 'cleaning' | 'unavailable';
+/** `light-cleaning`: a stay-over tidy while the guest stays several days; `needs-cleaning`: full clean after a check-out. */
+export type RoomStatus = 'ready' | 'occupied' | 'light-cleaning' | 'needs-cleaning' | 'cleaning' | 'unavailable';
 
 export interface RoomBlock {
 	reason: string;
@@ -38,7 +39,17 @@ export interface RoomInput {
 	/** Cost of each extra person per night. */
 	extraGuestPrice: number;
 	amenities: string[];
+	/** Where the room is, for guests choosing a room: building or wing (`Корпус 2`), bathroom, balcony and view. Empty = not set. */
+	building?: string;
+	bathroom?: string;
+	balcony?: string;
+	view?: string;
 }
+
+/** Choices offered in the room form; `view` also takes free text. */
+export const BATHROOM_OPTIONS = ['Душ', 'Ванна', 'Душ і ванна'];
+export const BALCONY_OPTIONS = ['Балкон', 'Тераса', 'Французький балкон', 'Без балкона'];
+export const VIEW_OPTIONS = ['Місто', 'Двір', 'Парк', 'Фортеця', 'Річка', 'Гори'];
 
 export interface RoomRecord extends RoomInput {
 	id: string;
@@ -76,13 +87,17 @@ export interface RoomPatch {
 	extraGuests?: number;
 	extraGuestPrice?: number;
 	amenities?: string[];
+	building?: string;
+	bathroom?: string;
+	balcony?: string;
+	view?: string;
 	status?: RoomStatus;
 	block?: RoomBlock | null;
 	/** `true` stamps the server time (cleaning finished). */
 	cleaned?: true;
 }
 
-const ROOM_STATUSES: RoomStatus[] = ['ready', 'occupied', 'needs-cleaning', 'cleaning', 'unavailable'];
+const ROOM_STATUSES: RoomStatus[] = ['ready', 'occupied', 'light-cleaning', 'needs-cleaning', 'cleaning', 'unavailable'];
 
 const str = (value: unknown): string => (typeof value === 'string' ? value : '');
 const num = (value: unknown, fallback: number): number => (typeof value === 'number' ? value : fallback);
@@ -103,6 +118,10 @@ function toRoom(id: string, data: DocumentData): RoomRecord {
 		extraGuests: num(data['extraGuests'], 0),
 		extraGuestPrice: num(data['extraGuestPrice'], 0),
 		amenities: strings(data['amenities']),
+		building: str(data['building']),
+		bathroom: str(data['bathroom']),
+		balcony: str(data['balcony']),
+		view: str(data['view']),
 		status: ROOM_STATUSES.includes(data['status']) ? data['status'] : 'ready',
 		block: block && typeof block === 'object' ? { reason: str(block.reason), start: str(block.start), end: str(block.end), note: str(block.note) } : null,
 		lastCleanedAt: cleaned?.toDate() ?? null,

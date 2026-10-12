@@ -75,15 +75,17 @@ service cloud.firestore {
         allow create, update: if isHotelOwner()
           && room().keys().hasAll(['number', 'type', 'floor', 'capacity', 'price', 'status'])
           && room().keys().hasOnly(['number', 'type', 'floor', 'capacity', 'beds', 'area', 'price', 'extraGuests', 'extraGuestPrice', 'amenities', 'status',
-                                    'block', 'lastCleanedAt', 'createdAt', 'updatedAt'])
+                                    'building', 'bathroom', 'balcony', 'view', 'block', 'lastCleanedAt', 'createdAt', 'updatedAt'])
           && room().number is string && room().number.size() >= 1 && room().number.size() <= 8
           && room().type is string && room().type.size() >= 1 && room().type.size() <= 50
           && room().floor is int && room().floor >= -5 && room().floor <= 200
           && room().capacity is int && room().capacity >= 1 && room().capacity <= 50
           && room().price is number && room().price >= 0 && room().price <= 1000000
           && optExtraGuests(room())
-          && room().status in ['ready', 'occupied', 'needs-cleaning', 'cleaning', 'unavailable']
+          && room().status in ['ready', 'occupied', 'light-cleaning', 'needs-cleaning', 'cleaning', 'unavailable']
           && optText(room(), 'beds', 100)
+          && optText(room(), 'building', 50) && optText(room(), 'bathroom', 50)
+          && optText(room(), 'balcony', 50) && optText(room(), 'view', 50)
           && optArea(room())
           && optAmenities(room())
           && validBlock()
@@ -122,7 +124,7 @@ service cloud.firestore {
                                          'rate', 'byBed', 'bedNumber', 'extraGuests', 'housekeepingNote', 'childrenPaid',
                                          'accommodationType', 'mealPlan', 'citizenship', 'contactPerson', 'manager',
                                          'privilegeCategory', 'visitPurpose', 'externalNumber', 'companyOperator',
-                                         'companySource', 'contractTerms', 'paymentType', 'payMethod',
+                                         'companySource', 'contractTerms', 'paymentType', 'payMethod', 'guarantee', 'rateCategory', 'roomLocked',
                                          'creditLimit', 'creditRemainder', 'depositBalance', 'createdAt', 'updatedAt'])
             && booking().roomId is string && booking().roomId.size() >= 1 && booking().roomId.size() <= 40
             && booking().roomNumber is string && booking().roomNumber.size() >= 1 && booking().roomNumber.size() <= 8
@@ -132,7 +134,7 @@ service cloud.firestore {
             && booking().guests is int && booking().guests >= 1 && booking().guests <= 50
             && booking().total is number && booking().total >= 0 && booking().total <= 10000000
             && booking().paid is number && booking().paid >= 0 && booking().paid <= booking().total
-            && booking().status in ['pending', 'confirmed', 'checkedin', 'checkedout', 'cancelled']
+            && booking().status in ['pending', 'confirmed', 'checkedin', 'checkedout', 'cancelled', 'waitlist']
             && optText(booking(), 'phone', 40)
             && optText(booking(), 'email', 200)
             && optText(booking(), 'source', 50)
@@ -156,6 +158,8 @@ service cloud.firestore {
             && optText(booking(), 'companyOperator', 100) && optText(booking(), 'companySource', 100)
             && optText(booking(), 'contractTerms', 100) && optText(booking(), 'paymentType', 100)
             && optText(booking(), 'payMethod', 100)
+            && optText(booking(), 'guarantee', 100) && optText(booking(), 'rateCategory', 100)
+            && (!('roomLocked' in booking()) || booking().roomLocked is bool)
             && (!('creditLimit' in booking()) || (booking().creditLimit is number && booking().creditLimit >= 0 && booking().creditLimit <= 100000000))
             && (!('creditRemainder' in booking()) || (booking().creditRemainder is number && booking().creditRemainder >= 0 && booking().creditRemainder <= 100000000))
             && (!('depositBalance' in booking()) || (booking().depositBalance is number && booking().depositBalance >= 0 && booking().depositBalance <= 100000000))

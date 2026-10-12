@@ -82,7 +82,7 @@ const GUEST_NAMES = [
 	'Юлія Савчук',
 	'Віктор Коваль',
 ];
-const ALL_STATUSES: RoomStatus[] = ['ready', 'occupied', 'needs-cleaning', 'cleaning', 'unavailable'];
+const ALL_STATUSES: RoomStatus[] = ['ready', 'occupied', 'light-cleaning', 'needs-cleaning', 'cleaning', 'unavailable'];
 const DEMO_TODAY = '2026-09-17';
 
 function buildRooms(): Room[] {
@@ -133,6 +133,7 @@ function buildRooms(): Room[] {
 	});
 	set('103', { status: 'ready', guest: null, nextGuest: null, nextArrival: '21 вересня', lastCleaned: '17 вересня · 11:40', cleanedBy: 'Марія' });
 	set('205', { status: 'ready', guest: null, nextArrival: null, lastCleaned: '16 вересня · 10:20', cleanedBy: 'Оксана' });
+	set('104', { status: 'light-cleaning', assigned: 'Марія' });
 	set('207', { status: 'needs-cleaning', guest: null, checkoutTime: '11:08', assigned: null });
 	set('302', { status: 'needs-cleaning', guest: null, checkoutTime: '10:40', assigned: null });
 	set('206', { status: 'cleaning', guest: null, assigned: 'Марія', startedAt: '12:20', nextArrival: '13:30' });
@@ -174,7 +175,8 @@ function withStays(records: RoomRecord[], bookings: BookingRecord[], today: stri
 		if (next) Object.assign(room, { nextGuest: next.guestName, nextStart: dayMonth(next.checkIn), nextEnd: dayMonth(next.checkOut), nextArrival: dayMonth(next.checkIn) });
 		if (current) {
 			Object.assign(room, {
-				status: 'occupied',
+				// A stay-over tidy set on the room shows over "occupied"; the guest stays on the card.
+				status: record.status === 'light-cleaning' ? 'light-cleaning' : 'occupied',
 				guest: current.guestName,
 				checkin: dayMonth(current.checkIn),
 				checkout: dayMonth(current.checkOut),
@@ -189,6 +191,12 @@ function withStays(records: RoomRecord[], bookings: BookingRecord[], today: stri
 }
 
 /** Validation message for the "extra people" inputs, or null when they are fine. */
+/** Building, bathroom, balcony and view as typed, trimmed to what Firestore accepts (≤ 50 characters each). */
+function roomFeatures(f: Pick<RoomFormValue, 'building' | 'bathroom' | 'balcony' | 'view'>) {
+	const clean = (s: string) => s.trim().slice(0, 50);
+	return { building: clean(f.building), bathroom: clean(f.bathroom), balcony: clean(f.balcony), view: clean(f.view) };
+}
+
 function extraGuestsError(extraGuests: number, extraGuestPrice: number): string | null {
 	if (!Number.isInteger(extraGuests) || extraGuests < 0 || extraGuests > 20) return 'Додаткові місця: ціле число від 0 до 20.';
 	if (!(extraGuestPrice >= 0)) return 'Вкажіть ціну за додаткового гостя (0, якщо безкоштовно).';
@@ -208,6 +216,10 @@ function toRoom(r: RoomRecord): Room {
 		extraGuests: r.extraGuests,
 		extraGuestPrice: r.extraGuestPrice,
 		amenities: r.amenities,
+		building: r.building,
+		bathroom: r.bathroom,
+		balcony: r.balcony,
+		view: r.view,
 		status: r.status,
 		guest: null,
 		maintenanceNotes: [],
@@ -221,9 +233,11 @@ function toRoom(r: RoomRecord): Room {
 
 const money = (n: number) => new Intl.NumberFormat('uk-UA').format(n) + ' ₴';
 const capBucket = (cap: number) => (cap >= 4 ? '4' : cap >= 3 ? '3' : String(cap));
-const needsCleaning = (r: Room) => Boolean(r.needsCleaning) || r.status === 'needs-cleaning' || r.status === 'cleaning';
+/** Any cleaning still to do: after a check-out, a stay-over tidy, or one in progress. */
+const toCleanStatus = (s: RoomStatus) => s === 'needs-cleaning' || s === 'light-cleaning' || s === 'cleaning';
+const needsCleaning = (r: Room) => Boolean(r.needsCleaning) || toCleanStatus(r.status);
 const statusLabel = (s: RoomStatus | string) =>
-	({ occupied: 'Зайнятий', ready: 'Готовий', 'needs-cleaning': 'Потребує прибирання', cleaning: 'Прибирається', unavailable: 'Недоступний' })[
+	({ occupied: 'Зайнятий', ready: 'Готовий', 'light-cleaning': 'Легке прибирання', 'needs-cleaning': 'Потребує прибирання', cleaning: 'Прибирається', unavailable: 'Недоступний' })[
 		s as RoomStatus
 	] ?? s;
 const sameText = (a: string, b: string) => a.trim().toLocaleLowerCase('uk-UA') === b.trim().toLocaleLowerCase('uk-UA');
@@ -315,9 +329,9 @@ export class RoomsComponent {
 	protected readonly counts = computed(() => {
 		const rooms = this.rooms();
 		const total = rooms.length;
-		const occupied = rooms.filter((r) => r.status === 'occupied').length;
+		const occupied = rooms.filter((r) => r.status === 'occupied' || r.status === 'light-cleaning').length;
 		const ready = rooms.filter((r) => r.status === 'ready').length;
-		const cleaningKpi = rooms.filter((r) => r.status === 'needs-cleaning' || r.status === 'cleaning').length;
+		const cleaningKpi = rooms.filter((r) => toCleanStatus(r.status)).length;
 		const unavailable = rooms.filter((r) => r.status === 'unavailable').length;
 		return { total, occupied, ready, cleaningKpi, unavailable };
 	});
@@ -336,8 +350,8 @@ export class RoomsComponent {
 		if (q) list = list.filter((r) => (r.number + ' ' + r.type).toLocaleLowerCase('uk-UA').includes(q));
 		const seg = this.segment();
 		if (seg === 'ready') list = list.filter((r) => r.status === 'ready');
-		else if (seg === 'occupied') list = list.filter((r) => r.status === 'occupied');
-		else if (seg === 'cleaning') list = list.filter((r) => r.status === 'needs-cleaning' || r.status === 'cleaning');
+		else if (seg === 'occupied') list = list.filter((r) => r.status === 'occupied' || r.status === 'light-cleaning');
+		else if (seg === 'cleaning') list = list.filter((r) => toCleanStatus(r.status));
 		else if (seg === 'unavailable') list = list.filter((r) => r.status === 'unavailable');
 		return list;
 	});
@@ -359,7 +373,7 @@ export class RoomsComponent {
 		if (!key) return '';
 		const rooms = this.rooms();
 		const free = rooms.filter((r) => r.status === 'ready').map((r) => r.number);
-		const toClean = rooms.filter((r) => r.status === 'needs-cleaning' || r.status === 'cleaning').map((r) => r.number);
+		const toClean = rooms.filter((r) => toCleanStatus(r.status)).map((r) => r.number);
 		const blocked = rooms.filter((r) => r.status === 'unavailable');
 		const map: Record<string, string> = {
 			freeToday: free.length ? `Сьогодні вільні номери: <b>${free.join(', ')}</b>.` : 'Наразі всі номери зайняті.',
@@ -651,6 +665,12 @@ export class RoomsComponent {
 		if (error) this.toast(error);
 	}
 
+	/** A stay-over tidy is done: the guest is still in, so the room goes back to occupied (a real hotel: clean, occupancy comes from bookings). */
+	protected async finishLightCleaning(number: string): Promise<void> {
+		const error = await this._saveRoom(number, { status: this.live ? 'ready' : 'occupied', cleaned: true }, `Номер ${number}: легке прибирання виконано`);
+		if (error) this.toast(error);
+	}
+
 	protected async unblockRoom(number: string): Promise<void> {
 		const error = await this._saveRoom(number, { status: 'ready', block: null }, `Номер ${number} знову доступний`);
 		if (error) this.toast(error);
@@ -676,7 +696,7 @@ export class RoomsComponent {
 		this.toast('Перехід до прибирання · Демо');
 	}
 
-	private async addRoom({ number, type, floor, capacity, price, area, extraGuests, extraGuestPrice }: RoomFormValue): Promise<string | null> {
+	private async addRoom({ number, type, floor, capacity, price, area, extraGuests, extraGuestPrice, ...features }: RoomFormValue): Promise<string | null> {
 		const n = number.trim();
 		const typeName = type.trim();
 		if (!n) return 'Вкажіть номер або назву.';
@@ -701,6 +721,7 @@ export class RoomsComponent {
 			extraGuests,
 			extraGuestPrice,
 			amenities: base.amenities,
+			...roomFeatures(features),
 		};
 		if (this.live) return this._write(() => this._roomsService.addRoom(this.hotelId()!, input), `Номер ${n} додано`);
 		this.rooms.update((rooms) => [...rooms, { ...input, id: n, status: 'ready', guest: null, maintenanceNotes: [] }]);
@@ -730,7 +751,7 @@ export class RoomsComponent {
 	private async changeStatus(number: string, status: RoomStatus): Promise<string | null> {
 		const room = this.room(number);
 		if (!room) return 'Номер не знайдено. Можливо, його вже видалили.';
-		if (this.live && room.status === 'occupied' && status !== 'unavailable') {
+		if (this.live && room.status === 'occupied' && status !== 'unavailable' && status !== 'light-cleaning') {
 			return 'Номер зайнятий: гостя заселено. Спершу відмітьте виїзд у календарі.';
 		}
 		// Blocking needs dates and a reason, so it continues in the block modal.
@@ -741,11 +762,12 @@ export class RoomsComponent {
 		const patch: RoomPatch = { status };
 		if (room.status === 'unavailable' && status !== 'unavailable') patch.block = null;
 		if (status === 'ready' && needsCleaning(room)) patch.cleaned = true;
-		const demo: Partial<Room> = status === 'occupied' ? {} : { guest: null, needsCleaning: false };
+		// The guest stays through a stay-over tidy; other statuses mean the room is empty.
+		const demo: Partial<Room> = status === 'occupied' || status === 'light-cleaning' ? {} : { guest: null, needsCleaning: false };
 		return this._saveRoom(number, patch, 'Статус оновлено', demo);
 	}
 
-	private async editRoom(number: string, { type, floor, capacity, price, area, extraGuests, extraGuestPrice }: RoomFormValue): Promise<string | null> {
+	private async editRoom(number: string, { type, floor, capacity, price, area, extraGuests, extraGuestPrice, ...features }: RoomFormValue): Promise<string | null> {
 		const room = this.room(number);
 		if (!room) return 'Номер не знайдено. Можливо, його вже видалили.';
 		if (!Number.isInteger(floor)) return 'Вкажіть поверх цілим числом.';
@@ -753,7 +775,7 @@ export class RoomsComponent {
 		if (!(price >= 0)) return 'Вкажіть ціну.';
 		const extrasError = extraGuestsError(extraGuests, extraGuestPrice);
 		if (extrasError) return extrasError;
-		const patch: RoomPatch = { type, floor, capacity, price, extraGuests, extraGuestPrice, area: area > 0 ? area : null };
+		const patch: RoomPatch = { type, floor, capacity, price, extraGuests, extraGuestPrice, area: area > 0 ? area : null, ...roomFeatures(features) };
 		// A new type brings its beds and amenities; capacity and price come from the form.
 		const base = type !== room.type ? this.typeByName(type) : undefined;
 		if (base) {

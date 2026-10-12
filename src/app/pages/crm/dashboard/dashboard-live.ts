@@ -1,5 +1,5 @@
 import type { BookingRecord } from '../../../feature/firebase/bookings.service';
-import { isoAddDays } from '../../../feature/firebase/bookings.service';
+import { holdsRoom, isoAddDays } from '../../../feature/firebase/bookings.service';
 import type { RoomRecord } from '../../../feature/firebase/rooms.service';
 
 /** Pure helpers behind the real-hotel Dashboard: what today's bookings and rooms say (CRM.md → `dashboard`). */
@@ -31,12 +31,12 @@ export const lateArrivals = (bookings: BookingRecord[], day: string) =>
 /** Rooms with a guest in the house. */
 export const occupiedRoomIds = (bookings: BookingRecord[]) => new Set(bookings.filter((b) => b.status === 'checkedin').map((b) => b.roomId));
 
-/** Share of rooms with a stay (not cancelled) covering the night of `day`, in percent. */
+/** Share of rooms with a stay (not cancelled or waitlisted) covering the night of `day`, in percent. */
 export function occupancyOn(bookings: BookingRecord[], rooms: RoomRecord[], day: string): number {
 	if (!rooms.length) return 0;
 	const ids = new Set(rooms.map((r) => r.id));
 	const busy = new Set(
-		bookings.filter((b) => b.status !== 'cancelled' && ids.has(b.roomId) && b.checkIn <= day && b.checkOut > day).map((b) => b.roomId),
+		bookings.filter((b) => holdsRoom(b.status) && ids.has(b.roomId) && b.checkIn <= day && b.checkOut > day).map((b) => b.roomId),
 	);
 	return Math.round((busy.size / rooms.length) * 100);
 }

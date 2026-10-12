@@ -1,7 +1,7 @@
 import { Component, signal } from '@angular/core';
 import type { ModalSave, Room, RoomBlock } from '../rooms.interface';
 
-const BLOCK_REASONS = ['Ремонт', 'Технічні роботи', 'Приватне використання', 'Інше'];
+const BLOCK_REASONS = ['Ремонт', 'Технічні роботи', 'Службове використання', 'Не експлуатується', 'Інше'];
 
 /** Make a room unavailable for given dates, or edit its block (ngx-ui modal). */
 @Component({

@@ -19,6 +19,10 @@ export interface Room {
 	extraGuests: number;
 	extraGuestPrice: number;
 	amenities: string[];
+	building?: string;
+	bathroom?: string;
+	balcony?: string;
+	view?: string;
 	status: RoomStatus;
 	guest: string | null;
 	maintenanceNotes: MaintenanceNote[];
@@ -60,6 +64,10 @@ export interface RoomFormValue {
 	extraGuests: number;
 	extraGuestPrice: number;
 	area: number;
+	building: string;
+	bathroom: string;
+	balcony: string;
+	view: string;
 }
 
 export interface RoomTypeFormValue {

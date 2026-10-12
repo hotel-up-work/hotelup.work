@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, signal } from '@angular/core';
+import { BALCONY_OPTIONS, BATHROOM_OPTIONS, VIEW_OPTIONS } from '../../../../feature/firebase/rooms.service';
 import type { ModalSave, Room, RoomFormValue, RoomType } from '../rooms.interface';
 
 /** Add or edit a room (ngx-ui modal). Props are set by `ModalService.show()`. */
@@ -29,6 +30,9 @@ export class RoomFormComponent implements OnInit {
 	protected readonly typeName = signal('');
 	protected readonly error = signal('');
 	protected readonly saving = signal(false);
+	protected readonly bathroomOptions = BATHROOM_OPTIONS;
+	protected readonly balconyOptions = BALCONY_OPTIONS;
+	protected readonly viewOptions = VIEW_OPTIONS;
 	/** Defaults of the picked type prefill capacity, price and area of a new room. */
 	protected readonly defaults = computed(() => this.types.find((t) => t.name === this.typeName()) ?? null);
 
@@ -38,10 +42,19 @@ export class RoomFormComponent implements OnInit {
 		this.typeName.set(initial || (this.room?.type ?? this.types[0]?.name ?? ''));
 	}
 
-	protected async submit(number: string, floor: number, capacity: number, price: number, area: number, extraGuests: number, extraGuestPrice: number): Promise<void> {
+	protected async submit(
+		number: string,
+		floor: number,
+		capacity: number,
+		price: number,
+		area: number,
+		extraGuests: number,
+		extraGuestPrice: number,
+		features: Pick<RoomFormValue, 'building' | 'bathroom' | 'balcony' | 'view'>,
+	): Promise<void> {
 		this.saving.set(true);
 		this.error.set('');
-		const error = await this.save({ number, type: this.typeName(), floor, capacity, price, area, extraGuests, extraGuestPrice });
+		const error = await this.save({ number, type: this.typeName(), floor, capacity, price, area, extraGuests, extraGuestPrice, ...features });
 		this.saving.set(false);
 		if (error) this.error.set(error);
 		else this.close();

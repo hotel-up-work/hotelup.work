@@ -38,7 +38,7 @@ type DialogView =
 const TODAY = '2026-09-17';
 const MS = 86400000;
 const STAYS_BUCKETS = ['0', '1', '2-3', '4-5', '6+'];
-const TAGS = ['Постійний гість', 'VIP', 'Бізнес', 'Сім’я'];
+const TAGS = ['Постійний гість', 'VIP', 'Бізнес', 'Сім’я', 'Чорний список'];
 
 const money = (n: number) => new Intl.NumberFormat('uk-UA').format(n) + ' ₴';
 const dayDiff = (a: string, b: string) => Math.round((new Date(b).getTime() - new Date(a).getTime()) / MS);

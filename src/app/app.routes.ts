@@ -4,7 +4,7 @@ import { Router, Routes } from '@angular/router';
 import { buildAbsoluteUrl } from '@wawjs/ngx-default';
 import { companyProfile } from './feature/company/company.data';
 import { defaultPageFor, getSessionRole, isLiveSession, LIVE_PAGES } from './shared/role';
-import { liveSettingsGuard, roleGuard, roomsMovedGuard, sessionGuard } from './shared/role.guard';
+import { adminGuard, liveSettingsGuard, roleGuard, roomsMovedGuard } from './shared/role.guard';
 
 const SETTINGS_META = {
 	image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/settings.jpg'),
@@ -451,7 +451,7 @@ export const routes: Routes = [
 	},
 	{
 		path: 'publish-panorama',
-		canActivate: [sessionGuard],
+		canActivate: [adminGuard],
 		data: {
 			meta: {
 				title: 'Панорами Street View · Hotel Upwork',

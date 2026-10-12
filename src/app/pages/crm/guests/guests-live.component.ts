@@ -35,7 +35,7 @@ interface GuestView {
 	status: { key: StatusKey; label: string };
 }
 
-const TAGS = ['Постійний гість', 'VIP', 'Бізнес', 'Сім’я'];
+const TAGS = ['Постійний гість', 'VIP', 'Бізнес', 'Сім’я', 'Чорний список'];
 const AWAY_DAYS = 180;
 
 const money = (n: number) => new Intl.NumberFormat('uk-UA').format(n) + ' ₴';
@@ -247,7 +247,7 @@ export class GuestsLiveComponent {
 	protected readonly bookingsLabel = (n: number) => `${n} ${plural(n, 'бронювання', 'бронювання', 'бронювань')}`;
 
 	protected bookingStatusLabel(b: BookingRecord): string {
-		return { pending: 'Очікує', confirmed: 'Підтверджено', checkedin: 'Заїхав', checkedout: 'Виїхав', cancelled: 'Скасовано' }[b.status];
+		return { pending: 'Очікує', confirmed: 'Підтверджено', checkedin: 'Заїхав', checkedout: 'Виїхав', cancelled: 'Скасовано', waitlist: 'Лист очікування' }[b.status];
 	}
 
 	protected stay(b: BookingRecord): string {
