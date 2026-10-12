@@ -19,6 +19,12 @@ export const liveSettingsGuard: CanActivateFn = () => {
 	return inject(Router).createUrlTree(['/settings', 'general']);
 };
 
+/** Admin pages (CRM.md → Admin pages): any signed-in session opens them, whatever its role, plan or live status. */
+export const sessionGuard: CanActivateFn = () => {
+	if (!isPlatformBrowser(inject(PLATFORM_ID))) return true;
+	return getSessionRole() ? true : inject(Router).parseUrl('/login');
+};
+
 export const roleGuard: CanActivateFn = (route) => {
 	const platformId = inject(PLATFORM_ID);
 	if (!isPlatformBrowser(platformId)) return true;

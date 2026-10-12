@@ -1,5 +1,5 @@
 import { Component, signal } from '@angular/core';
-import type { GuestRecord } from '../../../feature/firebase/guests.service';
+import type { GuestRecord } from '../../../../feature/firebase/guests.service';
 import type { ModalSave } from '../../rooms/rooms.interface';
 
 export interface MergeCandidate {

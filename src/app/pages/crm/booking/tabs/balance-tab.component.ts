@@ -1,5 +1,5 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
-import type { BookingRecord } from '../../../feature/firebase/bookings.service';
+import type { BookingRecord } from '../../../../feature/firebase/bookings.service';
 import { BookingDemoStore, PAYMENT_METHODS } from '../booking-card.demo';
 import { dayLabel, money } from './format';
 

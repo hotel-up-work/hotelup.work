@@ -1,8 +1,8 @@
 import { Component, ElementRef, computed, effect, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AppShellComponent } from '../../layouts/app-shell/app-shell.component';
-import { IconComponent } from '../../shared/icon/icon.component';
-import { can, getDemoRole, isPageAllowed, ROLE_LABEL, type Role } from '../../shared/role';
+import { AppShellComponent } from '../../../layouts/app-shell/app-shell.component';
+import { IconComponent } from '../../../shared/icon/icon.component';
+import { can, getDemoRole, isPageAllowed, ROLE_LABEL, type Role } from '../../../shared/role';
 
 interface AiAnswer {
 	html: string;

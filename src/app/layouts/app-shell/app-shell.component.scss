@@ -479,6 +479,18 @@ main {
 	}
 }
 
+.admin-nav {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+
+.nav-divider {
+	border: 0;
+	border-top: 1px solid var(--line);
+	margin: 10px 0;
+}
+
 .nav-number {
 	font-size: 10px;
 	margin-left: auto;

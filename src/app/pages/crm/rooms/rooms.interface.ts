@@ -1,4 +1,4 @@
-import type { RoomBlock, RoomStatus, RoomTypeRecord } from '../../feature/firebase/rooms.service';
+import type { RoomBlock, RoomStatus, RoomTypeRecord } from '../../../feature/firebase/rooms.service';
 
 export interface MaintenanceNote {
 	date: string;

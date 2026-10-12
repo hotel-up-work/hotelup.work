@@ -1,0 +1,355 @@
+<app-shell activeNav="publish-panorama" greetingTitle="Панорами Street View" [greetingSubtitle]="hotelName()">
+	<div class="page-heading">
+		<div>
+			<h1>Панорами для Google Street View</h1>
+			<p>Завантажте 360° фото, з’єднайте їх у тур і опублікуйте на Google Картах.</p>
+		</div>
+		<div class="page-actions">
+			<button
+				class="button primary"
+				type="button"
+				[disabled]="!canPublish()"
+				[attr.title]="canPublish() ? null : 'Спершу виконайте всі кроки у вкладці «Публікація в Google»'"
+				(click)="tab.set('google')"
+			>
+				<app-icon name="panorama" />Опублікувати в Google Street View
+			</button>
+		</div>
+	</div>
+
+	<div class="tabs" role="tablist" aria-label="Розділи">
+		@for (t of TABS; track t.key) {
+			<button type="button" role="tab" [attr.aria-selected]="tab() === t.key" [class.active]="tab() === t.key" (click)="tab.set(t.key)">
+				{{ t.label }}
+				@if (t.key === 'panoramas') {
+					<span>{{ spots().length }}</span>
+				}
+			</button>
+		}
+	</div>
+
+	@let section = tab();
+	@switch (section) {
+		@case ('panoramas') {
+			<label class="dropzone" [class.over]="dragOver()" (dragover)="onDragOver($event)" (dragleave)="dragOver.set(false)" (drop)="onDrop($event)">
+				<input type="file" accept="image/jpeg" multiple (change)="onFilesPicked($any($event.target))" />
+				<app-icon name="plus" />
+				<b>Перетягніть 360° JPEG сюди або виберіть файли</b>
+				<small>Рівнопроміжна проєкція 2:1, від {{ MIN_MEGAPIXELS }} Мп, оригінал з камери. Файл не перестискаємо.</small>
+				@if (processing()) {
+					<span class="processing" role="status">Обробка файлів: {{ processing() }}…</span>
+				}
+			</label>
+
+			@if (spots().length) {
+				<div class="workbench">
+					<ul class="spot-list">
+						@for (spot of spots(); track spot.id) {
+							<li>
+								<button type="button" class="spot-card" [class.active]="spot.id === selectedId()" [attr.aria-pressed]="spot.id === selectedId()" (click)="select(spot.id)">
+									<span class="spot-thumb">
+										@if (spot.thumbnail) {
+											<img [src]="spot.thumbnail" alt="" />
+										}
+										<span class="spot-number">{{ spot.number }}</span>
+									</span>
+									<span class="spot-text">
+										<b>{{ spot.name }}</b>
+										<small>{{ floorLabel(spot.floor) }} · {{ spot.width }}×{{ spot.height }} · з’єднань: {{ connectionCount(spot.id) }}</small>
+										<span class="spot-flags">
+											@if (errorCount(spot.id)) {
+												<span class="flag error">Помилок: {{ errorCount(spot.id) }}</span>
+											}
+											@if (warningCount(spot.id)) {
+												<span class="flag warning">Попереджень: {{ warningCount(spot.id) }}</span>
+											}
+											@if (!errorCount(spot.id) && !warningCount(spot.id)) {
+												<span class="flag ok">Готово</span>
+											}
+										</span>
+									</span>
+								</button>
+							</li>
+						}
+					</ul>
+
+					@if (selected(); as spot) {
+						<section class="card spot-detail" aria-label="Панорама">
+							<app-panorama-viewer [src]="spot.url" />
+
+							@if (selectedNeighbours().length) {
+								<div class="neighbours">
+									<span>Перейти до сусідньої точки:</span>
+									@for (next of selectedNeighbours(); track next.id) {
+										<button type="button" class="chip" (click)="select(next.id)">{{ next.number }} · {{ next.name }}</button>
+									}
+								</div>
+							}
+
+							<div class="form-grid">
+								<label class="field wide">
+									<span>Назва точки</span>
+									<input type="text" [value]="spot.name" (change)="rename(spot.id, $any($event.target).value)" />
+								</label>
+								<label class="field">
+									<span>Поверх</span>
+									<select [value]="spot.floor" (change)="setFloor(spot.id, +$any($event.target).value)">
+										@for (floor of floors(); track floor.level) {
+											<option [value]="floor.level" [selected]="floor.level === spot.floor">{{ floor.label }}</option>
+										}
+									</select>
+								</label>
+								<label class="field">
+									<span>Координати (широта, довгота)</span>
+									<input type="text" inputmode="decimal" placeholder="48.6789, 26.5851" [value]="coordsText(spot)" (change)="setCoords(spot.id, $any($event.target).value)" />
+									@if (coordsError()[spot.id]; as error) {
+										<small class="field-error">{{ error }}</small>
+									}
+								</label>
+								<label class="field">
+									<span>Напрямок, °</span>
+									<input type="number" min="0" max="359.9" step="0.1" [value]="spot.pose.heading" (change)="setPose(spot.id, 'heading', $any($event.target).valueAsNumber)" />
+								</label>
+								<label class="field">
+									<span>Нахил, °</span>
+									<input type="number" min="-90" max="90" step="0.1" [value]="spot.pose.pitch" (change)="setPose(spot.id, 'pitch', $any($event.target).valueAsNumber)" />
+								</label>
+								<label class="field">
+									<span>Крен, °</span>
+									<input type="number" min="-90" max="90" step="0.1" [value]="spot.pose.roll" (change)="setPose(spot.id, 'roll', $any($event.target).valueAsNumber)" />
+								</label>
+							</div>
+							<p class="hint">
+								Напрямок — куди дивиться центр панорами (0° — північ).
+								@if (spot.xmp) {
+									Значення взято з метаданих Photo Sphere у файлі.
+								}
+								@if (spot.lat !== null && spot.lng !== null) {
+									<a [href]="streetViewLink(spot)" target="_blank" rel="noopener">Відкрити це місце в Google Картах ↗</a>
+								}
+							</p>
+
+							@if (issuesById().get(spot.id)?.length) {
+								<ul class="issues">
+									@for (issue of issuesById().get(spot.id); track issue.text) {
+										<li [class]="issue.level"><app-icon name="attention" />{{ issue.text }}</li>
+									}
+								</ul>
+							}
+
+							<div class="detail-actions">
+								<button type="button" class="button secondary" (click)="tab.set('tour')">Зв’язки та план</button>
+								<button type="button" class="button danger" (click)="confirmRemove(spot)">Видалити</button>
+							</div>
+						</section>
+					}
+				</div>
+			} @else {
+				<div class="empty">
+					<b>Ще немає панорам</b>
+					<p>Почніть із трьох точок, наприклад: вхід → рецепція → лобі.</p>
+				</div>
+			}
+		}
+
+		@case ('tour') {
+			<div class="floor-bar">
+				<div class="floor-tabs" role="tablist" aria-label="Поверхи">
+					@for (floor of floors(); track floor.level) {
+						<button type="button" role="tab" class="chip" [class.active]="floor.level === activeFloor()" [attr.aria-selected]="floor.level === activeFloor()" (click)="activeFloor.set(floor.level)">
+							{{ floor.label }}
+						</button>
+					}
+					<button type="button" class="chip add" (click)="addFloor()"><app-icon name="plus" />Поверх</button>
+				</div>
+				<label class="field inline">
+					<span>Назва поверху</span>
+					<input type="text" [value]="currentFloor().label" (change)="renameFloor(activeFloor(), $any($event.target).value)" />
+				</label>
+				<label class="button secondary file-button">
+					<input type="file" accept="image/*" (change)="onPlanPicked($any($event.target))" />
+					{{ currentFloor().planUrl ? 'Замінити план поверху' : 'Завантажити план поверху' }}
+				</label>
+			</div>
+
+			<div class="workbench">
+				<section class="card">
+					<div class="plan" #plan [class.blank]="!currentFloor().planUrl" (click)="placeSelected($event, plan)">
+						@if (currentFloor().planUrl) {
+							<img [src]="currentFloor().planUrl" alt="План поверху" />
+						}
+						<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+							@for (line of planLines(); track line.key) {
+								<line [attr.x1]="line.x1" [attr.y1]="line.y1" [attr.x2]="line.x2" [attr.y2]="line.y2" />
+							}
+						</svg>
+						@for (spot of floorSpots(); track spot.id) {
+							@if (spot.plan; as pos) {
+								<button
+									type="button"
+									class="node"
+									[class.active]="spot.id === selectedId()"
+									[style.left.%]="pos.x * 100"
+									[style.top.%]="pos.y * 100"
+									[attr.aria-label]="'Точка ' + spot.number + ': ' + spot.name"
+									(click)="$event.stopPropagation(); select(spot.id)"
+								>
+									{{ spot.number }}
+								</button>
+							}
+						}
+					</div>
+					<p class="hint">Виберіть точку праворуч і клацніть на плані, щоб поставити її. План потрібен лише нашому туру, Google його не отримує.</p>
+				</section>
+
+				<section class="card tour-side" aria-label="Зв’язки">
+					@if (!spots().length) {
+						<p class="hint">Спершу завантажте панорами.</p>
+					}
+					<ul class="tour-spots">
+						@for (spot of spots(); track spot.id) {
+							<li>
+								<button type="button" class="tour-spot" [class.active]="spot.id === selectedId()" (click)="select(spot.id)">
+									<span class="node static">{{ spot.number }}</span>
+									<span>
+										<b>{{ spot.name }}</b>
+										<small>{{ floorLabel(spot.floor) }}{{ spot.plan ? '' : ' · не на плані' }} · з’єднань: {{ connectionCount(spot.id) }}</small>
+									</span>
+								</button>
+							</li>
+						}
+					</ul>
+
+					@if (selected(); as spot) {
+						<fieldset class="links">
+							<legend>Сусіди точки {{ spot.number }} · «{{ spot.name }}»</legend>
+							@for (other of spots(); track other.id) {
+								@if (other.id !== spot.id) {
+									<label class="check">
+										<input type="checkbox" [checked]="isConnected(spot.id, other.id)" (change)="toggleConnection(spot.id, other.id)" />
+										{{ other.number }} · {{ other.name }}
+										@if (other.floor !== spot.floor) {
+											<small>({{ floorLabel(other.floor) }})</small>
+										}
+									</label>
+								}
+							} @empty {
+								<p class="hint">Додайте ще хоча б одну панораму.</p>
+							}
+							<p class="hint">Зв’язок працює в обидва боки. Перехід можна перевірити у вкладці «Панорами».</p>
+						</fieldset>
+					}
+
+					@if (tourProblems().length) {
+						<ul class="issues">
+							@for (issue of tourProblems(); track issue.text) {
+								<li [class]="issue.level"><app-icon name="attention" />{{ issue.text }}</li>
+							}
+						</ul>
+					}
+				</section>
+			</div>
+		}
+
+		@case ('google') {
+			<div class="google-grid">
+				<section class="card">
+					<h2>Google-акаунт</h2>
+					<p class="status-line"><span class="dot" [class.on]="!!config().account"></span>{{ config().account ? config().account!.email : 'Не підключено' }}</p>
+					<p class="hint">
+						Фото публікуються від імені Google-акаунта готелю з доступом <code>{{ SCOPE }}</code>. Ключі доступу зберігає сервер Hotel Upwork, у браузер вони не потрапляють.
+					</p>
+					<button type="button" class="button primary" disabled title="Серверна частина публікації ще в розробці">Підключити Google</button>
+					<p class="notice">Публікацію через Street View Publish API ще не підключено: потрібна серверна частина. Поки що тут можна підготувати й перевірити панорами та тур.</p>
+				</section>
+
+				<section class="card">
+					<h2>Готель на Google Картах</h2>
+					<p class="status-line"><b>{{ hotelName() }}</b></p>
+					<label class="field">
+						<span>Google Maps Place ID</span>
+						<input type="text" placeholder="ChIJ…" spellcheck="false" [value]="config().placeId" (change)="setPlaceId($any($event.target).value)" />
+						@if (config().placeId && !placeIdValid()) {
+							<small class="field-error">Це не схоже на Place ID. Знайдіть його у Place ID Finder від Google.</small>
+						}
+					</label>
+					<p class="hint">
+						@if (placeIdValid()) {
+							<a [href]="placeLink()" target="_blank" rel="noopener">Перевірити місце на Google Картах ↗</a> ·
+						}
+						<a href="https://developers.google.com/maps/documentation/places/web-service/place-id" target="_blank" rel="noopener">Як знайти Place ID ↗</a>
+					</p>
+				</section>
+
+				<section class="card">
+					<h2>Готовність до публікації</h2>
+					<ul class="checklist">
+						@for (item of checklist(); track item.text) {
+							<li [class.done]="item.done"><app-icon [name]="item.done ? 'check' : 'close'" />{{ item.text }}</li>
+						}
+					</ul>
+					<p class="hint">Google перевіряє кожне фото окремо й може відхилити його або показати із затримкою. Зв’язки між фото з’являються після того, як Google їх обробить.</p>
+				</section>
+			</div>
+
+			@if (spots().length) {
+				<div class="card table-card">
+					<table>
+						<thead>
+							<tr>
+								<th scope="col">Панорама</th>
+								<th scope="col">Поверх</th>
+								<th scope="col">Місце</th>
+								<th scope="col">Зв’язки</th>
+								<th scope="col">Перевірка</th>
+								<th scope="col">Google</th>
+								<th scope="col">Синхронізація</th>
+							</tr>
+						</thead>
+						<tbody>
+							@for (spot of spots(); track spot.id) {
+								<tr>
+									<td>
+										<button type="button" class="row-spot" (click)="select(spot.id); tab.set('panoramas')">
+											@if (spot.thumbnail) {
+												<img [src]="spot.thumbnail" alt="" />
+											}
+											<span>{{ spot.number }} · {{ spot.name }}</span>
+										</button>
+									</td>
+									<td>{{ floorLabel(spot.floor) }}</td>
+									<td>
+										@if (spot.lat !== null && spot.lng !== null) {
+											<a [href]="streetViewLink(spot)" target="_blank" rel="noopener">{{ spot.lat }}, {{ spot.lng }}</a>
+										} @else {
+											<span class="muted">—</span>
+										}
+									</td>
+									<td>{{ connectionCount(spot.id) }}</td>
+									<td>
+										@if (errorCount(spot.id)) {
+											<span class="flag error">Помилок: {{ errorCount(spot.id) }}</span>
+										} @else if (warningCount(spot.id)) {
+											<span class="flag warning">Попереджень: {{ warningCount(spot.id) }}</span>
+										} @else {
+											<span class="flag ok">Готово</span>
+										}
+									</td>
+									<td>
+										@if (spot.google.shareLink) {
+											<a [href]="spot.google.shareLink" target="_blank" rel="noopener">{{ GOOGLE_STATUS_LABEL[spot.google.status] }} ↗</a>
+										} @else {
+											{{ GOOGLE_STATUS_LABEL[spot.google.status] }}
+										}
+									</td>
+									<td class="muted">{{ spot.google.syncedAt ?? '—' }}</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			}
+		}
+		@default never;
+	}
+</app-shell>

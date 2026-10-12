@@ -48,6 +48,7 @@ export const PAGE_LABEL: Record<string, string> = {
 	ai: 'AI-помічник',
 	team: 'Команда',
 	settings: 'Налаштування',
+	'publish-panorama': 'Панорами Street View',
 };
 
 /**
@@ -55,6 +56,12 @@ export const PAGE_LABEL: Record<string, string> = {
  * every other page stays demo-only until it is wired to Firestore. Add a path here when it goes live.
  */
 export const LIVE_PAGES: string[] = ['dashboard', 'submissions', 'calendar', 'new-booking', 'booking', 'guests', 'payments', 'settings'];
+
+/**
+ * Admin tools (`src/app/pages/admin`, CRM.md → Admin pages). For now every signed-in session opens them,
+ * whatever its role or plan, demo or real account; they are not gated by ROLE_PAGES, PLAN_PAGES or LIVE_PAGES.
+ */
+export const ADMIN_PAGES: string[] = ['publish-panorama'];
 
 /** True for a real, Firebase-authenticated session; false in the demo. */
 export function isLiveSession(): boolean {

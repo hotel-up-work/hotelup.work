@@ -1,7 +1,7 @@
 import { Component, ElementRef, computed, effect, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AppShellComponent } from '../../layouts/app-shell/app-shell.component';
-import { IconComponent } from '../../shared/icon/icon.component';
+import { AppShellComponent } from '../../../layouts/app-shell/app-shell.component';
+import { IconComponent } from '../../../shared/icon/icon.component';
 
 interface Stay {
 	dates: string;

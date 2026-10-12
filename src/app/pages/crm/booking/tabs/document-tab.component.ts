@@ -1,6 +1,6 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
-import type { BookingRecord } from '../../../feature/firebase/bookings.service';
-import { nightsBetween } from '../../../shared/booking-rules';
+import type { BookingRecord } from '../../../../feature/firebase/bookings.service';
+import { nightsBetween } from '../../../../shared/booking-rules';
 import { BookingDemoStore } from '../booking-card.demo';
 import { money } from './format';
 

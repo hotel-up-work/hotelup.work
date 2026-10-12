@@ -1,5 +1,5 @@
 import { Component, OnInit, signal } from '@angular/core';
-import type { GuestInput, GuestRecord } from '../../../feature/firebase/guests.service';
+import type { GuestInput, GuestRecord } from '../../../../feature/firebase/guests.service';
 import type { ModalSave } from '../../rooms/rooms.interface';
 
 /** Add or edit a guest (ngx-ui modal). Props are set by `ModalService.show()`. */

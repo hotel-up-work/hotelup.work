@@ -1,14 +1,14 @@
 import { Component, computed, ElementRef, inject, signal, viewChild, effect } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { AppShellComponent } from '../../layouts/app-shell/app-shell.component';
-import { BookingRecord, BookingsService, checkOutPatch } from '../../feature/firebase/bookings.service';
-import { HotelService } from '../../feature/firebase/hotel.service';
-import { PaymentRecord, PaymentsService } from '../../feature/firebase/payments.service';
-import { RoomRecord, RoomsService, RoomStatus } from '../../feature/firebase/rooms.service';
-import { SubmissionsService } from '../../feature/firebase/submissions.service';
-import { IconComponent } from '../../shared/icon/icon.component';
-import { canCurrent, isLiveSession } from '../../shared/role';
+import { AppShellComponent } from '../../../layouts/app-shell/app-shell.component';
+import { BookingRecord, BookingsService, checkOutPatch } from '../../../feature/firebase/bookings.service';
+import { HotelService } from '../../../feature/firebase/hotel.service';
+import { PaymentRecord, PaymentsService } from '../../../feature/firebase/payments.service';
+import { RoomRecord, RoomsService, RoomStatus } from '../../../feature/firebase/rooms.service';
+import { SubmissionsService } from '../../../feature/firebase/submissions.service';
+import { IconComponent } from '../../../shared/icon/icon.component';
+import { canCurrent, isLiveSession } from '../../../shared/role';
 import { arrivalsOn, balanceOf, departuresOn, lateArrivals, occupancyOn, occupiedRoomIds, overstays, sourceShares, weekFrom } from './dashboard-live';
 
 interface Booking {

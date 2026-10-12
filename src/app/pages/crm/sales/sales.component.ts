@@ -1,8 +1,8 @@
 import { Component, computed, ElementRef, effect, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AppShellComponent } from '../../layouts/app-shell/app-shell.component';
-import { IconComponent } from '../../shared/icon/icon.component';
-import { canCurrent } from '../../shared/role';
+import { AppShellComponent } from '../../../layouts/app-shell/app-shell.component';
+import { IconComponent } from '../../../shared/icon/icon.component';
+import { canCurrent } from '../../../shared/role';
 
 type Category = 'Direct' | 'OTA' | 'Social' | 'Offline' | 'Other';
 

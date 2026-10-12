@@ -1,7 +1,7 @@
 import { PrerenderFallback, RenderMode, ServerRoute } from '@angular/ssr';
-import { PROPOSAL_HOTELS } from './pages/proposal/proposal-hotels';
+import { PROPOSAL_HOTELS } from './pages/public/proposal/proposal-hotels';
 
-/** The signed-in app. The demo version of each page is prerendered (the server has no session, so it renders the demo). */
+/** The signed-in app, admin pages included. The demo version of each page is prerendered (the server has no session, so it renders the demo). */
 const PROTECTED_PATHS = [
 	'dashboard',
 	'calendar',
@@ -23,6 +23,7 @@ const PROTECTED_PATHS = [
 	'new-booking',
 	'booking',
 	'book',
+	'publish-panorama',
 ];
 
 export const serverRoutes: ServerRoute[] = [

@@ -1,0 +1,21 @@
+@use '@photo-sphere-viewer/core/index.scss';
+
+.panorama-viewer {
+	display: block;
+	position: relative;
+}
+
+.panorama-viewer__stage {
+	width: 100%;
+	aspect-ratio: 16 / 9;
+	min-height: 240px;
+	border-radius: 10px;
+	overflow: hidden;
+	background: #111214;
+}
+
+.panorama-viewer__error {
+	margin: 8px 0 0;
+	font-size: 12px;
+	color: #a24b3f;
+}

@@ -7,6 +7,7 @@ import { SyncStatusService } from '../../feature/firebase/sync-status.service';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { getStoredPlan, planForPage, planIncludes, PLANS } from '../../shared/plan';
 import {
+	ADMIN_PAGES,
 	clearDemoRole,
 	clearRealRole,
 	defaultPageFor,
@@ -43,6 +44,9 @@ const NAV_ITEMS: NavItem[] = [
 	{ key: 'sales', href: '/sales', icon: 'chart', label: 'Продажі' },
 	{ key: 'ai', href: '/ai', icon: 'spark', label: 'AI-помічник' },
 ];
+
+/** Admin tools: every signed-in session sees them (CRM.md → Admin pages). */
+const ADMIN_NAV_ITEMS: NavItem[] = [{ key: 'publish-panorama', href: '/publish-panorama', icon: 'panorama', label: 'Панорами Street View' }];
 
 const THEME_KEY = 'hotelup_theme';
 const SIDEBAR_KEY = 'hotelup_sidebar';
@@ -118,6 +122,8 @@ export class AppShellComponent {
 			return { ...item, lockedPlan: needed ? PLANS[needed].name : '' };
 		});
 	});
+
+	protected readonly adminNavItems = computed(() => (this.role() ? ADMIN_NAV_ITEMS.filter((item) => ADMIN_PAGES.includes(item.key)) : []));
 
 	protected readonly deniedNotice = signal(this._readDeniedNotice());
 

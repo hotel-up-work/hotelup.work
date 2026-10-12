@@ -1,9 +1,9 @@
 import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { AppShellComponent } from '../../layouts/app-shell/app-shell.component';
-import { IconComponent } from '../../shared/icon/icon.component';
-import { limitRoomsToPlan } from '../../shared/plan';
+import { AppShellComponent } from '../../../layouts/app-shell/app-shell.component';
+import { IconComponent } from '../../../shared/icon/icon.component';
+import { limitRoomsToPlan } from '../../../shared/plan';
 
 interface Room {
 	number: string;

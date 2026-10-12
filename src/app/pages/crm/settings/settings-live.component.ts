@@ -1,9 +1,9 @@
 import { Component, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { SettingsFormService } from '../../feature/settings/settings-form.service';
-import { type PaymentMethod } from '../../feature/firebase/payments.service';
-import { BookingType, HotelSettings } from '../../feature/firebase/hotel-settings.service';
+import { SettingsFormService } from '../../../feature/settings/settings-form.service';
+import { type PaymentMethod } from '../../../feature/firebase/payments.service';
+import { BookingType, HotelSettings } from '../../../feature/firebase/hotel-settings.service';
 import { RoomsComponent } from '../rooms/rooms.component';
 
 /** One section of the real-hotel Settings (`/settings/:section`, shown inside `app-settings`); the form state lives in `SettingsFormService`. */

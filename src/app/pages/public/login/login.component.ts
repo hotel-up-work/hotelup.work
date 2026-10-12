@@ -2,9 +2,9 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { FirebaseError } from 'firebase/app';
-import { AuthService } from '../../feature/firebase/auth.service';
-import { HotelService } from '../../feature/firebase/hotel.service';
-import { LIVE_PAGES, setRealRole } from '../../shared/role';
+import { AuthService } from '../../../feature/firebase/auth.service';
+import { HotelService } from '../../../feature/firebase/hotel.service';
+import { LIVE_PAGES, setRealRole } from '../../../shared/role';
 
 type Screen = 'login' | 'forgot' | 'checkEmail';
 

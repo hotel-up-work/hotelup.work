@@ -1,8 +1,8 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, OnDestroy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AppShellComponent } from '../../layouts/app-shell/app-shell.component';
-import { IconComponent } from '../../shared/icon/icon.component';
+import { AppShellComponent } from '../../../layouts/app-shell/app-shell.component';
+import { IconComponent } from '../../../shared/icon/icon.component';
 
 interface RoomType {
 	id: string;

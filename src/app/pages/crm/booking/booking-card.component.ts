@@ -1,7 +1,7 @@
 import { Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { AppShellComponent } from '../../layouts/app-shell/app-shell.component';
+import { AppShellComponent } from '../../../layouts/app-shell/app-shell.component';
 import {
 	BOOKING_MONEY_KEYS,
 	BOOKING_TEXT_KEYS,
@@ -10,11 +10,11 @@ import {
 	BookingStatus,
 	BookingsService,
 	isoAddDays,
-} from '../../feature/firebase/bookings.service';
-import { HotelService } from '../../feature/firebase/hotel.service';
-import { RoomRecord, RoomsService } from '../../feature/firebase/rooms.service';
-import { nightsBetween, roomIsFree } from '../../shared/booking-rules';
-import { canCurrent, isLiveSession } from '../../shared/role';
+} from '../../../feature/firebase/bookings.service';
+import { HotelService } from '../../../feature/firebase/hotel.service';
+import { RoomRecord, RoomsService } from '../../../feature/firebase/rooms.service';
+import { nightsBetween, roomIsFree } from '../../../shared/booking-rules';
+import { canCurrent, isLiveSession } from '../../../shared/role';
 import { BookingDemoStore, DEMO_BOOKING_ID } from './booking-card.demo';
 import { COLUMNS, FieldDef, NOT_SET, TabId, columnsFor, tabsFor } from './booking-card.fields';
 import { BalanceTabComponent } from './tabs/balance-tab.component';

@@ -1,12 +1,12 @@
 import { Component, DestroyRef, computed, effect, inject, signal, type Type } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ModalService, type Modal } from '@wawjs/ngx-ui';
-import { AppShellComponent } from '../../layouts/app-shell/app-shell.component';
-import { BookingRecord, BookingsService } from '../../feature/firebase/bookings.service';
-import { HotelService } from '../../feature/firebase/hotel.service';
-import { localDay, methodLabel, PAYMENT_METHODS, PaymentRecord, PaymentsService, type PaymentMethod } from '../../feature/firebase/payments.service';
-import { IconComponent } from '../../shared/icon/icon.component';
-import { canCurrent } from '../../shared/role';
+import { AppShellComponent } from '../../../layouts/app-shell/app-shell.component';
+import { BookingRecord, BookingsService } from '../../../feature/firebase/bookings.service';
+import { HotelService } from '../../../feature/firebase/hotel.service';
+import { localDay, methodLabel, PAYMENT_METHODS, PaymentRecord, PaymentsService, type PaymentMethod } from '../../../feature/firebase/payments.service';
+import { IconComponent } from '../../../shared/icon/icon.component';
+import { canCurrent } from '../../../shared/role';
 import { PaymentFormComponent, type PayableBooking, type PaymentFormValue } from './dialogs/payment-form.component';
 
 type Period = 'today' | 'week' | 'month' | 'all';

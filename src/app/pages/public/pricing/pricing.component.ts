@@ -2,11 +2,11 @@ import { Component, inject, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { companyEmailHref } from '../../feature/company/company.data';
-import { sendSalesRequest } from '../../shared/sales-contact';
-import { CONTACTS } from '../../shared/contacts';
-import { SITE_TIERS } from '../../shared/site-tiers';
-import { PLAN_ORDER, planIncludes, PLANS, setStoredPlan, type Plan } from '../../shared/plan';
+import { companyEmailHref } from '../../../feature/company/company.data';
+import { sendSalesRequest } from '../../../shared/sales-contact';
+import { CONTACTS } from '../../../shared/contacts';
+import { SITE_TIERS } from '../../../shared/site-tiers';
+import { PLAN_ORDER, planIncludes, PLANS, setStoredPlan, type Plan } from '../../../shared/plan';
 
 interface CompareRow {
 	label: string;

@@ -1,9 +1,9 @@
 import { Component, computed, ElementRef, effect, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { AppShellComponent } from '../../layouts/app-shell/app-shell.component';
-import { IconComponent } from '../../shared/icon/icon.component';
-import { getDemoRole, type Role } from '../../shared/role';
+import { AppShellComponent } from '../../../layouts/app-shell/app-shell.component';
+import { IconComponent } from '../../../shared/icon/icon.component';
+import { getDemoRole, type Role } from '../../../shared/role';
 
 type SectionId =
 	| 'general'

@@ -2,17 +2,17 @@ import { Component, computed, ElementRef, effect, inject, signal, untracked, vie
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { AppShellComponent } from '../../layouts/app-shell/app-shell.component';
-import { BookingInput, BookingPatch, BookingRecord, BookingsService, BookingStatus, checkOutPatch } from '../../feature/firebase/bookings.service';
-import { GuestsService } from '../../feature/firebase/guests.service';
-import { HotelService } from '../../feature/firebase/hotel.service';
-import { HotelSettingsService } from '../../feature/firebase/hotel-settings.service';
-import { localDay, PaymentMethod, PaymentsService } from '../../feature/firebase/payments.service';
-import { RoomRecord, RoomsService, RoomStatus } from '../../feature/firebase/rooms.service';
-import { SubmissionRecord, SubmissionsService } from '../../feature/firebase/submissions.service';
-import { IconComponent } from '../../shared/icon/icon.component';
-import { limitRoomsToPlan } from '../../shared/plan';
-import { canCurrent, isLiveSession } from '../../shared/role';
+import { AppShellComponent } from '../../../layouts/app-shell/app-shell.component';
+import { BookingInput, BookingPatch, BookingRecord, BookingsService, BookingStatus, checkOutPatch } from '../../../feature/firebase/bookings.service';
+import { GuestsService } from '../../../feature/firebase/guests.service';
+import { HotelService } from '../../../feature/firebase/hotel.service';
+import { HotelSettingsService } from '../../../feature/firebase/hotel-settings.service';
+import { localDay, PaymentMethod, PaymentsService } from '../../../feature/firebase/payments.service';
+import { RoomRecord, RoomsService, RoomStatus } from '../../../feature/firebase/rooms.service';
+import { SubmissionRecord, SubmissionsService } from '../../../feature/firebase/submissions.service';
+import { IconComponent } from '../../../shared/icon/icon.component';
+import { limitRoomsToPlan } from '../../../shared/plan';
+import { canCurrent, isLiveSession } from '../../../shared/role';
 
 interface Room {
 	/** Firestore document id (the room number in the demo). */

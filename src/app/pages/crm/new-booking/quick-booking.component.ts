@@ -2,16 +2,16 @@ import { afterNextRender, Component, computed, ElementRef, effect, inject, signa
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { AppShellComponent } from '../../layouts/app-shell/app-shell.component';
-import { BookingInput, BookingRecord, BookingsService, isoAddDays } from '../../feature/firebase/bookings.service';
-import { GuestRecord, GuestsService, phoneKey } from '../../feature/firebase/guests.service';
-import { HotelService } from '../../feature/firebase/hotel.service';
-import { HotelSettingsService } from '../../feature/firebase/hotel-settings.service';
-import { PaymentMethod, PaymentsService } from '../../feature/firebase/payments.service';
-import { RoomRecord, RoomsService } from '../../feature/firebase/rooms.service';
-import { IconComponent } from '../../shared/icon/icon.component';
-import { nightsBetween, roomIsFree } from '../../shared/booking-rules';
-import { canCurrent } from '../../shared/role';
+import { AppShellComponent } from '../../../layouts/app-shell/app-shell.component';
+import { BookingInput, BookingRecord, BookingsService, isoAddDays } from '../../../feature/firebase/bookings.service';
+import { GuestRecord, GuestsService, phoneKey } from '../../../feature/firebase/guests.service';
+import { HotelService } from '../../../feature/firebase/hotel.service';
+import { HotelSettingsService } from '../../../feature/firebase/hotel-settings.service';
+import { PaymentMethod, PaymentsService } from '../../../feature/firebase/payments.service';
+import { RoomRecord, RoomsService } from '../../../feature/firebase/rooms.service';
+import { IconComponent } from '../../../shared/icon/icon.component';
+import { nightsBetween, roomIsFree } from '../../../shared/booking-rules';
+import { canCurrent } from '../../../shared/role';
 
 type Payment = 'none' | 'half' | 'full';
 

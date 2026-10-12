@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { HotelSettingsService } from '../../../feature/firebase/hotel-settings.service';
-import type { PaymentMethod } from '../../../feature/firebase/payments.service';
+import { HotelSettingsService } from '../../../../feature/firebase/hotel-settings.service';
+import type { PaymentMethod } from '../../../../feature/firebase/payments.service';
 import type { ModalSave } from '../../rooms/rooms.interface';
 
 export interface PayableBooking {

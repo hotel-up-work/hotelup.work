@@ -144,6 +144,37 @@ hotels), plan per hotel (plan is still one local demo setting), and whether seve
 require Enterprise (pricing says so, not enforced). Only Dashboard, Submissions, Calendar, New booking, Guests, Payments and Settings (with the Rooms tab) read real hotel
 data today.
 
+## Admin pages — tools outside the role model
+
+Admin tools live in `src/app/pages/admin/` and are listed in `ADMIN_PAGES` (`src/app/shared/role.ts`).
+**For now every signed-in session opens them**: any role, any plan, demo or real account
+(`sessionGuard` in `role.guard.ts`; no session → `/login`). They are not part of `ROLE_PAGES`,
+`PLAN_PAGES` or `LIVE_PAGES`. The sidebar lists them at the top, above Календар, separated by a line.
+Narrow access (e.g. owner/manager only) here first when it is decided.
+
+### Publish panorama (`/publish-panorama`)
+
+Prepares a hotel's 360° panoramas for Google Street View. Three tabs:
+
+- **Панорами:** drag-and-drop upload of several 360° JPEGs. Each file is checked without being
+  re-encoded: JPEG, 2:1 ratio, at least 7.5 MP, Photo Sphere XMP present (warning if missing),
+  equirectangular projection, full sphere (not cropped). Heading/pitch/roll are prefilled from XMP.
+  Per spot: name, floor, coordinates (pasted as "lat, lng" from Google Maps), heading, pitch, roll,
+  a 360° preview (Photo Sphere Viewer, loaded only in the browser) and jumps to neighbouring spots
+  to preview transitions. Delete asks for confirmation.
+- **Редактор туру:** floors (add, rename, upload a floor plan), numbered spots placed by clicking
+  the plan, two-way connections between spots (also across floors). Tour checks: every spot
+  reachable from spot 1, connected spots no more than 100 m apart. The tour (spots, floors,
+  connections) is ours and independent of Google, so the hotel's own virtual tour can reuse it.
+- **Публікація в Google:** Google account status, hotel Place ID with a Maps link, a readiness
+  checklist, and a per-panorama table (floor, place, connections, checks, Google status, last sync).
+
+Not built yet (needs a Hotel Upwork server; Google OAuth tokens must never reach the browser):
+connecting the Google account (scope `streetviewpublish`), upload/create/update/connections through
+the Street View Publish API, status sync, retries, deleting published photos, batch publishing.
+"Опублікувати в Google Street View" and "Підключити Google" stay disabled until then. Work on the
+page is kept in memory only and is lost on reload; storage (files + tour) comes with the server part.
+
 ## Intended rules — take precedence over the page inventory
 
 ### People, roles and home screens
@@ -370,7 +401,7 @@ write; roles per hotel are not built yet.
 
 #### Booking card: live and demo
 
-The card is one component (`src/app/pages/booking/`) with two data modes. `/booking`, `/new-booking` and `/book` are detail views of the Calendar and `/guest` of Guests: they open for any role and plan that can open that page. `/search`, `/notifications` and `/profile` are shell features open to every role and plan (`DETAIL_OF` and `SHELL_PAGES` in `role.ts`). Every field and tab is declared once in `booking-card.fields.ts` with a `live` flag.
+The card is one component (`src/app/pages/crm/booking/`) with two data modes. `/booking`, `/new-booking` and `/book` are detail views of the Calendar and `/guest` of Guests: they open for any role and plan that can open that page. `/search`, `/notifications` and `/profile` are shell features open to every role and plan (`DETAIL_OF` and `SHELL_PAGES` in `role.ts`). Every field and tab is declared once in `booking-card.fields.ts` with a `live` flag.
 
 - **Live (real account):** shows only fields and tabs that are saved to the booking (`live: true`): the **Картка** tab with stay, notes, guest, terms and the money block. Unbuilt fields and tabs are **hidden**, not shown as disabled placeholders.
 - **Demo:** shows every field and tab, backed by one seeded booking kept in memory (reset on reload; the same demo hotel and guest as the other demos). Demo-only parts: the extra Картка fields (room properties, guarantee, transfer and decision date, documents, hotel inventory, extra characteristics, loyalty card, auto-charging, company segment, price fixation, services total), the notes log with author and time, the audit footer (booked / checked in / last changed), and the tabs below. Seed people, numbers and amounts are invented.
@@ -834,16 +865,17 @@ Added with live Calendar bookings on 2 October 2026 (not yet verified in the run
 - Plans, prices, plan page allowlist: `src/app/shared/plan.ts`
 - Roles, labels, page allowlist: `src/app/shared/role.ts`
 - Modals: `ModalService` from `@wawjs/ngx-ui` with `panelClass: 'crm-modal'` (CRM palette and
-  form/button styles in `src/styles/_crm-modal.scss`). Rooms uses it (`src/app/pages/rooms/dialogs/`);
+  form/button styles in `src/styles/_crm-modal.scss`). Rooms uses it (`src/app/pages/crm/rooms/dialogs/`);
   other pages still have their own `<dialog>` and move over when they go live.
 - Live data services: `src/app/feature/firebase/` (`submissions.service.ts`, `rooms.service.ts`, `bookings.service.ts`);
   access and field validation in `firestore.rules`
 - Account hotels and active hotel: `src/app/feature/firebase/hotel.service.ts`,
   switcher in `src/app/layouts/app-shell/`
 - Route guard: `src/app/shared/role.guard.ts`
+- Admin pages: `src/app/pages/admin/` (`ADMIN_PAGES` in `role.ts`, `sessionGuard`); CRM pages: `src/app/pages/crm/`; public pages: `src/app/pages/public/`
 - Route declarations: `src/app/app.routes.ts`
 - Server-rendering mode per route (protected pages are client-only, not prerendered):
   `src/app/app.routes.server.ts`
 - Each page's own gating flags/checks live inside that page's component
-  (`src/app/pages/<name>/<name>.component.ts`), typically as a boolean computed once from
+  (`src/app/pages/crm/<name>/<name>.component.ts`), typically as a boolean computed once from
   `getStoredRole()`.

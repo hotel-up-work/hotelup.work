@@ -1,6 +1,6 @@
-import type { BookingRecord } from '../../feature/firebase/bookings.service';
-import { isoAddDays } from '../../feature/firebase/bookings.service';
-import type { RoomRecord } from '../../feature/firebase/rooms.service';
+import type { BookingRecord } from '../../../feature/firebase/bookings.service';
+import { isoAddDays } from '../../../feature/firebase/bookings.service';
+import type { RoomRecord } from '../../../feature/firebase/rooms.service';
 
 /** Pure helpers behind the real-hotel Dashboard: what today's bookings and rooms say (CRM.md → `dashboard`). */
 

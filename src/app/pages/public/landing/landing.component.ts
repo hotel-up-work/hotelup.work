@@ -13,9 +13,9 @@ import {
 	viewChild,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { CONTACTS } from '../../shared/contacts';
-import { SITE_TIERS } from '../../shared/site-tiers';
-import { PLAN_ORDER, PLANS, setStoredPlan, type Plan } from '../../shared/plan';
+import { CONTACTS } from '../../../shared/contacts';
+import { SITE_TIERS } from '../../../shared/site-tiers';
+import { PLAN_ORDER, PLANS, setStoredPlan, type Plan } from '../../../shared/plan';
 
 interface ParallaxTarget {
 	el: HTMLElement;

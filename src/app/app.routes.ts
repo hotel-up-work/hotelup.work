@@ -4,7 +4,7 @@ import { Router, Routes } from '@angular/router';
 import { buildAbsoluteUrl } from '@wawjs/ngx-default';
 import { companyProfile } from './feature/company/company.data';
 import { defaultPageFor, getSessionRole, isLiveSession, LIVE_PAGES } from './shared/role';
-import { liveSettingsGuard, roleGuard, roomsMovedGuard } from './shared/role.guard';
+import { liveSettingsGuard, roleGuard, roomsMovedGuard, sessionGuard } from './shared/role.guard';
 
 const SETTINGS_META = {
 	image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/settings.jpg'),
@@ -27,7 +27,7 @@ export const routes: Routes = [
 			},
 		},
 		loadComponent: () =>
-			import('./pages/landing/landing.component').then((m) => m.LandingComponent),
+			import('./pages/public/landing/landing.component').then((m) => m.LandingComponent),
 	},
 	{
 		path: 'pricing',
@@ -40,7 +40,7 @@ export const routes: Routes = [
 				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/pricing.jpg'),
 			},
 		},
-		loadComponent: () => import('./pages/pricing/pricing.component').then((m) => m.PricingComponent),
+		loadComponent: () => import('./pages/public/pricing/pricing.component').then((m) => m.PricingComponent),
 	},
 	{
 		path: 'pitch',
@@ -53,7 +53,7 @@ export const routes: Routes = [
 				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/pitch.jpg'),
 			},
 		},
-		loadComponent: () => import('./pages/pitch/pitch.component').then((m) => m.PitchComponent),
+		loadComponent: () => import('./pages/public/pitch/pitch.component').then((m) => m.PitchComponent),
 	},
 	{
 		path: 'proposal',
@@ -66,7 +66,7 @@ export const routes: Routes = [
 				robots: 'noindex, nofollow',
 			},
 		},
-		loadComponent: () => import('./pages/proposal/proposal.component').then((m) => m.ProposalComponent),
+		loadComponent: () => import('./pages/public/proposal/proposal.component').then((m) => m.ProposalComponent),
 	},
 	{
 		path: 'proposal/:slug',
@@ -79,7 +79,7 @@ export const routes: Routes = [
 				robots: 'noindex, nofollow',
 			},
 		},
-		loadComponent: () => import('./pages/proposal/proposal.component').then((m) => m.ProposalComponent),
+		loadComponent: () => import('./pages/public/proposal/proposal.component').then((m) => m.ProposalComponent),
 	},
 	{
 		path: 'roadmap',
@@ -92,7 +92,7 @@ export const routes: Routes = [
 				robots: 'noindex, nofollow',
 			},
 		},
-		loadComponent: () => import('./pages/roadmap/roadmap.component').then((m) => m.RoadmapComponent),
+		loadComponent: () => import('./pages/public/roadmap/roadmap.component').then((m) => m.RoadmapComponent),
 	},
 	{
 		path: 'login',
@@ -105,7 +105,7 @@ export const routes: Routes = [
 				robots: 'noindex, nofollow',
 			},
 		},
-		loadComponent: () => import('./pages/login/login.component').then((m) => m.LoginComponent),
+		loadComponent: () => import('./pages/public/login/login.component').then((m) => m.LoginComponent),
 	},
 	{
 		path: 'demo',
@@ -118,7 +118,7 @@ export const routes: Routes = [
 				robots: 'noindex, nofollow',
 			},
 		},
-		loadComponent: () => import('./pages/demo/demo.component').then((m) => m.DemoComponent),
+		loadComponent: () => import('./pages/public/demo/demo.component').then((m) => m.DemoComponent),
 	},
 	{
 		path: 'dashboard',
@@ -134,7 +134,7 @@ export const routes: Routes = [
 			},
 		},
 		loadComponent: () =>
-			import('./pages/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+			import('./pages/crm/dashboard/dashboard.component').then((m) => m.DashboardComponent),
 	},
 	{
 		path: 'calendar',
@@ -149,7 +149,7 @@ export const routes: Routes = [
 			},
 		},
 		loadComponent: () =>
-			import('./pages/calendar/calendar.component').then((m) => m.CalendarComponent),
+			import('./pages/crm/calendar/calendar.component').then((m) => m.CalendarComponent),
 	},
 	{
 		path: 'submissions',
@@ -164,7 +164,7 @@ export const routes: Routes = [
 			},
 		},
 		loadComponent: () =>
-			import('./pages/submissions/submissions.component').then((m) => m.SubmissionsComponent),
+			import('./pages/crm/submissions/submissions.component').then((m) => m.SubmissionsComponent),
 	},
 	{
 		path: 'guests',
@@ -181,8 +181,8 @@ export const routes: Routes = [
 		// Real hotels get their guest database on live data; the demo keeps the seeded list.
 		loadComponent: () =>
 			isLiveSession()
-				? import('./pages/guests/guests-live.component').then((m) => m.GuestsLiveComponent)
-				: import('./pages/guests/guests.component').then((m) => m.GuestsComponent),
+				? import('./pages/crm/guests/guests-live.component').then((m) => m.GuestsLiveComponent)
+				: import('./pages/crm/guests/guests.component').then((m) => m.GuestsComponent),
 	},
 	{
 		path: 'rooms',
@@ -196,7 +196,7 @@ export const routes: Routes = [
 				robots: 'noindex, nofollow',
 			},
 		},
-		loadComponent: () => import('./pages/rooms/rooms.component').then((m) => m.RoomsComponent),
+		loadComponent: () => import('./pages/crm/rooms/rooms.component').then((m) => m.RoomsComponent),
 	},
 	{
 		path: 'payments',
@@ -213,8 +213,8 @@ export const routes: Routes = [
 		// Real hotels get the payment journal on live data; the demo keeps the seeded list.
 		loadComponent: () =>
 			isLiveSession()
-				? import('./pages/payments/payments-live.component').then((m) => m.PaymentsLiveComponent)
-				: import('./pages/payments/payments.component').then((m) => m.PaymentsComponent),
+				? import('./pages/crm/payments/payments-live.component').then((m) => m.PaymentsLiveComponent)
+				: import('./pages/crm/payments/payments.component').then((m) => m.PaymentsComponent),
 	},
 	{
 		path: 'housekeeping',
@@ -229,7 +229,7 @@ export const routes: Routes = [
 			},
 		},
 		loadComponent: () =>
-			import('./pages/housekeeping/housekeeping.component').then((m) => m.HousekeepingComponent),
+			import('./pages/crm/housekeeping/housekeeping.component').then((m) => m.HousekeepingComponent),
 	},
 	{
 		path: 'messages',
@@ -243,7 +243,7 @@ export const routes: Routes = [
 				robots: 'noindex, nofollow',
 			},
 		},
-		loadComponent: () => import('./pages/messages/messages.component').then((m) => m.MessagesComponent),
+		loadComponent: () => import('./pages/crm/messages/messages.component').then((m) => m.MessagesComponent),
 	},
 	{
 		path: 'automations',
@@ -258,7 +258,7 @@ export const routes: Routes = [
 			},
 		},
 		loadComponent: () =>
-			import('./pages/automations/automations.component').then((m) => m.AutomationsComponent),
+			import('./pages/crm/automations/automations.component').then((m) => m.AutomationsComponent),
 	},
 	{
 		path: 'sales',
@@ -272,7 +272,7 @@ export const routes: Routes = [
 				robots: 'noindex, nofollow',
 			},
 		},
-		loadComponent: () => import('./pages/sales/sales.component').then((m) => m.SalesComponent),
+		loadComponent: () => import('./pages/crm/sales/sales.component').then((m) => m.SalesComponent),
 	},
 	{
 		path: 'ai',
@@ -286,7 +286,7 @@ export const routes: Routes = [
 				robots: 'noindex, nofollow',
 			},
 		},
-		loadComponent: () => import('./pages/ai/ai.component').then((m) => m.AiComponent),
+		loadComponent: () => import('./pages/crm/ai/ai.component').then((m) => m.AiComponent),
 	},
 	{
 		path: 'team',
@@ -300,7 +300,7 @@ export const routes: Routes = [
 				robots: 'noindex, nofollow',
 			},
 		},
-		loadComponent: () => import('./pages/team/team.component').then((m) => m.TeamComponent),
+		loadComponent: () => import('./pages/crm/team/team.component').then((m) => m.TeamComponent),
 	},
 	// The demo's single page comes first and has no canMatch: the prerenderer only finds /settings that way. A real account is sent on to its sections.
 	{
@@ -308,7 +308,7 @@ export const routes: Routes = [
 		pathMatch: 'full',
 		canActivate: [liveSettingsGuard, roleGuard],
 		data: { meta: SETTINGS_META },
-		loadComponent: () => import('./pages/settings/settings.component').then((m) => m.SettingsComponent),
+		loadComponent: () => import('./pages/crm/settings/settings.component').then((m) => m.SettingsComponent),
 	},
 	// Real hotels: the settings layout with one child page per section; the demo keeps the seeded single page.
 	{
@@ -321,27 +321,27 @@ export const routes: Routes = [
 			{
 				path: 'general',
 				data: { section: 'general', meta: SETTINGS_META },
-				loadComponent: () => import('./pages/settings/settings-live.component').then((m) => m.SettingsLiveComponent),
+				loadComponent: () => import('./pages/crm/settings/settings-live.component').then((m) => m.SettingsLiveComponent),
 			},
 			{
 				path: 'stay',
 				data: { section: 'stay', meta: SETTINGS_META },
-				loadComponent: () => import('./pages/settings/settings-live.component').then((m) => m.SettingsLiveComponent),
+				loadComponent: () => import('./pages/crm/settings/settings-live.component').then((m) => m.SettingsLiveComponent),
 			},
 			{
 				path: 'payments',
 				data: { section: 'payments', meta: SETTINGS_META },
-				loadComponent: () => import('./pages/settings/settings-live.component').then((m) => m.SettingsLiveComponent),
+				loadComponent: () => import('./pages/crm/settings/settings-live.component').then((m) => m.SettingsLiveComponent),
 			},
 			{
 				path: 'booking-types',
 				data: { section: 'booking-types', meta: SETTINGS_META },
-				loadComponent: () => import('./pages/settings/settings-live.component').then((m) => m.SettingsLiveComponent),
+				loadComponent: () => import('./pages/crm/settings/settings-live.component').then((m) => m.SettingsLiveComponent),
 			},
 			{
 				path: 'rooms',
 				data: { section: 'rooms', meta: SETTINGS_META },
-				loadComponent: () => import('./pages/settings/settings-live.component').then((m) => m.SettingsLiveComponent),
+				loadComponent: () => import('./pages/crm/settings/settings-live.component').then((m) => m.SettingsLiveComponent),
 			},
 		],
 	},
@@ -357,7 +357,7 @@ export const routes: Routes = [
 				robots: 'noindex, nofollow',
 			},
 		},
-		loadComponent: () => import('./pages/search/search.component').then((m) => m.SearchComponent),
+		loadComponent: () => import('./pages/crm/search/search.component').then((m) => m.SearchComponent),
 	},
 	{
 		path: 'notifications',
@@ -372,7 +372,7 @@ export const routes: Routes = [
 			},
 		},
 		loadComponent: () =>
-			import('./pages/notifications/notifications.component').then((m) => m.NotificationsComponent),
+			import('./pages/crm/notifications/notifications.component').then((m) => m.NotificationsComponent),
 	},
 	{
 		path: 'profile',
@@ -386,7 +386,7 @@ export const routes: Routes = [
 				robots: 'noindex, nofollow',
 			},
 		},
-		loadComponent: () => import('./pages/profile/profile.component').then((m) => m.ProfileComponent),
+		loadComponent: () => import('./pages/crm/profile/profile.component').then((m) => m.ProfileComponent),
 	},
 	{
 		path: 'guest',
@@ -400,7 +400,7 @@ export const routes: Routes = [
 				robots: 'noindex, nofollow',
 			},
 		},
-		loadComponent: () => import('./pages/guest/guest.component').then((m) => m.GuestComponent),
+		loadComponent: () => import('./pages/crm/guest/guest.component').then((m) => m.GuestComponent),
 	},
 	{
 		path: 'new-booking',
@@ -417,8 +417,8 @@ export const routes: Routes = [
 		// Real hotels get the fast desk form on live data; the demo keeps the seeded one.
 		loadComponent: () =>
 			isLiveSession()
-				? import('./pages/new-booking/quick-booking.component').then((m) => m.QuickBookingComponent)
-				: import('./pages/new-booking/new-booking.component').then((m) => m.NewBookingComponent),
+				? import('./pages/crm/new-booking/quick-booking.component').then((m) => m.QuickBookingComponent)
+				: import('./pages/crm/new-booking/new-booking.component').then((m) => m.NewBookingComponent),
 	},
 	{
 		path: 'booking',
@@ -433,7 +433,7 @@ export const routes: Routes = [
 			},
 		},
 		// One editable, autosaving card: real hotels see saved fields on live data, the demo sees every field on a seeded booking.
-		loadComponent: () => import('./pages/booking/booking-card.component').then((m) => m.BookingCardComponent),
+		loadComponent: () => import('./pages/crm/booking/booking-card.component').then((m) => m.BookingCardComponent),
 	},
 	{
 		path: 'book',
@@ -447,7 +447,22 @@ export const routes: Routes = [
 				robots: 'noindex, nofollow',
 			},
 		},
-		loadComponent: () => import('./pages/book/book.component').then((m) => m.BookComponent),
+		loadComponent: () => import('./pages/crm/book/book.component').then((m) => m.BookComponent),
+	},
+	{
+		path: 'publish-panorama',
+		canActivate: [sessionGuard],
+		data: {
+			meta: {
+				title: 'Панорами Street View · Hotel Upwork',
+				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/dashboard.jpg'),
+				description: 'Hotel Upwork: 360° панорами готелю, тур між точками та публікація в Google Street View.',
+				robots: 'noindex, nofollow',
+			},
+		},
+		loadComponent: () =>
+			import('./pages/admin/publish-panorama/publish-panorama.component').then((m) => m.PublishPanoramaComponent),
 	},
 	{
 		path: 'confirmation',
@@ -461,7 +476,7 @@ export const routes: Routes = [
 			},
 		},
 		loadComponent: () =>
-			import('./pages/confirmation/confirmation.component').then((m) => m.ConfirmationComponent),
+			import('./pages/public/confirmation/confirmation.component').then((m) => m.ConfirmationComponent),
 	},
 	{
 		path: 'privacy',
@@ -474,7 +489,7 @@ export const routes: Routes = [
 					'Hotel Upwork: які персональні дані ми обробляємо, навіщо та як ви можете керувати ними.',
 			},
 		},
-		loadComponent: () => import('./pages/privacy/privacy.component').then((m) => m.PrivacyComponent),
+		loadComponent: () => import('./pages/public/privacy/privacy.component').then((m) => m.PrivacyComponent),
 	},
 	{
 		path: 'cookies',
@@ -486,7 +501,7 @@ export const routes: Routes = [
 				description: 'Hotel Upwork: які файли cookie ми використовуємо та як ними керувати.',
 			},
 		},
-		loadComponent: () => import('./pages/cookies/cookies.component').then((m) => m.CookiesComponent),
+		loadComponent: () => import('./pages/public/cookies/cookies.component').then((m) => m.CookiesComponent),
 	},
 	{
 		path: '**',

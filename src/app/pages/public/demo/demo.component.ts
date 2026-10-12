@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { getStoredPlan, PLAN_ORDER, PLAN_ROLES, PLANS, setStoredPlan, type Plan } from '../../shared/plan';
-import { defaultPageFor, ROLE_LABEL, setDemoRole, type Role } from '../../shared/role';
+import { getStoredPlan, PLAN_ORDER, PLAN_ROLES, PLANS, setStoredPlan, type Plan } from '../../../shared/plan';
+import { defaultPageFor, ROLE_LABEL, setDemoRole, type Role } from '../../../shared/role';
 
 @Component({
 	selector: 'app-demo',

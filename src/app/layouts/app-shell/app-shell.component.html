@@ -76,6 +76,22 @@
 			</div>
 		}
 	</div>
+	@if (adminNavItems().length) {
+		<nav class="admin-nav" aria-label="Адміністрування">
+			@for (item of adminNavItems(); track item.key) {
+				<a
+					class="nav-item"
+					[class.active]="activeNav() === item.key"
+					[attr.aria-current]="activeNav() === item.key ? 'page' : null"
+					[routerLink]="item.href"
+				>
+					<app-icon [name]="item.icon" />
+					<span class="nav-text">{{ item.label }}</span>
+				</a>
+			}
+		</nav>
+		<hr class="nav-divider" />
+	}
 	<nav>
 		@for (item of navItems(); track item.key) {
 			<a

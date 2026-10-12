@@ -2,9 +2,9 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, ElementRef, effect, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { AppShellComponent } from '../../layouts/app-shell/app-shell.component';
-import { IconComponent } from '../../shared/icon/icon.component';
-import { canCurrent, getDemoRole, isPageAllowed } from '../../shared/role';
+import { AppShellComponent } from '../../../layouts/app-shell/app-shell.component';
+import { IconComponent } from '../../../shared/icon/icon.component';
+import { canCurrent, getDemoRole, isPageAllowed } from '../../../shared/role';
 
 type Status = 'needs-cleaning' | 'cleaning' | 'ready' | 'occupied';
 type Priority = 'critical' | 'high' | 'normal' | 'low' | null;

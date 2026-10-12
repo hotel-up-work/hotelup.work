@@ -2,7 +2,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { IconComponent } from '../../shared/icon/icon.component';
+import { IconComponent } from '../../../shared/icon/icon.component';
 
 type ViewState = 'new' | 'return' | 'paid' | 'pending' | 'failed' | 'staying' | 'done' | 'cancelled' | 'invalid';
 type ModalKind = 'arrival' | 'request' | 'contact' | null;

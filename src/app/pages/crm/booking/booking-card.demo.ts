@@ -1,6 +1,6 @@
 import { Injectable, computed, signal } from '@angular/core';
-import type { BookingPatch, BookingRecord } from '../../feature/firebase/bookings.service';
-import type { RoomRecord } from '../../feature/firebase/rooms.service';
+import type { BookingPatch, BookingRecord } from '../../../feature/firebase/bookings.service';
+import type { RoomRecord } from '../../../feature/firebase/rooms.service';
 import type { TabId } from './booking-card.fields';
 
 /** The demo's one booking: the same hotel and guest as the other demo pages. All people and amounts are invented. */
