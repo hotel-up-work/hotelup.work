@@ -125,13 +125,17 @@
 				<section class="card">
 					<h2><span class="step">3</span>Гість</h2>
 					<div class="guest-grid">
-						<label class="field">
+						<label class="field wide">
 							Телефон
 							<input #phoneInput name="phone" type="tel" inputmode="tel" maxlength="40" placeholder="+380 …" [ngModel]="phone()" (ngModelChange)="phone.set($event)" />
 						</label>
 						<label class="field">
 							Імʼя
-							<input name="name" maxlength="200" placeholder="Імʼя та прізвище" [ngModel]="name()" (ngModelChange)="name.set($event)" />
+							<input name="firstName" maxlength="100" [ngModel]="firstName()" (ngModelChange)="firstName.set($event)" />
+						</label>
+						<label class="field">
+							Прізвище
+							<input name="lastName" maxlength="100" [ngModel]="lastName()" (ngModelChange)="lastName.set($event)" />
 						</label>
 					</div>
 					@if (knownGuest(); as known) {

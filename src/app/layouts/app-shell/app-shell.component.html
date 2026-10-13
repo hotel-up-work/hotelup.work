@@ -166,23 +166,23 @@
 		<ng-content select="[topbar-center]" />
 		<div class="top-actions">
 			<ng-content select="[topbar-actions]" />
-			@if (!live) {
-				<a class="icon-button" aria-label="Пошук" routerLink="/search"><app-icon name="search" /></a>
-				<a class="icon-button notification-button" aria-label="Сповіщення, 4 нових" routerLink="/notifications">
-					<app-icon name="bell" /><i></i>
-				</a>
-			}
 			@if (!plainTopbar()) {
+				@if (!live) {
+					<a class="icon-button" aria-label="Пошук" routerLink="/search"><app-icon name="search" /></a>
+					<a class="icon-button notification-button" aria-label="Сповіщення, 4 нових" routerLink="/notifications">
+						<app-icon name="bell" /><i></i>
+					</a>
+				}
 				<button class="icon-button" [attr.aria-label]="isDark() ? 'Увімкнути світлу тему' : 'Увімкнути темну тему'" (click)="toggleTheme()">
 					<app-icon [name]="isDark() ? 'sun' : 'moon'" />
 				</button>
-			}
-			<span class="top-divider"></span>
-			@if (showAi()) {
-				<a class="ai-button" routerLink="/ai"><app-icon name="spark" />Hotel AI</a>
-			}
-			@if (!live) {
-				<a class="profile" routerLink="/profile" aria-label="Профіль Олександра">ОК</a>
+				<span class="top-divider"></span>
+				@if (showAi()) {
+					<a class="ai-button" routerLink="/ai"><app-icon name="spark" />Hotel AI</a>
+				}
+				@if (!live) {
+					<a class="profile" routerLink="/profile" aria-label="Профіль Олександра">ОК</a>
+				}
 			}
 		</div>
 	</header>

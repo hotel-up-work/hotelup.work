@@ -57,6 +57,14 @@ button {
 	color: inherit;
 }
 
+// The card is dense by design: on desktop everything below the top bar is drawn at 80%.
+// Phones keep full size so touch targets stay 44px.
+.page {
+	@media (min-width: 1100px) {
+		zoom: 0.8;
+	}
+}
+
 a {
 	color: inherit;
 	text-decoration: none;
@@ -117,6 +125,26 @@ ul {
 			background: #d9b96e;
 		}
 	}
+
+	&.secondary {
+		border: 1px solid var(--line);
+		background: var(--white);
+		color: var(--ink);
+
+		&:hover {
+			background: var(--surface-hover);
+		}
+	}
+
+	&.danger {
+		background: var(--red);
+		color: #fff;
+	}
+
+	&:disabled {
+		cursor: default;
+		opacity: 0.6;
+	}
 }
 
 .empty-state {
@@ -138,100 +166,63 @@ ul {
 	}
 }
 
-// ----- topbar content (projected into the shell's topbar) -----
+// ----- save button (projected into the shell's topbar) -----
 
-.top-status {
-	display: flex;
-	align-items: center;
-	gap: 8px 16px;
-	min-width: 0;
-	margin-left: auto;
-}
-
-// The shell hides its title on narrow screens, so the name moves here.
-.top-name {
-	display: none;
-	font-weight: 700;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-
-	@media (max-width: 900px) {
-		display: block;
-	}
-}
-
-.pill {
-	border-radius: 999px;
-	padding: 2px 12px;
-	font-size: 12px;
-	font-weight: 700;
-	white-space: nowrap;
-	background: var(--surface-hover);
-	color: var(--ink);
-
-	&[data-status='pending'] {
-		background: var(--gold-bg);
-		color: var(--gold-ink);
-	}
-
-	&[data-status='confirmed'],
-	&[data-status='checkedin'] {
-		background: var(--green-bg);
-		color: var(--green);
-	}
-
-	&[data-status='cancelled'] {
-		background: var(--red-bg);
-		color: var(--red);
-	}
-}
-
-.autosave {
-	display: inline-flex;
-	align-items: center;
+.save-button {
 	gap: 8px;
-	font-size: 12px;
-	font-weight: 600;
-	white-space: nowrap;
-	color: var(--green);
+	min-height: 36px;
+	padding: 8px 20px;
 
-	&::before {
-		content: '';
-		width: 8px;
-		height: 8px;
+	.spinner {
+		width: 12px;
+		height: 12px;
+		border: 2px solid currentColor;
+		border-right-color: transparent;
 		border-radius: 50%;
-		background: currentColor;
+		animation: save-spin 0.7s linear infinite;
 	}
 
-	&[data-kind='saving'] {
-		color: var(--gold-ink);
-	}
-
-	&[data-kind='error'] {
-		color: var(--red);
+	&:disabled {
+		cursor: default;
+		background: var(--surface-hover);
+		color: var(--muted);
 	}
 }
 
-// ----- tabs -----
+@keyframes save-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.save-button .spinner {
+		animation-duration: 2s;
+	}
+}
+
+// ----- tabs (projected into the shell's topbar) -----
 
 .tabs {
+	flex: 1;
+	align-self: stretch;
+	min-width: 0;
 	overflow-x: auto;
-	border-bottom: 1px solid var(--line);
-	margin-bottom: 16px;
+	scrollbar-width: none;
 
 	ul {
 		display: flex;
-		gap: 4px;
+		height: 100%;
 		width: max-content;
 	}
 }
 
 .tab {
-	display: block;
-	min-height: 44px;
-	padding: 10px 14px;
-	font-size: 13px;
+	display: flex;
+	align-items: center;
+	height: 100%;
+	padding: 0 10px;
+	font-size: 12px;
 	font-weight: 600;
 	white-space: nowrap;
 	border-bottom: 2px solid transparent;
@@ -417,9 +408,107 @@ ul {
 	}
 }
 
+// Who booked / checked in / checked out: one compact line each.
+.staff {
+	display: grid;
+	gap: 4px;
+	margin: 0;
+	font-size: 13px;
+
+	div {
+		display: flex;
+		gap: 8px;
+		align-items: baseline;
+	}
+
+	dt {
+		flex: 0 0 88px;
+		color: var(--muted);
+		font-size: 12px;
+	}
+
+	dd {
+		margin: 0;
+		min-width: 0;
+		font-weight: 600;
+		color: var(--ink);
+	}
+}
+
+// ----- status actions (bottom bar) -----
+
+.stay-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 12px 16px;
+	margin-top: 12px;
+}
+
+.stay-status {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 13px;
+	color: var(--muted);
+}
+
+.stay-error {
+	font-size: 13px;
+	color: var(--red);
+}
+
+.stay-buttons {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	margin-left: auto;
+}
+
+.stay-confirm {
+	font-size: 13px;
+	color: var(--ink);
+}
+
+.late-select {
+	min-height: 44px;
+	border: 1px solid var(--line);
+	border-radius: 6px;
+	background: var(--surface);
+	padding: 0 12px;
+	color: var(--ink);
+}
+
+.pill {
+	border-radius: 999px;
+	padding: 2px 12px;
+	font-size: 12px;
+	font-weight: 700;
+	white-space: nowrap;
+	background: var(--surface-hover);
+	color: var(--ink);
+
+	&[data-status='pending'],
+	&[data-status='waitlist'] {
+		background: var(--gold-bg);
+		color: var(--gold-ink);
+	}
+
+	&[data-status='confirmed'],
+	&[data-status='checkedin'] {
+		background: var(--green-bg);
+		color: var(--green);
+	}
+
+	&[data-status='cancelled'] {
+		background: var(--red-bg);
+		color: var(--red);
+	}
+}
+
 // ----- demo: notes log, history, audit footer -----
 
-.log,
 .history {
 	margin-top: 12px;
 }
@@ -445,20 +534,22 @@ ul {
 }
 
 .log-add {
-	display: grid;
+	display: flex;
 	gap: 8px;
-	justify-items: start;
 	margin-top: 12px;
 
-	textarea {
-		width: 100%;
-		min-height: 64px;
+	input {
+		flex: 1;
+		min-width: 0;
 		border: 1px solid var(--line);
 		border-radius: 6px;
 		background: var(--surface);
 		padding: 8px 12px;
 		color: var(--ink);
-		resize: vertical;
+	}
+
+	.button {
+		flex-shrink: 0;
 	}
 }
 
@@ -484,7 +575,7 @@ ul {
 }
 
 .audit {
-	margin-top: 12px;
+	padding: 0 4px;
 	font-size: 12px;
 	color: var(--muted);
 }

@@ -112,7 +112,10 @@ export class QuickBookingComponent {
 	protected readonly totalOverride = signal<number | null>(null);
 	// Guest
 	protected readonly phone = signal('');
-	protected readonly name = signal('');
+	protected readonly firstName = signal('');
+	protected readonly lastName = signal('');
+	/** Full name as stored on the booking and the guest: first name first. */
+	protected readonly name = computed(() => `${this.firstName().trim()} ${this.lastName().trim()}`.trim());
 	protected readonly email = signal('');
 	protected readonly notes = signal('');
 	protected readonly housekeepingNote = signal('');
@@ -254,7 +257,7 @@ export class QuickBookingComponent {
 			this._pendingGuestId = null;
 			untracked(() => {
 				this.phone.set(guest.phone);
-				this.name.set(guest.name);
+				this._setName(guest.name);
 				this.email.set(guest.email);
 			});
 		});
@@ -296,7 +299,7 @@ export class QuickBookingComponent {
 			const guest = this._guests().find((g) => g.id === guestId);
 			if (!guest) return false;
 			this.phone.set(guest.phone);
-			this.name.set(guest.name);
+			this._setName(guest.name);
 			this.email.set(guest.email);
 			return true;
 		};
@@ -335,6 +338,13 @@ export class QuickBookingComponent {
 		this.children.update((c) => Math.min(50, Math.max(0, c + delta)));
 	}
 
+	/** `Радомир Савула` → first name `Радомир`, last name `Савула`. */
+	private _setName(full: string): void {
+		const [first = '', ...rest] = (full ?? '').trim().split(/\s+/);
+		this.firstName.set(first);
+		this.lastName.set(rest.join(' '));
+	}
+
 	protected setTotal(value: unknown): void {
 		this.totalOverride.set(value === null || value === '' || Number.isNaN(Number(value)) ? null : Math.max(0, Number(value)));
 	}
@@ -342,7 +352,7 @@ export class QuickBookingComponent {
 	protected useKnownGuest(): void {
 		const known = this.knownGuest();
 		if (!known) return;
-		this.name.set(known.name);
+		this._setName(known.name);
 		if (known.email && !this.email()) this.email.set(known.email);
 	}
 
@@ -409,7 +419,7 @@ export class QuickBookingComponent {
 	protected another(): void {
 		this.created.set(null);
 		this.phone.set('');
-		this.name.set('');
+		this._setName('');
 		this.email.set('');
 		this.notes.set('');
 		this.adults.set(2);

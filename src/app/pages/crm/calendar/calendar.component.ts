@@ -3,7 +3,18 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AppShellComponent } from '../../../layouts/app-shell/app-shell.component';
-import { BookingInput, BookingPatch, BookingRecord, BookingsService, BookingStatus, checkOutPatch, holdsRoom } from '../../../feature/firebase/bookings.service';
+import {
+	BookingInput,
+	BookingPatch,
+	BookingRecord,
+	BookingsService,
+	BookingStatus,
+	checkOutPatch,
+	holdsRoom,
+	STAY_ACTION_LABEL,
+	stayActions,
+	type StayAction,
+} from '../../../feature/firebase/bookings.service';
 import { GuestsService } from '../../../feature/firebase/guests.service';
 import { HotelService } from '../../../feature/firebase/hotel.service';
 import { HotelSettingsService } from '../../../feature/firebase/hotel-settings.service';
@@ -121,6 +132,7 @@ type DialogView =
 	| { kind: 'message'; bookingId: string }
 	| { kind: 'payment'; bookingId: string }
 	| { kind: 'extend-stay'; bookingId: string }
+	| { kind: 'extend-nights'; bookingId: string }
 	| { kind: 'cancel'; bookingId: string }
 	| null;
 
@@ -131,7 +143,8 @@ interface AuditItem {
 }
 
 interface BookingForm {
-	name: string;
+	firstName: string;
+	lastName: string;
 	phone: string;
 	email: string;
 	/** Room number. */
@@ -261,6 +274,12 @@ const stayRange = (start: string, end: string) =>
 	start.slice(0, 7) === end.slice(0, 7)
 		? `${dayNum(start)}–${dayNum(end)} ${monthShort(end)}`
 		: `${dayNum(start)} ${monthShort(start)} – ${dayNum(end)} ${monthShort(end)}`;
+/** `Радомир Савула` → `{ firstName: 'Радомир', lastName: 'Савула' }`: stored names are first name first. */
+const splitName = (n: string): Pick<BookingForm, 'firstName' | 'lastName'> => {
+	const [firstName = '', ...rest] = (n ?? '').trim().split(/\s+/);
+	return { firstName, lastName: rest.join(' ') };
+};
+
 /** `Радомир Савула` → `Савула Радомир`: in a narrow block the surname is read first and the first name is cut. */
 const surnameFirst = (n: string) => {
 	const parts = n.trim().split(/\s+/);
@@ -1017,7 +1036,8 @@ export class CalendarComponent {
 
 	private _emptyForm(start: string, room = ''): BookingForm {
 		return {
-			name: '',
+			firstName: '',
+			lastName: '',
 			phone: '',
 			email: '',
 			room,
@@ -1052,7 +1072,7 @@ export class CalendarComponent {
 		this.formError.set('');
 		this.bookingForm.set({
 			...this._emptyForm(b.start, b.room),
-			name: b.name,
+			...splitName(b.name),
 			phone: b.phone,
 			email: b.email,
 			guests: b.guests,
@@ -1261,7 +1281,7 @@ export class CalendarComponent {
 		this.formError.set('');
 		this.bookingForm.set({
 			...this._emptyForm(start),
-			name: submission.name,
+			...splitName(submission.name),
 			phone: submission.phone,
 			email: submission.email,
 			room: this._suggestRoom(submission.roomType, start, end, guests),
@@ -1285,7 +1305,7 @@ export class CalendarComponent {
 	protected async submitBooking(): Promise<void> {
 		if (this.saving()) return;
 		const f = this.bookingForm();
-		const name = f.name.trim();
+		const name = `${f.firstName.trim()} ${f.lastName.trim()}`.trim();
 		const phone = f.phone.trim();
 		const room = this.roomOf(f.room);
 		const guests = Number(f.guests);
@@ -1439,6 +1459,15 @@ export class CalendarComponent {
 		this.toast('Чернетку повідомлення підготовлено · Демо');
 	}
 
+	protected readonly stayActions = stayActions;
+	protected readonly STAY_ACTION_LABEL = STAY_ACTION_LABEL;
+
+	/** Поселити / Виселити / В лист очікування / Анулювати; cancelling asks first. */
+	protected runStayAction(id: string, action: StayAction): void {
+		if (action === 'cancel') return this.askCancel(id);
+		void this.setStatus(id, ({ checkin: 'checkedin', checkout: 'checkedout', waitlist: 'waitlist' } as const)[action]);
+	}
+
 	protected askCancel(id: string): void {
 		if (this.canChange) this.dialogView.set({ kind: 'cancel', bookingId: id });
 	}
@@ -1451,7 +1480,7 @@ export class CalendarComponent {
 		if (!saved) return;
 		this.closeDialog();
 		this.closeSidePanel();
-		this.toast('Бронювання скасовано' + this.demoTag);
+		this.toast('Бронювання анульовано' + this.demoTag);
 	}
 
 	protected async setStatus(id: string, status: Status): Promise<void> {
@@ -1523,6 +1552,47 @@ export class CalendarComponent {
 
 	protected openExtendStay(id: string): void {
 		this.dialogView.set({ kind: 'extend-stay', bookingId: id });
+	}
+
+	/** Продовжити проживання: a later check-out date; the price per night stays, the total follows the nights. */
+	protected readonly extendEnd = signal('');
+
+	protected canExtendNights(b: Booking): boolean {
+		return this.canChange && holdsRoom(b.status);
+	}
+
+	protected openExtendNights(id: string): void {
+		const b = this.booking(id);
+		if (!b) return;
+		this.extendEnd.set(addDays(b.end, 1));
+		this.dialogView.set({ kind: 'extend-nights', bookingId: id });
+	}
+
+	protected extendedTotal(b: Booking, end: string): number {
+		const was = dayDiff(b.start, b.end);
+		return was > 0 ? Math.round((b.total / was) * dayDiff(b.start, end)) : b.total;
+	}
+
+	/** Why the new check-out cannot be saved, or '' when it can. */
+	protected extendError(b: Booking, end: string): string {
+		if (!end || end <= b.end) return 'Новий виїзд має бути пізніше за поточний.';
+		if (dayDiff(b.start, end) > 90) return 'Не більше 90 ночей.';
+		if (this.bookingsOverlap(b.room, b.end, end, b.id)) return `Номер ${b.room} зайнятий у ці дати. Продовжте менше або перенесіть гостя в інший номер.`;
+		return '';
+	}
+
+	protected async submitExtendNights(id: string): Promise<void> {
+		const b = this.booking(id);
+		const end = this.extendEnd();
+		if (!b || !this.canChange || this.saving() || this.extendError(b, end)) return;
+		const total = this.extendedTotal(b, end);
+		this.saving.set(true);
+		const saved = await this._save(id, { checkOut: end, total }, { end, total });
+		this.saving.set(false);
+		if (!saved) return;
+		this.closeDialog();
+		this.openSidePanel(id);
+		this.toast(`Проживання продовжено до ${shortDate(end)} · ${money(total)}${this.demoTag}`);
 	}
 
 	protected async submitExtendStay(id: string, hour: number): Promise<void> {

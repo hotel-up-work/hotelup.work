@@ -277,6 +277,7 @@ const DEMO_BOOKING: BookingRecord = {
 	depositBalance: 0,
 	lateCheckoutHour: null,
 	createdAt: new Date('2026-09-14T12:11:00'),
+	createdBy: 'Ірина Лисенко',
 };
 
 /** Fields that exist only in the demo (`live: false` in the field list), kept next to the booking. */

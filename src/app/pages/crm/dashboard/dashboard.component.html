@@ -717,7 +717,7 @@
 					class="demo-form"
 					(ngSubmit)="
 						submitNewBooking({
-							name: nameInput.value,
+							name: (firstNameInput.value.trim() + ' ' + lastNameInput.value.trim()).trim(),
 							start: startInput.value,
 							end: endInput.value,
 							room: roomSelect.value,
@@ -728,7 +728,8 @@
 						})
 					"
 				>
-					<label class="full">Ім'я гостя<input #nameInput name="name" required maxlength="70" placeholder="Ім'я та прізвище" /></label>
+					<label>Ім'я<input #firstNameInput name="firstName" required maxlength="40" /></label>
+					<label>Прізвище<input #lastNameInput name="lastName" maxlength="40" /></label>
 					<label>Заїзд<input #startInput name="start" type="date" required value="2026-09-17" /></label>
 					<label>Виїзд<input #endInput name="end" type="date" required value="2026-09-18" /></label>
 					<label>

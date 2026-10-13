@@ -278,6 +278,10 @@ p {
 	margin-bottom: 16px;
 }
 
+.guest-grid .wide {
+	grid-column: 1 / -1;
+}
+
 .stepper {
 	display: flex;
 	align-items: center;

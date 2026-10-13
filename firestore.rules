@@ -122,10 +122,11 @@ service cloud.firestore {
                                          'guests', 'total', 'paid', 'status', 'source', 'notes', 'submissionId',
                                          'lateCheckoutHour', 'plannedCheckOut', 'guestId', 'adults', 'children', 'checkInTime', 'checkOutTime',
                                          'rate', 'byBed', 'bedNumber', 'extraGuests', 'housekeepingNote', 'childrenPaid',
-                                         'accommodationType', 'mealPlan', 'citizenship', 'contactPerson', 'manager',
+                                         'accommodationType', 'mealPlan', 'citizenship', 'contactPerson', 'contactPhone', 'contactCompany', 'manager',
                                          'privilegeCategory', 'visitPurpose', 'externalNumber', 'companyOperator',
                                          'companySource', 'contractTerms', 'paymentType', 'payMethod', 'guarantee', 'rateCategory', 'roomLocked',
-                                         'creditLimit', 'creditRemainder', 'depositBalance', 'createdAt', 'updatedAt'])
+                                         'creditLimit', 'creditRemainder', 'depositBalance', 'createdBy', 'createdByUid', 'checkedInBy', 'checkedInAt', 'checkedOutBy', 'checkedOutAt',
+                                         'createdAt', 'updatedAt'])
             && booking().roomId is string && booking().roomId.size() >= 1 && booking().roomId.size() <= 40
             && booking().roomNumber is string && booking().roomNumber.size() >= 1 && booking().roomNumber.size() <= 8
             && booking().guestName is string && booking().guestName.size() >= 1 && booking().guestName.size() <= 200
@@ -153,6 +154,10 @@ service cloud.firestore {
             && (!('childrenPaid' in booking()) || (booking().childrenPaid is int && booking().childrenPaid >= 0 && booking().childrenPaid <= 50))
             && optText(booking(), 'accommodationType', 100) && optText(booking(), 'mealPlan', 100)
             && optText(booking(), 'citizenship', 100) && optText(booking(), 'contactPerson', 100)
+            && optText(booking(), 'contactPhone', 40) && optText(booking(), 'contactCompany', 100)
+            && optText(booking(), 'checkedInBy', 100) && optText(booking(), 'checkedOutBy', 100)
+            && (!('checkedInAt' in booking()) || booking().checkedInAt is timestamp)
+            && (!('checkedOutAt' in booking()) || booking().checkedOutAt is timestamp)
             && optText(booking(), 'manager', 100) && optText(booking(), 'privilegeCategory', 100)
             && optText(booking(), 'visitPurpose', 100) && optText(booking(), 'externalNumber', 100)
             && optText(booking(), 'companyOperator', 100) && optText(booking(), 'companySource', 100)
@@ -171,8 +176,13 @@ service cloud.firestore {
         }
 
         allow read: if isHotelOwner();
-        allow create: if isHotelOwner() && validBooking() && booking().createdAt == request.time;
-        allow update: if isHotelOwner() && validBooking() && booking().createdAt == resource.data.createdAt;
+        // createdBy / createdByUid: the staff member who made the booking; set once, never changed.
+        allow create: if isHotelOwner() && validBooking() && booking().createdAt == request.time
+          && booking().createdBy is string && booking().createdBy.size() >= 1 && booking().createdBy.size() <= 100
+          && booking().createdByUid == request.auth.uid;
+        allow update: if isHotelOwner() && validBooking() && booking().createdAt == resource.data.createdAt
+          && booking().get('createdBy', null) == resource.data.get('createdBy', null)
+          && booking().get('createdByUid', null) == resource.data.get('createdByUid', null);
         allow delete: if false;
       }
 

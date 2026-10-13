@@ -1,5 +1,6 @@
 import { Service, inject } from '@angular/core';
 import { collection, doc, onSnapshot, serverTimestamp, Timestamp, updateDoc, writeBatch, type DocumentData } from 'firebase/firestore';
+import { AuthService } from './auth.service';
 import { FirebaseService } from './firebase.service';
 import { localDay, paymentFields, type PaymentMethod, type Recorder } from './payments.service';
 
@@ -9,12 +10,45 @@ export type BookingStatus = 'pending' | 'confirmed' | 'checkedin' | 'checkedout'
 /** Whether a booking takes its room on its dates: cancelled and waitlisted bookings never do. */
 export const holdsRoom = (status: BookingStatus) => status !== 'cancelled' && status !== 'waitlist';
 
+/** Front-desk actions on a booking, in the order they are shown. */
+export type StayAction = 'checkin' | 'checkout' | 'waitlist' | 'cancel';
+
+export const STAY_ACTION_LABEL: Record<StayAction, string> = {
+	checkin: 'Поселити',
+	checkout: 'Виселити',
+	waitlist: 'В лист очікування',
+	cancel: 'Анулювати',
+};
+
+/**
+ * What the desk can do with a booking in this status. Check-in and check-out never show together: a confirmed
+ * stay can be checked in, moved to the waitlist or cancelled; a guest in the house can only be checked out;
+ * a waitlisted stay can only be cancelled (confirming it is its own step). Shared by the calendar and the booking card.
+ */
+export function stayActions(status: BookingStatus): StayAction[] {
+	switch (status) {
+		case 'confirmed':
+			return ['checkin', 'waitlist', 'cancel'];
+		case 'pending':
+			return ['waitlist', 'cancel'];
+		case 'waitlist':
+			return ['cancel'];
+		case 'checkedin':
+			return ['checkout'];
+		case 'checkedout':
+		case 'cancelled':
+			return [];
+	}
+}
+
 /** Text details of the booking card, picked from built-in lists or typed; all optional, up to 100 characters. */
 export const BOOKING_TEXT_KEYS = [
 	'accommodationType',
 	'mealPlan',
 	'citizenship',
 	'contactPerson',
+	'contactPhone',
+	'contactCompany',
 	'manager',
 	'privilegeCategory',
 	'visitPurpose',
@@ -85,6 +119,13 @@ export interface BookingRecord extends BookingInput {
 	/** Check-out as originally booked, set when an early check-out shortened the stay. */
 	plannedCheckOut?: string;
 	createdAt: Date | null;
+	/** Staff member who created the booking in the CRM; missing on bookings made before it was recorded. */
+	createdBy?: string;
+	/** Staff member who checked the guest in / out, and when; set by `BookingsService` on the status change. */
+	checkedInBy?: string;
+	checkedInAt?: Date | null;
+	checkedOutBy?: string;
+	checkedOutAt?: Date | null;
 }
 
 export interface BookingPatch extends BookingDetails {
@@ -156,6 +197,11 @@ function toBooking(id: string, data: DocumentData): BookingRecord {
 		lateCheckoutHour: typeof data['lateCheckoutHour'] === 'number' ? data['lateCheckoutHour'] : null,
 		plannedCheckOut: str(data['plannedCheckOut']) || undefined,
 		createdAt: (data['createdAt'] as Timestamp | undefined)?.toDate() ?? null,
+		createdBy: str(data['createdBy']) || undefined,
+		checkedInBy: str(data['checkedInBy']) || undefined,
+		checkedInAt: (data['checkedInAt'] as Timestamp | undefined)?.toDate() ?? null,
+		checkedOutBy: str(data['checkedOutBy']) || undefined,
+		checkedOutAt: (data['checkedOutAt'] as Timestamp | undefined)?.toDate() ?? null,
 	};
 }
 
@@ -193,6 +239,7 @@ export function checkOutPatch(
 @Service()
 export class BookingsService {
 	private readonly _firebase = inject(FirebaseService);
+	private readonly _auth = inject(AuthService);
 
 	/** Live list of all of a hotel's bookings. Returns an unsubscribe function. */
 	listen(hotelId: string, onChange: (bookings: BookingRecord[]) => void, onError: (error: Error) => void = () => {}): () => void {
@@ -214,11 +261,15 @@ export class BookingsService {
 		if (!firestore) throw new Error('Firestore is not available');
 		const { submissionId, guestId, ...fields } = booking;
 		const ref = doc(collection(firestore, 'hotels', hotelId, 'bookings'));
+		const staff = this._staff();
 		const batch = writeBatch(firestore);
 		batch.set(ref, {
 			...definedOnly(fields),
 			...(submissionId ? { submissionId } : {}),
 			...(guestId ? { guestId } : {}),
+			createdBy: staff.name,
+			createdByUid: staff.uid,
+			...this._statusStamp(fields.status),
 			createdAt: serverTimestamp(),
 			updatedAt: serverTimestamp(),
 		});
@@ -239,6 +290,19 @@ export class BookingsService {
 	async update(hotelId: string, bookingId: string, patch: BookingPatch): Promise<void> {
 		const firestore = this._firebase.firestore;
 		if (!firestore) throw new Error('Firestore is not available');
-		await updateDoc(doc(firestore, 'hotels', hotelId, 'bookings', bookingId), { ...patch, updatedAt: serverTimestamp() });
+		await updateDoc(doc(firestore, 'hotels', hotelId, 'bookings', bookingId), { ...patch, ...this._statusStamp(patch.status), updatedAt: serverTimestamp() });
+	}
+
+	/** The signed-in staff member, for the "who booked / checked in / checked out" fields. */
+	private _staff(): { name: string; uid: string } {
+		const user = this._auth.user();
+		return { name: (user?.displayName || user?.email || 'Співробітник').slice(0, 100), uid: user?.uid ?? '' };
+	}
+
+	/** Checking in or out records who did it and when; a later repeat of the same status overwrites it. */
+	private _statusStamp(status: BookingStatus | undefined) {
+		if (status === 'checkedin') return { checkedInBy: this._staff().name, checkedInAt: serverTimestamp() };
+		if (status === 'checkedout') return { checkedOutBy: this._staff().name, checkedOutAt: serverTimestamp() };
+		return {};
 	}
 }

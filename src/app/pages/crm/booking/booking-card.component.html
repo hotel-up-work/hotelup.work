@@ -1,256 +1,337 @@
 <app-shell activeNav="calendar" [forceCompact]="true" [plainTopbar]="true" [greetingTitle]="topTitle()" [greetingSubtitle]="topSubtitle()">
-	@if (booking(); as b) {
-		<div class="top-status" topbar-center>
-			<span class="top-name">{{ topTitle() }}</span>
-			<span class="autosave" role="status" [attr.data-kind]="summary().kind">{{ summary().text }}</span>
-			<span class="pill" [attr.data-status]="b.status">{{ statusLabel[b.status] }}</span>
-		</div>
+	@if (booking() && tabs.length > 1) {
+		<nav class="tabs" aria-label="Розділи картки" topbar-center>
+			<ul>
+				@for (tab of tabs; track tab.id) {
+					<li>
+						@if (tab.id === activeTab()) {
+							<span class="tab current" aria-current="page">{{ tab.label }}</span>
+						} @else if (tab.live || tab.demo) {
+							<button class="tab" type="button" (click)="activeTab.set(tab.id)">{{ tab.label }}</button>
+						} @else {
+							<button class="tab" type="button" disabled title="Скоро">{{ tab.label }}</button>
+						}
+					</li>
+				}
+			</ul>
+		</nav>
+	}
+	@if (booking() && !readOnly()) {
+		<button class="button primary save-button" type="button" topbar-actions [disabled]="!dirty() || saving()" (click)="save()">
+			@if (saving()) {
+				<span class="spinner" aria-hidden="true"></span>
+			}
+			{{ saving() ? 'Зберігаємо…' : 'Зберегти' }}
+		</button>
 	}
 
-	@if (loadError()) {
-		<section class="card empty-state">
-			<h2>Не вдалося завантажити дані</h2>
-			<p role="alert">{{ loadError() }}</p>
-		</section>
-	} @else if (!bookingId()) {
-		<section class="card empty-state">
-			<h2>Оберіть бронювання</h2>
-			<p>Відкрийте бронювання в календарі й натисніть «Відкрити картку бронювання».</p>
-			<a class="button primary" routerLink="/calendar">Перейти до календаря</a>
-		</section>
-	} @else if (loading()) {
-		<section class="card empty-state"><p>Завантажуємо бронювання…</p></section>
-	} @else if (booking(); as bk) {
-		@if (tabs.length > 1) {
-			<nav class="tabs" aria-label="Розділи картки">
-				<ul>
-					@for (tab of tabs; track tab.id) {
-						<li>
-							@if (tab.id === activeTab()) {
-								<span class="tab current" aria-current="page">{{ tab.label }}</span>
-							} @else if (tab.live || tab.demo) {
-								<button class="tab" type="button" (click)="activeTab.set(tab.id)">{{ tab.label }}</button>
-							} @else {
-								<button class="tab" type="button" disabled title="Скоро">{{ tab.label }}</button>
-							}
-						</li>
-					}
-				</ul>
-			</nav>
-		}
+	<div class="page">
+		@if (loadError()) {
+			<section class="card empty-state">
+				<h2>Не вдалося завантажити дані</h2>
+				<p role="alert">{{ loadError() }}</p>
+			</section>
+		} @else if (!bookingId()) {
+			<section class="card empty-state">
+				<h2>Оберіть бронювання</h2>
+				<p>Відкрийте бронювання в календарі й натисніть «Відкрити картку бронювання».</p>
+				<a class="button primary" routerLink="/calendar">Перейти до календаря</a>
+			</section>
+		} @else if (loading()) {
+			<section class="card empty-state"><p>Завантажуємо бронювання…</p></section>
+		} @else if (booking(); as bk) {
+			@if (readOnly()) {
+				<p class="notice" role="note">
+					{{ booking()!.status === 'cancelled' ? 'Бронювання скасовано: картку можна лише переглядати.' : 'Ваша роль дозволяє лише переглядати картку.' }}
+				</p>
+			}
 
-		@if (readOnly()) {
-			<p class="notice" role="note">
-				{{ booking()!.status === 'cancelled' ? 'Бронювання скасовано: картку можна лише переглядати.' : 'Ваша роль дозволяє лише переглядати картку.' }}
-			</p>
-		}
-
-		@switch (activeTab()) {
-			@case ('guests') {
-				<app-booking-guests [readOnly]="readOnly()" />
-			}
-			@case ('charges') {
-				<app-booking-charges [booking]="bk" [readOnly]="readOnly()" />
-			}
-			@case ('balance') {
-				<app-booking-balance [booking]="bk" [readOnly]="readOnly()" [canPay]="canPay" />
-			}
-			@case ('tasks') {
-				<app-booking-tasks [readOnly]="readOnly()" />
-			}
-			@case ('registration') {
-				<app-booking-document kind="registration" [booking]="bk" />
-			}
-			@case ('confirmation') {
-				<app-booking-document kind="confirmation" [booking]="bk" />
-			}
-			@case ('cancellation') {
-				<app-booking-document kind="cancellation" [booking]="bk" />
-			}
-			@case ('rental') {
-				<app-booking-records tab="rental" [readOnly]="readOnly()" />
-			}
-			@case ('expenses') {
-				<app-booking-records tab="expenses" [readOnly]="readOnly()" />
-			}
-			@case ('transfer') {
-				<app-booking-records tab="transfer" [readOnly]="readOnly()" />
-			}
-			@case ('calls') {
-				<app-booking-records tab="calls" [readOnly]="readOnly()" />
-			}
-			@case ('keys') {
-				<app-booking-records tab="keys" [readOnly]="readOnly()" />
-			}
-			@case ('vouchers') {
-				<app-booking-records tab="vouchers" [readOnly]="readOnly()" />
-			}
-			@default {
-		<div class="columns">
-			@for (column of columns; track $index) {
-				<div class="column">
-					@for (section of column; track section.id) {
-						<section class="card" [attr.aria-labelledby]="'s-' + section.id">
-							<h2 [id]="'s-' + section.id">{{ section.title }}</h2>
-							<div class="fields">
-								@for (f of section.fields; track f.key) {
-									<div
-										class="field"
-										[class.wide]="f.wide"
-											[class.invalid]="fieldError()[f.key]"
-										[class.check]="f.kind === 'check'"
-											[class.lifted]="f.kind === 'select' || f.kind === 'date' || f.kind === 'time' || f.kind === 'readonly'"
-									>
-										@switch (f.kind) {
-											@case ('select') {
-												<select
-													#el
-													[id]="'f-' + f.key"
-													[name]="f.key"
-													[disabled]="isOff(f)"
-													[attr.aria-invalid]="fieldError()[f.key] ? 'true' : null"
-													[attr.aria-describedby]="fieldError()[f.key] ? 'e-' + f.key : null"
-													(change)="edit(f.key, el.value, 0)"
-												>
-													@for (o of options(f); track o.value) {
-														<option [value]="o.value" [disabled]="o.disabled" [selected]="o.value === value(f.key)">{{ o.label }}</option>
-													}
-												</select>
-											}
-											@case ('textarea') {
-												<textarea
-													#el
-													[id]="'f-' + f.key"
-													[name]="f.key"
-													rows="2"
-													placeholder=" "
-													[disabled]="isOff(f)"
-													[value]="value(f.key)"
-													[attr.aria-invalid]="fieldError()[f.key] ? 'true' : null"
-													[attr.aria-describedby]="fieldError()[f.key] ? 'e-' + f.key : null"
-													(input)="edit(f.key, el.value, typingDelay)"
-													(blur)="flush(f.key)"
-												></textarea>
-											}
-											@case ('check') {
-												<input
-													#el
-													type="checkbox"
-													[id]="'f-' + f.key"
-													[name]="f.key"
-													[disabled]="isOff(f)"
-													[checked]="value(f.key) === 'true'"
-													(change)="edit(f.key, el.checked ? 'true' : '', 0)"
-												/>
-											}
-											@case ('readonly') {
-												<output class="static" [id]="'f-' + f.key">{{ display(f.key) }}</output>
-											}
-											@case ('date') {
-												<input
-													#el
-													type="date"
-													[id]="'f-' + f.key"
-													[name]="f.key"
-													[disabled]="isOff(f)"
-													[value]="value(f.key)"
-													[attr.aria-invalid]="fieldError()[f.key] ? 'true' : null"
-													[attr.aria-describedby]="fieldError()[f.key] ? 'e-' + f.key : null"
-													(change)="edit(f.key, el.value, 0)"
-												/>
-											}
-											@case ('time') {
-												<input
-													#el
-													type="time"
-													[id]="'f-' + f.key"
-													[name]="f.key"
-													[disabled]="isOff(f)"
-													[value]="value(f.key)"
-													[attr.aria-invalid]="fieldError()[f.key] ? 'true' : null"
-													[attr.aria-describedby]="fieldError()[f.key] ? 'e-' + f.key : null"
-													(change)="edit(f.key, el.value, 0)"
-												/>
-											}
-											@default {
-												<input
-													#el
-													[id]="'f-' + f.key"
-													[name]="f.key"
-													[type]="f.kind === 'number' || f.kind === 'money' ? 'number' : f.kind"
-													[attr.inputmode]="f.kind === 'number' ? 'numeric' : f.kind === 'money' ? 'decimal' : null"
-													[attr.min]="f.kind === 'number' || f.kind === 'money' ? 0 : null"
-													[attr.step]="f.kind === 'money' ? '0.01' : null"
-													[attr.autocomplete]="f.autocomplete ?? 'off'"
-													[attr.spellcheck]="f.kind === 'email' ? 'false' : null"
+			@switch (activeTab()) {
+				@case ('guests') {
+					<app-booking-guests [readOnly]="readOnly()" />
+				}
+				@case ('charges') {
+					<app-booking-charges [booking]="bk" [readOnly]="readOnly()" />
+				}
+				@case ('balance') {
+					<app-booking-balance [booking]="bk" [readOnly]="readOnly()" [canPay]="canPay" />
+				}
+				@case ('tasks') {
+					<app-booking-tasks [readOnly]="readOnly()" />
+				}
+				@case ('registration') {
+					<app-booking-document kind="registration" [booking]="bk" />
+				}
+				@case ('confirmation') {
+					<app-booking-document kind="confirmation" [booking]="bk" />
+				}
+				@case ('cancellation') {
+					<app-booking-document kind="cancellation" [booking]="bk" />
+				}
+				@case ('rental') {
+					<app-booking-records tab="rental" [readOnly]="readOnly()" />
+				}
+				@case ('expenses') {
+					<app-booking-records tab="expenses" [readOnly]="readOnly()" />
+				}
+				@case ('transfer') {
+					<app-booking-records tab="transfer" [readOnly]="readOnly()" />
+				}
+				@case ('calls') {
+					<app-booking-records tab="calls" [readOnly]="readOnly()" />
+				}
+				@case ('keys') {
+					<app-booking-records tab="keys" [readOnly]="readOnly()" />
+				}
+				@case ('vouchers') {
+					<app-booking-records tab="vouchers" [readOnly]="readOnly()" />
+				}
+				@default {
+			<div class="columns">
+				@for (column of columns; track $index; let firstColumn = $first, lastColumn = $last) {
+					<div class="column">
+						@for (section of column; track section.id) {
+							<section class="card" [attr.aria-labelledby]="'s-' + section.id">
+								<h2 [id]="'s-' + section.id">{{ section.title }}</h2>
+								@if (section.id === 'manager') {
+									<dl class="staff">
+										@for (f of section.fields; track f.key) {
+											<div>
+												<dt>{{ f.label }}</dt>
+												<dd>{{ display(f.key) }}</dd>
+											</div>
+										}
+									</dl>
+								} @else {
+								<div class="fields">
+									@for (f of section.fields; track f.key) {
+										<div
+											class="field"
+											[class.wide]="f.wide"
+												[class.invalid]="fieldError()[f.key]"
+											[class.check]="f.kind === 'check'"
+												[class.lifted]="f.kind === 'select' || f.kind === 'date' || f.kind === 'time' || f.kind === 'readonly'"
+										>
+											@switch (f.kind) {
+												@case ('select') {
+													<select
+														#el
+														[id]="'f-' + f.key"
+														[name]="f.key"
+														[disabled]="isOff(f)"
+														[attr.aria-invalid]="fieldError()[f.key] ? 'true' : null"
+														[attr.aria-describedby]="fieldError()[f.key] ? 'e-' + f.key : null"
+														(change)="edit(f.key, el.value)"
+													>
+														@for (o of options(f); track o.value) {
+															<option [value]="o.value" [disabled]="o.disabled" [selected]="o.value === value(f.key)">{{ o.label }}</option>
+														}
+													</select>
+												}
+												@case ('textarea') {
+													<textarea
+														#el
+														[id]="'f-' + f.key"
+														[name]="f.key"
+														rows="2"
 														placeholder=" "
-													[disabled]="isOff(f)"
-													[value]="value(f.key)"
-													[attr.aria-invalid]="fieldError()[f.key] ? 'true' : null"
-													[attr.aria-describedby]="fieldError()[f.key] ? 'e-' + f.key : null"
-													(input)="edit(f.key, el.value, typingDelay)"
-													(blur)="flush(f.key)"
-												/>
+														[disabled]="isOff(f)"
+														[value]="value(f.key)"
+														[attr.aria-invalid]="fieldError()[f.key] ? 'true' : null"
+														[attr.aria-describedby]="fieldError()[f.key] ? 'e-' + f.key : null"
+														(input)="edit(f.key, el.value)"
+													></textarea>
+												}
+												@case ('check') {
+													<input
+														#el
+														type="checkbox"
+														[id]="'f-' + f.key"
+														[name]="f.key"
+														[disabled]="isOff(f)"
+														[checked]="value(f.key) === 'true'"
+														(change)="edit(f.key, el.checked ? 'true' : '')"
+													/>
+												}
+												@case ('readonly') {
+													<output class="static" [id]="'f-' + f.key">{{ display(f.key) }}</output>
+												}
+												@case ('date') {
+													<input
+														#el
+														type="date"
+														[id]="'f-' + f.key"
+														[name]="f.key"
+														[disabled]="isOff(f)"
+														[value]="value(f.key)"
+														[attr.aria-invalid]="fieldError()[f.key] ? 'true' : null"
+														[attr.aria-describedby]="fieldError()[f.key] ? 'e-' + f.key : null"
+														(change)="edit(f.key, el.value)"
+													/>
+												}
+												@case ('time') {
+													<input
+														#el
+														type="time"
+														[id]="'f-' + f.key"
+														[name]="f.key"
+														[disabled]="isOff(f)"
+														[value]="value(f.key)"
+														[attr.aria-invalid]="fieldError()[f.key] ? 'true' : null"
+														[attr.aria-describedby]="fieldError()[f.key] ? 'e-' + f.key : null"
+														(change)="edit(f.key, el.value)"
+													/>
+												}
+												@default {
+													<input
+														#el
+														[id]="'f-' + f.key"
+														[name]="f.key"
+														[type]="f.kind === 'number' || f.kind === 'money' ? 'number' : f.kind"
+														[attr.inputmode]="f.kind === 'number' ? 'numeric' : f.kind === 'money' ? 'decimal' : null"
+														[attr.min]="f.kind === 'number' || f.kind === 'money' ? 0 : null"
+														[attr.step]="f.kind === 'money' ? '0.01' : null"
+														[attr.autocomplete]="f.autocomplete ?? 'off'"
+														[attr.spellcheck]="f.kind === 'email' ? 'false' : null"
+															placeholder=" "
+														[disabled]="isOff(f)"
+														[value]="value(f.key)"
+														[attr.aria-invalid]="fieldError()[f.key] ? 'true' : null"
+														[attr.aria-describedby]="fieldError()[f.key] ? 'e-' + f.key : null"
+														(input)="edit(f.key, el.value)"
+													/>
+												}
 											}
-										}
-										<label [for]="'f-' + f.key" [attr.title]="f.label">{{ f.label }}</label>
+											<label [for]="'f-' + f.key" [attr.title]="f.label">{{ f.label }}</label>
 
-										@if (fieldError()[f.key]; as message) {
-											<p class="msg" [id]="'e-' + f.key" role="alert">{{ message }}</p>
-										}
-									</div>
+											@if (fieldError()[f.key]; as message) {
+												<p class="msg" [id]="'e-' + f.key" role="alert">{{ message }}</p>
+											}
+										</div>
+									}
+								</div>
 								}
-							</div>
-						</section>
+							</section>
+						}
+						@if (firstColumn && created()) {
+							<p class="audit">
+								@if (demo) {
+									Заброньовано: <b>{{ demoStore.bookedBy }}</b> · {{ created() }} · Остання зміна: <b>{{ demoStore.lastChange().actor }}</b> · {{ demoStore.lastChange().at }}
+								} @else {
+									Створено: {{ created() }}
+								}
+							</p>
+						}
+						@if (demo && lastColumn) {
+							<section class="card log">
+								<h2>Журнал приміток ({{ demoStore.notes().length }})</h2>
+								<ul>
+									@for (n of demoStore.notes(); track n.id) {
+										<li>
+											<b>{{ n.author }}</b> <span>{{ n.at }}</span>
+											<p>{{ n.text }}</p>
+										</li>
+									}
+								</ul>
+								@if (!readOnly()) {
+									<form class="log-add" (submit)="addNote($event, noteText)">
+										<input #noteText maxlength="300" placeholder="Нова примітка для персоналу" aria-label="Нова примітка" />
+										<button class="button primary" type="submit">Додати</button>
+									</form>
+								}
+							</section>
+						}
+					</div>
+				}
+			</div>
+
+			@if (demo) {
+				<details class="card history">
+					<summary>Історія змін ({{ demoStore.history().length }})</summary>
+					<ul>
+						@for (e of historyDesc(); track $index) {
+							<li><span>{{ e.at }}</span> <b>{{ e.actor }}</b>: {{ e.text }}</li>
+						}
+					</ul>
+				</details>
+			}
+
+
+			<section class="card stay-actions" aria-label="Статус бронювання">
+				<p class="stay-status">Статус: <span class="pill" [attr.data-status]="bk.status">{{ statusLabel[bk.status] }}</span></p>
+				@if (actionError()) {
+					<p class="stay-error" role="alert">{{ actionError() }}</p>
+				}
+				<div class="stay-buttons">
+					@if (confirmCancel()) {
+						<span class="stay-confirm">Анулювати бронювання? Номер стане вільним на ці дати.</span>
+						<button class="button danger" type="button" [disabled]="acting()" (click)="runAction('cancel')">Так, анулювати</button>
+						<button class="button secondary" type="button" (click)="confirmCancel.set(false)">Ні</button>
+					} @else if (extendOpen()) {
+						<label class="stay-confirm" for="extend-end">Новий виїзд</label>
+						<input #extendEnd id="extend-end" class="late-select" type="date" [min]="addDays(bk.checkOut, 1)" [value]="addDays(bk.checkOut, 1)" />
+						<button class="button primary" type="button" [disabled]="acting() || saving()" (click)="extendNights(extendEnd.value)">Продовжити</button>
+						<button class="button secondary" type="button" (click)="extendOpen.set(false)">Ні</button>
+					} @else if (lateOpen()) {
+						<label class="stay-confirm" for="late-hour">Новий час виїзду</label>
+						<select #lateHour id="late-hour" class="late-select">
+							@for (h of LATE_CHECKOUT_OPTIONS; track h) {
+								<option [value]="h" [selected]="h === (bk.lateCheckoutHour ?? 12)">до {{ h }}:00</option>
+							}
+						</select>
+						<button class="button primary" type="button" [disabled]="acting()" (click)="extendStay(+lateHour.value)">Підтвердити</button>
+						<button class="button secondary" type="button" (click)="lateOpen.set(false)">Ні</button>
+					} @else {
+						@if (bk.status === 'cancelled') {
+							<a class="button primary" routerLink="/new-booking" [queryParams]="rebookParams()">Забронювати знову</a>
+						}
+						@if (canChange && (bk.status === 'pending' || bk.status === 'waitlist')) {
+							<button class="button primary" type="button" [disabled]="acting() || saving()" (click)="confirm()">
+								{{ bk.status === 'waitlist' ? 'Підтвердити з листа очікування' : 'Підтвердити бронювання' }}
+							</button>
+						}
+						@for (action of actions(); track action) {
+							<button
+								class="button"
+								type="button"
+								[class.primary]="action === 'checkin' || action === 'checkout'"
+								[class.secondary]="action === 'waitlist' || action === 'cancel'"
+								[disabled]="acting() || saving()"
+								(click)="runAction(action)"
+							>
+								{{ actionLabel[action] }}
+							</button>
+						}
+						@if (canChange && holdsRoom(bk.status)) {
+							<button class="button secondary" type="button" (click)="extendOpen.set(true)">Продовжити проживання</button>
+						}
+						@if (canExtendStay()) {
+							<button class="button secondary" type="button" (click)="lateOpen.set(true)">Пізній виїзд</button>
+						}
+						@if (canChange && bk.status !== 'cancelled' && !bk.roomLocked) {
+							<button class="button secondary" type="button" (click)="focusRoom()">Змінити номер</button>
+						}
+						@if (demo) {
+							<a class="button secondary" routerLink="/messages">Надіслати повідомлення</a>
+						}
+						@if (canCollect && bk.paid < bk.total && bk.status !== 'cancelled' && bk.status !== 'waitlist') {
+							@if (demo) {
+								<button class="button secondary" type="button" (click)="activeTab.set('balance')">Додати оплату</button>
+							} @else {
+								<a class="button secondary" routerLink="/payments">Додати оплату</a>
+							}
+						}
 					}
 				</div>
-			}
-		</div>
-
-		@if (demo) {
-			<section class="card log">
-				<h2>Журнал приміток ({{ demoStore.notes().length }})</h2>
-				<ul>
-					@for (n of demoStore.notes(); track n.id) {
-						<li>
-							<b>{{ n.author }}</b> <span>{{ n.at }}</span>
-							<p>{{ n.text }}</p>
-						</li>
-					}
-				</ul>
-				@if (!readOnly()) {
-					<form class="log-add" (submit)="addNote($event, noteText)">
-						<textarea #noteText rows="2" maxlength="300" placeholder="Нова примітка для персоналу" aria-label="Нова примітка"></textarea>
-						<button class="button primary" type="submit">Додати примітку</button>
-					</form>
-				}
 			</section>
-			<details class="card history">
-				<summary>Історія змін ({{ demoStore.history().length }})</summary>
-				<ul>
-					@for (e of historyDesc(); track $index) {
-						<li><span>{{ e.at }}</span> <b>{{ e.actor }}</b>: {{ e.text }}</li>
-					}
-				</ul>
-			</details>
-		}
-
-		@if (created()) {
-			<p class="audit">
-				@if (demo) {
-					Заброньовано: <b>{{ demoStore.bookedBy }}</b> · {{ created() }} · Остання зміна: <b>{{ demoStore.lastChange().actor }}</b> · {{ demoStore.lastChange().at }}
-				} @else {
-					Створено: {{ created() }}
 				}
-			</p>
-		}
 			}
+		} @else {
+			<section class="card empty-state">
+				<h2>Бронювання не знайдено</h2>
+				<p>Воно могло бути з іншого готелю або посилання застаріло.</p>
+				<a class="button primary" routerLink="/calendar">Перейти до календаря</a>
+			</section>
 		}
-	} @else {
-		<section class="card empty-state">
-			<h2>Бронювання не знайдено</h2>
-			<p>Воно могло бути з іншого готелю або посилання застаріло.</p>
-			<a class="button primary" routerLink="/calendar">Перейти до календаря</a>
-		</section>
-	}
+	</div>
 </app-shell>

@@ -1,27 +1,17 @@
-<app-shell activeNav="calendar" greetingTitle="" greetingSubtitle="">
-	<button
-		class="icon-button legend-toggle"
-		topbar-center
-		[class.active]="legendOpen()"
-		[attr.aria-expanded]="legendOpen()"
-		aria-controls="cal-legend"
-		[attr.aria-label]="legendOpen() ? 'Сховати умовні позначення' : 'Показати умовні позначення'"
-		[attr.title]="legendOpen() ? 'Сховати умовні позначення' : 'Умовні позначення'"
-		(click)="toggleLegend()"
-	>
-		<app-icon name="info" />
-	</button>
-	<div class="topbar-buttons" topbar-actions>
-		<button class="button secondary" (click)="goToday()">Сьогодні</button>
-		@if (live) {
-			<a class="button primary" aria-label="Нове бронювання" routerLink="/new-booking"><app-icon name="plus" /><span class="btn-label">Нове бронювання</span></a>
-		} @else {
-			<button class="button primary" aria-label="Нове бронювання" [disabled]="!ready() || !rooms().length" (click)="openQuickBooking(null, TODAY)"><app-icon name="plus" /><span class="btn-label">Нове бронювання</span></button>
-		}
-	</div>
-
-	<div class="cal-toolbar cal-desktop">
-		<div class="cal-nav">
+<app-shell activeNav="calendar" [plainTopbar]="true" greetingTitle="" greetingSubtitle="">
+	<div class="cal-topbar-left" topbar-center>
+		<button
+			class="icon-button legend-toggle"
+			[class.active]="legendOpen()"
+			[attr.aria-expanded]="legendOpen()"
+			aria-controls="cal-legend"
+			[attr.aria-label]="legendOpen() ? 'Сховати умовні позначення' : 'Показати умовні позначення'"
+			[attr.title]="legendOpen() ? 'Сховати умовні позначення' : 'Умовні позначення'"
+			(click)="toggleLegend()"
+		>
+			<app-icon name="info" />
+		</button>
+		<div class="cal-nav cal-desktop">
 			<button class="icon-button" aria-label="Попередній місяць" title="Попередній місяць" (click)="prevMonth()"><app-icon name="double-left" /></button>
 			<button class="icon-button" aria-label="Попередній період" title="Попередній період" (click)="prevRange()"><app-icon name="left" /></button>
 			<b>{{ rangeLabel() }}</b>
@@ -38,11 +28,13 @@
 			</div>
 			<button class="cal-density" [class.active]="compact()" [attr.aria-pressed]="compact()" (click)="toggleCompact()">Компактно</button>
 		</div>
-		<div class="cal-toolbar-right">
+	</div>
+	<div class="topbar-buttons" topbar-actions>
+		<div class="cal-toolbar-right cal-desktop">
 			@if (auditItems().length) {
 				<div class="filters-wrap">
-					<button class="button audit-button" [attr.aria-expanded]="auditOpen()" (click)="auditOpen.set(!auditOpen()); filtersOpen.set(false)">
-						<app-icon name="attention" />Нічний аудит · {{ auditItems().length }}
+					<button class="button audit-button" [attr.aria-label]="'Нічний аудит, ' + auditItems().length" [attr.aria-expanded]="auditOpen()" (click)="auditOpen.set(!auditOpen()); filtersOpen.set(false)">
+						<app-icon name="attention" /><span class="btn-label">Нічний аудит · </span>{{ auditItems().length }}
 					</button>
 					@if (auditOpen()) {
 						<div class="filters-panel audit-panel">
@@ -65,10 +57,10 @@
 			}
 			<div class="cal-search">
 				<app-icon name="search" />
-				<input [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Знайти гостя або бронювання" />
+				<input [ngModel]="search()" (ngModelChange)="search.set($event)" aria-label="Знайти гостя або бронювання" placeholder="Знайти гостя або бронювання" />
 			</div>
 			<div class="filters-wrap">
-				<button class="button secondary" (click)="toggleFilters(); auditOpen.set(false)"><app-icon name="filter" />Фільтри</button>
+				<button class="button secondary" aria-label="Фільтри" (click)="toggleFilters(); auditOpen.set(false)"><app-icon name="filter" /><span class="btn-label">Фільтри</span></button>
 				@if (filtersOpen()) {
 					<div class="filters-panel">
 						<section>
@@ -99,6 +91,12 @@
 				}
 			</div>
 		</div>
+		<button class="button secondary" (click)="goToday()">Сьогодні</button>
+		@if (live) {
+			<a class="button primary" aria-label="Нове бронювання" routerLink="/new-booking"><app-icon name="plus" /><span class="btn-label">Нове бронювання</span></a>
+		} @else {
+			<button class="button primary" aria-label="Нове бронювання" [disabled]="!ready() || !rooms().length" (click)="openQuickBooking(null, TODAY)"><app-icon name="plus" /><span class="btn-label">Нове бронювання</span></button>
+		}
 	</div>
 
 	@if (loadError()) {
@@ -541,11 +539,21 @@
 					@if (canChange && b.status === 'pending') {
 						<button class="button primary" [disabled]="saving()" (click)="setStatus(b.id, 'confirmed')">Підтвердити бронювання</button>
 					}
-					@if (canChange && b.status === 'confirmed') {
-						<button class="button primary" [disabled]="saving()" (click)="setStatus(b.id, 'checkedin')">Відмітити заїзд</button>
+					@if (canChange) {
+						@for (action of stayActions(b.status); track action) {
+							<button
+								class="button"
+								[class.primary]="action === 'checkin' || action === 'checkout'"
+								[class.secondary]="action === 'waitlist' || action === 'cancel'"
+								[disabled]="saving()"
+								(click)="runStayAction(b.id, action)"
+							>
+								{{ STAY_ACTION_LABEL[action] }}
+							</button>
+						}
 					}
-					@if (canChange && b.status === 'checkedin') {
-						<button class="button primary" [disabled]="saving()" (click)="setStatus(b.id, 'checkedout')">Відмітити виїзд</button>
+					@if (canExtendNights(b)) {
+						<button class="button secondary" (click)="openExtendNights(b.id)">Продовжити проживання</button>
 					}
 					@if (canExtendStay(b)) {
 						<button class="button secondary" (click)="openExtendStay(b.id)">Пізній виїзд</button>
@@ -558,9 +566,6 @@
 					}
 					@if (canCollect && b.paid < b.total && b.status !== 'cancelled' && b.status !== 'waitlist') {
 						<button class="button secondary" (click)="dialogView.set({ kind: 'payment', bookingId: b.id })">Додати оплату</button>
-					}
-					@if (canChange && b.status !== 'cancelled') {
-						<button class="button secondary" (click)="askCancel(b.id)">Скасувати бронювання</button>
 					}
 				</div>
 			}
@@ -591,9 +596,13 @@
 					</div>
 				}
 				<form class="demo-form" (ngSubmit)="submitBooking()">
-					<label class="full">
-						Гість
-						<input name="name" maxlength="200" placeholder="Ім'я" [ngModel]="f.name" (ngModelChange)="patchForm({ name: $event })" />
+					<label>
+						Ім'я
+						<input name="firstName" maxlength="100" [ngModel]="f.firstName" (ngModelChange)="patchForm({ firstName: $event })" />
+					</label>
+					<label>
+						Прізвище
+						<input name="lastName" maxlength="100" [ngModel]="f.lastName" (ngModelChange)="patchForm({ lastName: $event })" />
 					</label>
 					<label>
 						Телефон
@@ -712,12 +721,12 @@
 			@case ('cancel') {
 				@let b = booking(view!.bookingId);
 				@if (b) {
-					<h2>Скасувати бронювання?</h2>
+					<h2>Анулювати бронювання?</h2>
 					<p>{{ b.name }} · Номер {{ b.room }} · {{ shortDate(b.start) }} – {{ shortDate(b.end) }}</p>
 					<p class="form-note">Бронювання залишиться в історії зі статусом «Скасовано», а номер стане вільним на ці дати.</p>
 					<div class="dialog-actions">
-						<button class="button primary" [disabled]="saving()" (click)="cancelBooking(b.id)">Так, скасувати</button>
-						<button class="button secondary" (click)="closeDialog()">Не скасовувати</button>
+						<button class="button primary" [disabled]="saving()" (click)="cancelBooking(b.id)">Так, анулювати</button>
+						<button class="button secondary" (click)="closeDialog()">Не анулювати</button>
 					</div>
 				}
 			}
@@ -748,6 +757,30 @@
 							</select>
 						</label>
 						<button class="button primary full" type="submit">Підтвердити оплату</button>
+					</form>
+				}
+			}
+			@case ('extend-nights') {
+				@let b = booking(view!.bookingId);
+				@if (b) {
+					@let end = extendEnd();
+					@let error = extendError(b, end);
+					<h2>Продовжити проживання</h2>
+					<p>{{ b.name }} · Номер {{ b.room }} · зараз виїзд {{ shortDate(b.end) }}</p>
+					<form class="demo-form" (ngSubmit)="submitExtendNights(b.id)">
+						<label class="full">
+							Новий виїзд
+							<input name="extendEnd" type="date" required [min]="b.end" [ngModel]="end" (ngModelChange)="extendEnd.set($event)" />
+						</label>
+						@if (error) {
+							<p class="full balance" role="alert">{{ error }}</p>
+						} @else {
+							<p class="full form-note">
+								+{{ dayDiff(b.end, end) }} ноч. · разом {{ dayDiff(b.start, end) }} ноч. · нова сума {{ money(extendedTotal(b, end)) }}
+								(ціна за ніч не змінюється)
+							</p>
+						}
+						<button class="button primary full" type="submit" [disabled]="!!error || saving()">Продовжити</button>
 					</form>
 				}
 			}

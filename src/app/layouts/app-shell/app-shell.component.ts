@@ -78,7 +78,7 @@ export class AppShellComponent {
 	readonly housekeepingBadge = input<number | null>(null);
 	/** A page that needs the room (the booking card) opens the sidebar as icons whatever the saved choice is, without changing it. */
 	readonly forceCompact = input(false);
-	/** Leaves the role badge and theme switch out of the topbar, for pages that use the bar for their own status. */
+	/** Leaves the role badge and all built-in actions (search, alerts, theme, AI, profile) out of the topbar, for pages that fill the bar themselves. */
 	readonly plainTopbar = input(false);
 	readonly greetingTitle = input('Добрий день, Олександре');
 	readonly greetingSubtitle = input('Grand Hotel · Кам’янець-Подільський');

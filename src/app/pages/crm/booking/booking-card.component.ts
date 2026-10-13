@@ -7,11 +7,16 @@ import {
 	BOOKING_TEXT_KEYS,
 	BookingPatch,
 	BookingRecord,
-	BookingStatus,
 	BookingsService,
+	BookingStatus,
+	checkOutPatch,
 	holdsRoom,
 	isoAddDays,
+	STAY_ACTION_LABEL,
+	stayActions,
+	type StayAction,
 } from '../../../feature/firebase/bookings.service';
+import { localDay } from '../../../feature/firebase/payments.service';
 import { HotelService } from '../../../feature/firebase/hotel.service';
 import { RoomRecord, RoomsService } from '../../../feature/firebase/rooms.service';
 import { nightsBetween, roomIsFree } from '../../../shared/booking-rules';
@@ -40,7 +45,8 @@ const MAX_NIGHTS = 90;
 const MAX_TOTAL = 10_000_000;
 const MAX_MONEY = 100_000_000;
 /** Typing pauses this long before the field is saved; leaving the field saves at once. */
-const TYPING_DELAY_MS = 700;
+/** Unsaved changes are saved on their own once nothing has been changed for this long. */
+const AUTOSAVE_MS = 10_000;
 const SAVED_FLASH_MS = 2500;
 
 /** Fields that exist only in the demo; a real booking has nowhere to save them. */
@@ -48,18 +54,26 @@ const DEMO_ONLY: ReadonlySet<string> = new Set(COLUMNS.flat().flatMap((section) 
 
 /** Text fields that are saved as typed or picked, with their length limit in `firestore.rules` (default 100). */
 const TEXT_KEYS: ReadonlySet<string> = new Set<string>([...BOOKING_TEXT_KEYS, 'rate', 'source', 'phone', 'email', 'notes', 'housekeepingNote']);
-const TEXT_LIMIT: Record<string, number> = { phone: 40, email: 200, source: 50, rate: 50, notes: 1000, housekeepingNote: 300 };
+const TEXT_LIMIT: Record<string, number> = { phone: 40, contactPhone: 40, email: 200, source: 50, rate: 50, notes: 1000, housekeepingNote: 300 };
 
+const STAMP_AT = new Intl.DateTimeFormat('uk-UA', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+/** `Ірина Лисенко · 14 вер. 2026 р., 12:11` */
+const staffStamp = (name: string, at: Date | null | undefined) => (at ? `${name} · ${STAMP_AT.format(at)}` : name);
 const STATUS_LABEL: Record<BookingStatus, string> = {
 	pending: 'Очікує підтвердження',
 	confirmed: 'Підтверджено',
-	checkedin: 'Заїхав',
+	checkedin: 'Проживає',
 	checkedout: 'Виїхав',
-	cancelled: 'Скасовано',
+	cancelled: 'Анульовано',
 	waitlist: 'Лист очікування',
 };
 
 const money = (n: number) => new Intl.NumberFormat('uk-UA').format(n) + ' ₴';
+/** `Анна Коваленко` → `{ firstName: 'Анна', lastName: 'Коваленко' }`: stored names are first name first. */
+const splitName = (name: string) => {
+	const [firstName = '', ...rest] = (name ?? '').trim().split(/\s+/);
+	return { firstName, lastName: rest.join(' ') };
+};
 const shortDate = (iso: string) => new Intl.DateTimeFormat('uk-UA', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(iso + 'T00:00:00Z'));
 
 /** Ukrainian plural: 1 ніч, 2 ночі, 5 ночей. */
@@ -108,11 +122,12 @@ export class BookingCardComponent {
 	private readonly _hotel = inject(HotelService);
 	private readonly _route = inject(ActivatedRoute);
 	private readonly _timers = new Map<string, ReturnType<typeof setTimeout>>();
+	private _autosave: ReturnType<typeof setTimeout> | null = null;
 
 	protected readonly hotelId = this._hotel.activeHotelId;
 
 	/** The topbar says whose booking this is and where and when; the page itself starts with the fields. */
-	protected readonly topTitle = computed(() => this.value('guestName') || (this.booking() ? 'Гість без імені' : 'Картка бронювання'));
+	protected readonly topTitle = computed(() => `${this.value('firstName').trim()} ${this.value('lastName').trim()}`.trim() || (this.booking() ? 'Гість без імені' : 'Картка бронювання'));
 	protected readonly topSubtitle = computed(() => {
 		const b = this.booking();
 		if (!b) return this._hotel.activeHotel()?.name ?? '';
@@ -121,7 +136,6 @@ export class BookingCardComponent {
 
 	protected readonly money = money;
 	protected readonly shortDate = shortDate;
-	protected readonly statusLabel = STATUS_LABEL;
 	protected readonly canChange = canCurrent('changeBooking');
 	/** Money figures only for roles that see guest bills. */
 	protected readonly showFinance = canCurrent('guestBill');
@@ -157,16 +171,44 @@ export class BookingCardComponent {
 	/** What was typed and is not saved yet, by field. A field with a draft shows the draft, not the stored value. */
 	private readonly _draft = signal<Record<string, string>>({});
 	protected readonly saveState = signal<Record<string, SaveState>>({});
+	/** Something typed is not saved yet: the Save button is active. */
+	protected readonly dirty = computed(() => Object.keys(this._draft()).length > 0);
+	protected readonly saving = signal(false);
+
+	// ----- status actions (Поселити / Виселити / В лист очікування / Анулювати), same rules as the calendar -----
+	protected readonly statusLabel = STATUS_LABEL;
+	protected readonly actionLabel = STAY_ACTION_LABEL;
+	protected readonly actions = computed(() => {
+		const b = this.booking();
+		return b && this.canChange ? stayActions(b.status) : [];
+	});
+	/** Other desk actions, mirroring the Calendar booking panel. */
+	protected readonly canCollect = canCurrent('collectPayment') && this.showFinance;
+	protected readonly LATE_CHECKOUT_OPTIONS = [12, 14, 16, 18];
+	protected readonly lateOpen = signal(false);
+	/** Продовжити проживання: a new check-out date, saved through the card's own check-out rules (room free, price per night kept). */
+	protected readonly extendOpen = signal(false);
+	protected readonly addDays = isoAddDays;
+	protected readonly holdsRoom = holdsRoom;
+	/** A late check-out is possible while the room is not taken or blocked from the departure day. */
+	protected readonly canExtendStay = computed(() => {
+		const b = this.booking();
+		if (!b || !this.canChange || !holdsRoom(b.status)) return false;
+		const takenAfter = this._others(b).some((x) => x.roomId === b.roomId && holdsRoom(x.status) && x.checkIn === b.checkOut);
+		const block = this.room()?.block;
+		return !takenAfter && !(block && block.start <= b.checkOut && b.checkOut < block.end);
+	});
+	/** "Забронювати знову": the new-booking page opens with the same room, dates, guests and guest. */
+	protected readonly rebookParams = computed(() => {
+		const b = this.booking();
+		return b ? { room: b.roomNumber, start: b.checkIn, end: b.checkOut, guests: b.guests, guest: b.guestId ?? null } : {};
+	});
+	/** Анулювати asks once more before it acts. */
+	protected readonly confirmCancel = signal(false);
+	protected readonly acting = signal(false);
+	protected readonly actionError = signal('');
 	protected readonly fieldError = signal<Record<string, string>>({});
 
-	/** One line for the page header: all saved, still saving, or something needs attention. */
-	protected readonly summary = computed(() => {
-		const states = Object.values(this.saveState());
-		if (states.includes('error')) return { kind: 'error', text: 'Не всі зміни збережено' };
-		if (states.includes('saving')) return { kind: 'saving', text: 'Зберігаємо…' };
-		if (Object.keys(this._draft()).length) return { kind: 'saving', text: 'Є незбережені зміни' };
-		return { kind: 'saved', text: 'Усі зміни збережено' };
-	});
 
 	/** Rooms with the ones busy on this booking's dates marked, so a conflict is visible before it is picked. */
 	private readonly _roomOptions = computed<Option[]>(() => {
@@ -230,9 +272,9 @@ export class BookingCardComponent {
 			untracked(() => this._reset());
 		});
 
-		// Leaving the page saves whatever is still waiting for the typing pause.
+		// Leaving the page saves whatever is still waiting for the autosave pause.
 		inject(DestroyRef).onDestroy(() => {
-			for (const key of Object.keys(this._draft())) void this.flush(key);
+			void this.save();
 			for (const timer of this._timers.values()) clearTimeout(timer);
 		});
 	}
@@ -249,6 +291,10 @@ export class BookingCardComponent {
 	protected display(key: string): string {
 		const b = this.booking();
 		if (!b) return '';
+		// Older bookings were made before the creator was recorded; the typed manager is the best guess.
+		if (key === 'createdBy') return staffStamp(b.createdBy || b.manager || 'Не записано', b.createdAt);
+		if (key === 'checkedInBy') return b.checkedInBy ? staffStamp(b.checkedInBy, b.checkedInAt) : '—';
+		if (key === 'checkedOutBy') return b.checkedOutBy ? staffStamp(b.checkedOutBy, b.checkedOutAt) : '—';
 		const services = this.demo ? this.demoStore.servicesTotal() : 0;
 		if (key === 'services') return money(services);
 		const due = b.total + services - b.paid;
@@ -296,6 +342,9 @@ export class BookingCardComponent {
 				return b.byBed ? 'true' : '';
 			case 'roomLocked':
 				return b.roomLocked ? 'true' : '';
+			case 'firstName':
+			case 'lastName':
+				return splitName(b.guestName)[key];
 			default:
 				if ((BOOKING_MONEY_KEYS as readonly string[]).includes(key)) return String(stored[key] ?? 0);
 				return String(stored[key] ?? '');
@@ -304,25 +353,38 @@ export class BookingCardComponent {
 
 	// ----- editing -----
 
-	/** A change from the person: remember it, then save after a typing pause (`delay` 0 saves at once). */
-	protected edit(key: string, raw: string, delay: number): void {
-		this._draft.update((d) => ({ ...d, [key]: raw }));
-		this._clearTimer(key);
-		if (delay <= 0) {
-			void this.flush(key);
-			return;
-		}
-		this._timers.set(
-			key,
-			setTimeout(() => void this.flush(key), delay),
-		);
+	/** A change from the person: kept as a draft; every change restarts the autosave pause. */
+	protected edit(key: string, raw: string): void {
+		// Typed back to what is stored: nothing left to save for this field.
+		if (raw === this._read(key)) {
+			this._dropDraft(key, this._draft()[key] ?? raw);
+			this._mark(key, null);
+		} else this._draft.update((d) => ({ ...d, [key]: raw }));
+		this._clearAutosave();
+		if (!this.dirty()) return;
+		this._autosave = setTimeout(() => void this.save(), AUTOSAVE_MS);
 	}
 
-	protected readonly typingDelay = TYPING_DELAY_MS;
+	/** Saves every draft (the Save button, the autosave pause, or leaving the page). A draft that fails stays, so the button stays active. */
+	protected async save(): Promise<void> {
+		this._clearAutosave();
+		if (this.saving()) return;
+		this.saving.set(true);
+		try {
+			// One by one: a field's rules read the booking as the previous field left it (dates move the total).
+			for (const key of Object.keys(this._draft())) await this._flush(key);
+		} finally {
+			this.saving.set(false);
+		}
+	}
 
-	/** Saves the field's draft now (leaving the field, or the typing pause ended). */
-	protected async flush(key: string): Promise<void> {
-		this._clearTimer(key);
+	private _clearAutosave(): void {
+		if (this._autosave) clearTimeout(this._autosave);
+		this._autosave = null;
+	}
+
+	/** Saves one field's draft. */
+	private async _flush(key: string): Promise<void> {
 		const raw = this._draft()[key];
 		const booking = this.booking();
 		const hotelId = this.hotelId();
@@ -377,7 +439,83 @@ export class BookingCardComponent {
 		return COLUMNS.flat().flatMap((section) => section.fields).find((f) => f.key === key)?.label ?? key;
 	}
 
-	protected addNote(event: Event, field: HTMLTextAreaElement): void {
+	protected async runAction(action: StayAction): Promise<void> {
+		const b = this.booking();
+		const hotelId = this.hotelId();
+		if (!b || this.acting() || (!hotelId && !this.demo)) return;
+		if (action === 'cancel' && !this.confirmCancel()) {
+			this.confirmCancel.set(true);
+			return;
+		}
+		this.confirmCancel.set(false);
+		const patch: BookingPatch =
+			action === 'checkout'
+				? checkOutPatch(b, localDay(new Date())).patch
+				: { status: ({ checkin: 'checkedin', waitlist: 'waitlist', cancel: 'cancelled' } as const)[action] };
+		await this._apply(patch, this.actionLabel[action], action === 'checkout');
+	}
+
+	/** Підтвердити (pending or off the waitlist): off the waitlist only into a free room, or it would double-book it. */
+	protected async confirm(): Promise<void> {
+		const b = this.booking();
+		if (!b) return;
+		const room = this.room();
+		if (b.status === 'waitlist' && room && !roomIsFree(room, this._others(b), b.checkIn, b.checkOut)) {
+			this.actionError.set(`Номер ${room.number} ще зайнятий на ці дати. Змініть номер або дати, потім підтвердіть.`);
+			return;
+		}
+		await this._apply({ status: 'confirmed' }, 'Підтверджено');
+	}
+
+	protected async extendNights(end: string): Promise<void> {
+		this.extendOpen.set(false);
+		this.edit('checkOut', end);
+		await this.save();
+		const error = this.fieldError()['checkOut'];
+		if (error) this.actionError.set(`Не вдалося продовжити: ${error}`);
+	}
+
+	protected async extendStay(hour: number): Promise<void> {
+		this.lateOpen.set(false);
+		await this._apply({ lateCheckoutHour: hour }, `Пізній виїзд до ${hour}:00`);
+	}
+
+	/** Змінити номер: the room is a field of the card, so the button takes the person there. */
+	protected focusRoom(): void {
+		document.getElementById('f-roomId')?.focus();
+	}
+
+	/** Saves a status-like change at once (typed drafts first); a check-out also sends the room to cleaning. */
+	private async _apply(patch: BookingPatch, label: string, checkout = false): Promise<void> {
+		const b = this.booking();
+		const hotelId = this.hotelId();
+		if (!b || this.acting() || (!hotelId && !this.demo)) return;
+		this.actionError.set('');
+		await this.save();
+		if (this.dirty()) {
+			this.actionError.set('Спершу виправте поля з помилками.');
+			return;
+		}
+		this.acting.set(true);
+		try {
+			if (this.demo) this.demoStore.update(patch, label);
+			else {
+				await this._bookingsService.update(hotelId!, b.id, patch);
+				// After check-out the room waits for cleaning (a blocked room stays blocked).
+				const room = this.room();
+				if (checkout && room && room.status !== 'unavailable') {
+					await this._roomsService.updateRoom(hotelId!, room.id, { status: 'needs-cleaning' });
+				}
+			}
+		} catch (error) {
+			console.error('Booking status change failed', error);
+			this.actionError.set('Не вдалося зберегти зміну. Перевірте зʼєднання і спробуйте ще раз.');
+		} finally {
+			this.acting.set(false);
+		}
+	}
+
+	protected addNote(event: Event, field: HTMLInputElement): void {
 		event.preventDefault();
 		this.demoStore.addNote(field.value);
 		field.value = '';
@@ -385,12 +523,6 @@ export class BookingCardComponent {
 
 	protected warnBeforeLeaving(event: BeforeUnloadEvent): void {
 		if (Object.keys(this._draft()).length) event.preventDefault();
-	}
-
-	private _clearTimer(key: string): void {
-		const timer = this._timers.get(key);
-		if (timer) clearTimeout(timer);
-		this._timers.delete(key);
 	}
 
 	private _dropDraft(key: string, raw: string): void {
@@ -413,6 +545,7 @@ export class BookingCardComponent {
 	}
 
 	private _reset(): void {
+		this._clearAutosave();
 		for (const timer of this._timers.values()) clearTimeout(timer);
 		this._timers.clear();
 		this._draft.set({});
@@ -477,9 +610,15 @@ export class BookingCardComponent {
 				const n = wholeNumber(raw, 1, 50);
 				return n === null ? { error: 'Місце від 1 до 50' } : { patch: { bedNumber: n } };
 			}
-			case 'guestName':
-				if (!text) return { error: 'Вкажіть імʼя гостя' };
-				return text.length > 200 ? { error: 'Не більше 200 символів' } : { patch: { guestName: text } };
+			// Both halves are stored as one `guestName`; the other half is taken as shown, so two quick edits do not overwrite each other.
+			case 'firstName':
+			case 'lastName': {
+				const first = key === 'firstName' ? text : this.value('firstName').trim();
+				const last = key === 'lastName' ? text : this.value('lastName').trim();
+				if (!first) return { error: 'Вкажіть імʼя гостя' };
+				if (text.length > 100) return { error: 'Не більше 100 символів' };
+				return { patch: { guestName: `${first} ${last}`.trim() } };
+			}
 			case 'price': {
 				const price = amount(raw, MAX_MONEY);
 				const n = nightsBetween(b.checkIn, b.checkOut);
