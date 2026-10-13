@@ -153,11 +153,69 @@ p {
 	&.secondary {
 		border: 1px solid var(--line);
 		background: var(--surface);
-		color: var(--muted);
+		color: var(--text-strong);
 
 		&:hover {
 			background: var(--surface-hover);
 		}
+	}
+
+	&.outline {
+		border: 1px solid var(--gold-border, var(--gold));
+		background: transparent;
+		color: var(--gold-ink);
+
+		&:hover {
+			background: var(--gold-bg);
+		}
+	}
+
+	&.money {
+		border: 1px solid var(--green);
+		background: var(--green-bg);
+		color: var(--green);
+
+		&:hover {
+			background: var(--white);
+		}
+	}
+
+	&.danger {
+		border: 1px solid transparent;
+		background: transparent;
+		color: var(--conflict);
+
+		&:hover {
+			border-color: var(--conflict);
+			background: var(--conflict-bg);
+		}
+	}
+
+	&:disabled {
+		cursor: default;
+		opacity: 0.6;
+	}
+}
+
+// Booking panel: main step and "open" full width, stay tools two per row, annul last on its own.
+.panel-actions {
+	display: grid;
+	gap: 8px;
+	margin-top: 20px;
+
+	> .danger {
+		justify-self: start;
+		margin-top: 4px;
+	}
+}
+
+.panel-tools {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 8px;
+
+	&:empty {
+		display: none;
 	}
 }
 

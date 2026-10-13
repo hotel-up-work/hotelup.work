@@ -524,12 +524,9 @@
 				<p>{{ b.source }}</p>
 				<h5>Нотатки</h5>
 				<p>{{ b.notes || 'Нотаток немає.' }}</p>
-				<div class="dialog-actions">
-					@if (!live) {
-						<a class="button primary full" href="/booking/">Відкрити бронювання</a>
-					} @else {
-						<a class="button primary full" routerLink="/booking" [queryParams]="{ id: b.id }">Відкрити картку бронювання</a>
-					}
+				<!-- Colour says what a button does: gold = the next step, gold outline = open, grey = change the stay,
+				     green = money, red = annul (last, apart from the rest). -->
+				<div class="panel-actions">
 					@if (b.status === 'cancelled') {
 						<button class="button primary" [disabled]="!ready()" (click)="rebook(b)">Забронювати знову</button>
 					}
@@ -541,31 +538,38 @@
 					}
 					@if (canChange) {
 						@for (action of stayActions(b.status); track action) {
-							<button
-								class="button"
-								[class.primary]="action === 'checkin' || action === 'checkout'"
-								[class.secondary]="action === 'waitlist' || action === 'cancel'"
-								[disabled]="saving()"
-								(click)="runStayAction(b.id, action)"
-							>
-								{{ STAY_ACTION_LABEL[action] }}
-							</button>
+							@if (action === 'checkin' || action === 'checkout') {
+								<button class="button primary" [disabled]="saving()" (click)="runStayAction(b.id, action)">{{ STAY_ACTION_LABEL[action] }}</button>
+							}
 						}
 					}
-					@if (canExtendNights(b)) {
-						<button class="button secondary" (click)="openExtendNights(b.id)">Продовжити проживання</button>
-					}
-					@if (canExtendStay(b)) {
-						<button class="button secondary" (click)="openExtendStay(b.id)">Пізній виїзд</button>
-					}
-					@if (canChange && b.status !== 'cancelled' && !b.roomLocked) {
-						<button class="button secondary" (click)="requestRoomChange()">Змінити номер</button>
-					}
 					@if (!live) {
-						<button class="button secondary" (click)="dialogView.set({ kind: 'message', bookingId: b.id })">Надіслати повідомлення</button>
+						<a class="button outline" href="/booking/">Відкрити бронювання</a>
+					} @else {
+						<a class="button outline" routerLink="/booking" [queryParams]="{ id: b.id }">Відкрити картку бронювання</a>
 					}
 					@if (canCollect && b.paid < b.total && b.status !== 'cancelled' && b.status !== 'waitlist') {
-						<button class="button secondary" (click)="dialogView.set({ kind: 'payment', bookingId: b.id })">Додати оплату</button>
+						<button class="button money" (click)="dialogView.set({ kind: 'payment', bookingId: b.id })">Додати оплату</button>
+					}
+					<div class="panel-tools">
+						@if (canExtendNights(b)) {
+							<button class="button secondary" (click)="openExtendNights(b.id)">Продовжити проживання</button>
+						}
+						@if (canExtendStay(b)) {
+							<button class="button secondary" (click)="openExtendStay(b.id)">Пізній виїзд</button>
+						}
+						@if (canChange && b.status !== 'cancelled' && !b.roomLocked) {
+							<button class="button secondary" (click)="requestRoomChange()">Змінити номер</button>
+						}
+						@if (canChange && stayActions(b.status).includes('waitlist')) {
+							<button class="button secondary" [disabled]="saving()" (click)="runStayAction(b.id, 'waitlist')">{{ STAY_ACTION_LABEL.waitlist }}</button>
+						}
+						@if (!live) {
+							<button class="button secondary" (click)="dialogView.set({ kind: 'message', bookingId: b.id })">Надіслати повідомлення</button>
+						}
+					</div>
+					@if (canChange && stayActions(b.status).includes('cancel')) {
+						<button class="button danger" (click)="runStayAction(b.id, 'cancel')">{{ STAY_ACTION_LABEL.cancel }}</button>
 					}
 				</div>
 			}
