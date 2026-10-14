@@ -73,6 +73,10 @@ ul {
 	color: var(--muted);
 }
 
+.req {
+	color: var(--red);
+}
+
 .btn {
 	display: inline-flex;
 	align-items: center;
@@ -177,6 +181,25 @@ ul {
 	textarea {
 		min-height: 64px;
 		resize: vertical;
+	}
+
+	// A required field that is still empty.
+	&.missing {
+		input,
+		select {
+			border-color: var(--red);
+		}
+	}
+
+	.static {
+		display: flex;
+		align-items: center;
+		min-height: 40px;
+		border-radius: 6px;
+		background: var(--surface-hover);
+		padding: 8px 10px;
+		color: var(--ink);
+		font-weight: 700;
 	}
 
 	&.check {

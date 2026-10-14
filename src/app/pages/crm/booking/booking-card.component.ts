@@ -21,7 +21,7 @@ import { HotelService } from '../../../feature/firebase/hotel.service';
 import { RoomRecord, RoomsService } from '../../../feature/firebase/rooms.service';
 import { nightsBetween, roomIsFree } from '../../../shared/booking-rules';
 import { canCurrent, isLiveSession } from '../../../shared/role';
-import { BookingDemoStore, DEMO_BOOKING_ID } from './booking-card.demo';
+import { BookingDemoStore, DEMO_BOOKING_ID, visitsLabel } from './booking-card.demo';
 import { COLUMNS, FieldDef, NOT_SET, TabId, columnsFor, tabsFor } from './booking-card.fields';
 import { BalanceTabComponent } from './tabs/balance-tab.component';
 import { ChargesTabComponent } from './tabs/charges-tab.component';
@@ -175,6 +175,7 @@ export class BookingCardComponent {
 	protected readonly dirty = computed(() => Object.keys(this._draft()).length > 0);
 	protected readonly saving = signal(false);
 
+
 	// ----- status actions (Поселити / Виселити / В лист очікування / Анулювати), same rules as the calendar -----
 	protected readonly statusLabel = STATUS_LABEL;
 	protected readonly actionLabel = STAY_ACTION_LABEL;
@@ -295,6 +296,10 @@ export class BookingCardComponent {
 		if (key === 'createdBy') return staffStamp(b.createdBy || b.manager || 'Не записано', b.createdAt);
 		if (key === 'checkedInBy') return b.checkedInBy ? staffStamp(b.checkedInBy, b.checkedInAt) : '—';
 		if (key === 'checkedOutBy') return b.checkedOutBy ? staffStamp(b.checkedOutBy, b.checkedOutAt) : '—';
+		if (key === 'loyaltyCard') {
+			const main = this.demoStore.guests().find((g) => g.primary);
+			return main ? `${main.loyaltyCard} · ${visitsLabel(main.stays)}` : '—';
+		}
 		const services = this.demo ? this.demoStore.servicesTotal() : 0;
 		if (key === 'services') return money(services);
 		const due = b.total + services - b.paid;

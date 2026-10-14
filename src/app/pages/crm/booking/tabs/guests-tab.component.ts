@@ -1,5 +1,5 @@
 import { Component, inject, input } from '@angular/core';
-import { AGE_GROUPS, BookingDemoStore, DOCUMENT_TYPES, GENDERS, type DemoGuest } from '../booking-card.demo';
+import { AGE_GROUPS, BookingDemoStore, DOCUMENT_TYPES, GENDERS, REQUIRED_GUEST_KEYS, visitsLabel, type DemoGuest } from '../booking-card.demo';
 
 type TextKey = 'lastName' | 'firstName' | 'middleName' | 'birthDate' | 'phone' | 'email' | 'citizenship' | 'city' | 'address' | 'documentNumber';
 type SelectKey = 'gender' | 'ageGroup' | 'documentType';
@@ -37,6 +37,7 @@ const FLAGS: { key: FlagKey; label: string }[] = [
 	template: `
 		<div class="panel-head">
 			<h2>Анкети гостей ({{ store.guests().length }})</h2>
+			<span class="hint"><span class="req">*</span> обовʼязкові поля для реєстраційної картки</span>
 			<button type="button" class="btn primary" [disabled]="readOnly()" (click)="store.addGuest()">+ Додати анкету</button>
 		</div>
 		@for (g of store.guests(); track g.id) {
@@ -59,15 +60,21 @@ const FLAGS: { key: FlagKey; label: string }[] = [
 				</div>
 				<div class="form-grid">
 					@for (f of textFields; track f.key) {
-						<label class="f" [class.wide]="f.wide">
-							{{ f.label }}
-							<input [type]="f.type" [value]="g[f.key]" [disabled]="readOnly()" (change)="set(g, f.key, $any($event.target).value)" />
+						<label class="f" [class.wide]="f.wide" [class.missing]="required.has(f.key) && !g[f.key]">
+							<span>{{ f.label }}@if (required.has(f.key)) {<span class="req" aria-hidden="true"> *</span>}</span>
+							<input
+								[type]="f.type"
+								[value]="g[f.key]"
+								[required]="required.has(f.key)"
+								[disabled]="readOnly()"
+								(change)="set(g, f.key, $any($event.target).value)"
+							/>
 						</label>
 					}
 					@for (f of selectFields; track f.key) {
-						<label class="f">
-							{{ f.label }}
-							<select [disabled]="readOnly()" (change)="set(g, f.key, $any($event.target).value)">
+						<label class="f" [class.missing]="required.has(f.key) && !g[f.key]">
+							<span>{{ f.label }}@if (required.has(f.key)) {<span class="req" aria-hidden="true"> *</span>}</span>
+							<select [required]="required.has(f.key)" [disabled]="readOnly()" (change)="set(g, f.key, $any($event.target).value)">
 								<option value="" [selected]="!g[f.key]">Не визначено</option>
 								@for (o of f.options; track o) {
 									<option [value]="o" [selected]="g[f.key] === o">{{ o }}</option>
@@ -75,6 +82,14 @@ const FLAGS: { key: FlagKey; label: string }[] = [
 							</select>
 						</label>
 					}
+					<label class="f">
+						Паспорт дійсний до
+						<input type="date" [value]="g.documentValidUntil" [disabled]="readOnly()" (change)="set(g, 'documentValidUntil', $any($event.target).value)" />
+					</label>
+					<div class="f">
+						Карта лояльності
+						<output class="static">{{ g.loyaltyCard }} · {{ visits(g) }}</output>
+					</div>
 					@for (f of flags; track f.key) {
 						<label class="f check wide">
 							<input type="checkbox" [checked]="g[f.key]" [disabled]="readOnly()" (change)="setFlag(g, f.key, $any($event.target).checked)" />
@@ -97,6 +112,11 @@ export class GuestsTabComponent {
 	protected readonly textFields = TEXT_FIELDS;
 	protected readonly selectFields = SELECT_FIELDS;
 	protected readonly flags = FLAGS;
+	protected readonly required = REQUIRED_GUEST_KEYS;
+
+	protected visits(g: DemoGuest): string {
+		return visitsLabel(g.stays);
+	}
 
 	protected fullName(g: DemoGuest): string {
 		return [g.lastName, g.firstName, g.middleName].filter(Boolean).join(' ') || 'Новий гість';

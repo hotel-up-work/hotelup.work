@@ -23,6 +23,10 @@ export interface DemoGuest {
 	address: string;
 	documentType: string;
 	documentNumber: string;
+	/** ISO `YYYY-MM-DD`: the document's expiry date. */
+	documentValidUntil: string;
+	/** Given automatically when the profile is created. */
+	loyaltyCard: string;
 	vip: boolean;
 	blacklist: boolean;
 	consent: boolean;
@@ -36,8 +40,14 @@ export interface DemoCharge {
 	service: string;
 	/** ISO `YYYY-MM-DD`. */
 	date: string;
+	/** Pieces, or hours for an hourly procedure. */
 	qty: number;
+	/** Per piece, or per hour. */
 	price: number;
+	/** Procedures (massage, spa, sauna) are billed by the hour from a start time. */
+	hourly?: boolean;
+	/** `HH:MM`, hourly procedures only. */
+	time?: string;
 }
 
 export interface DemoPayment {
@@ -77,6 +87,37 @@ export const SERVICES: { name: string; price: number }[] = [
 	{ name: 'Дитяче ліжечко', price: 200 },
 	{ name: 'Пральня', price: 250 },
 ];
+
+/** Procedures billed by the hour; price is per hour. */
+export const PROCEDURES: { name: string; price: number }[] = [
+	{ name: 'Масаж', price: 900 },
+	{ name: 'СПА-зона', price: 600 },
+	{ name: 'Сауна', price: 700 },
+	{ name: 'Хамам', price: 750 },
+	{ name: 'Джакузі', price: 500 },
+];
+
+/** Required on a guest profile for the registration card. */
+export const REQUIRED_GUEST_KEYS: ReadonlySet<string> = new Set([
+	'lastName',
+	'firstName',
+	'birthDate',
+	'phone',
+	'citizenship',
+	'documentNumber',
+	'gender',
+	'ageGroup',
+	'documentType',
+]);
+
+/** "3 візити": visits counted with this one. */
+export function visitsLabel(earlierStays: number): string {
+	const n = earlierStays + 1;
+	const last = n % 10;
+	const teen = n % 100 >= 11 && n % 100 <= 14;
+	const word = last === 1 && !teen ? 'візит' : last >= 2 && last <= 4 && !teen ? 'візити' : 'візитів';
+	return `${n} ${word}`;
+}
 
 export const GENDERS = ['Жіноча', 'Чоловіча'];
 export const AGE_GROUPS = ['Дорослий', 'Дитина'];
@@ -290,7 +331,6 @@ const DEMO_EXTRAS: Record<string, string> = {
 	transferDecision: '',
 	documents: '',
 	companySegment: '',
-	loyaltyCard: 'GH-004217',
 	autoCharging: 'true',
 	priceFixation: 'При критичних змінах',
 };
@@ -312,6 +352,8 @@ function person(over: Partial<DemoGuest>): DemoGuest {
 		address: '',
 		documentType: 'Паспорт',
 		documentNumber: '',
+		documentValidUntil: '',
+		loyaltyCard: '',
 		vip: false,
 		blacklist: false,
 		consent: true,
@@ -336,9 +378,16 @@ export class BookingDemoStore {
 	/** Values of demo-only fields, by field key. */
 	readonly extras = signal<Record<string, string>>({ ...DEMO_EXTRAS });
 
+	/** Loyalty cards are numbered in order of issue; the demo's main guest holds GH-004217. */
+	private _nextCard = 4217;
+	private _issueCard(): string {
+		return `GH-${String(this._nextCard++).padStart(6, '0')}`;
+	}
+
 	readonly guests = signal<DemoGuest[]>([
 		person({
 			primary: true,
+			loyaltyCard: this._issueCard(),
 			lastName: 'Коваленко',
 			firstName: 'Анна',
 			middleName: 'Сергіївна',
@@ -349,10 +398,12 @@ export class BookingDemoStore {
 			city: 'Львів',
 			address: 'вул. Вигадана, 10',
 			documentNumber: 'АА 000001',
+			documentValidUntil: '2032-04-12',
 			stays: 2,
 			notes: 'Любить тихі номери на високому поверсі.',
 		}),
 		person({
+			loyaltyCard: this._issueCard(),
 			lastName: 'Коваленко',
 			firstName: 'Олексій',
 			middleName: 'Петрович',
@@ -361,6 +412,7 @@ export class BookingDemoStore {
 			city: 'Львів',
 			address: 'вул. Вигадана, 10',
 			documentNumber: 'АА 000002',
+			documentValidUntil: '2029-09-02',
 			stays: 2,
 		}),
 	]);
@@ -445,6 +497,11 @@ export class BookingDemoStore {
 		this.log(`Додано нарахування «${service}»`);
 	}
 
+	addProcedure(service: string, hours: number, price: number, date: string, time: string): void {
+		this.services.update((s) => [...s, { id: uid(), service, qty: hours, price, date, time, hourly: true }]);
+		this.log(`Додано процедуру «${service}», ${hours} год`);
+	}
+
 	removeCharge(id: string): void {
 		const gone = this.services().find((c) => c.id === id);
 		this.services.update((s) => s.filter((c) => c.id !== id));
@@ -458,7 +515,7 @@ export class BookingDemoStore {
 	}
 
 	addGuest(): void {
-		this.guests.update((g) => [...g, person({ lastName: this.booking().guestName.split(' ').pop() ?? '' })]);
+		this.guests.update((g) => [...g, person({ lastName: this.booking().guestName.split(' ').pop() ?? '', loyaltyCard: this._issueCard() })]);
 		this.log('Додано анкету гостя');
 	}
 

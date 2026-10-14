@@ -88,10 +88,10 @@
 				}
 				@default {
 			<div class="columns">
-				@for (column of columns; track $index; let firstColumn = $first, lastColumn = $last) {
+				@for (column of columns; track $index; let lastColumn = $last) {
 					<div class="column">
 						@for (section of column; track section.id) {
-							<section class="card" [attr.aria-labelledby]="'s-' + section.id">
+							<section class="card" [attr.data-section]="section.id" [attr.aria-labelledby]="'s-' + section.id">
 								<h2 [id]="'s-' + section.id">{{ section.title }}</h2>
 								@if (section.id === 'manager') {
 									<dl class="staff">
@@ -108,8 +108,10 @@
 										<div
 											class="field"
 											[class.wide]="f.wide"
+											[class.third]="f.third"
 												[class.invalid]="fieldError()[f.key]"
 											[class.check]="f.kind === 'check'"
+											[class.inline]="f.kind === 'readonly'"
 												[class.lifted]="f.kind === 'select' || f.kind === 'date' || f.kind === 'time' || f.kind === 'readonly'"
 										>
 											@switch (f.kind) {
@@ -213,15 +215,6 @@
 								}
 							</section>
 						}
-						@if (firstColumn && created()) {
-							<p class="audit">
-								@if (demo) {
-									Заброньовано: <b>{{ demoStore.bookedBy }}</b> · {{ created() }} · Остання зміна: <b>{{ demoStore.lastChange().actor }}</b> · {{ demoStore.lastChange().at }}
-								} @else {
-									Створено: {{ created() }}
-								}
-							</p>
-						}
 						@if (demo && lastColumn) {
 							<section class="card log">
 								<h2>Журнал приміток ({{ demoStore.notes().length }})</h2>
@@ -247,13 +240,20 @@
 
 			@if (demo) {
 				<details class="card history">
-					<summary>Історія змін ({{ demoStore.history().length }})</summary>
+					<summary>
+						<span class="history-title">Історія змін ({{ demoStore.history().length }})</span>
+						<span class="audit">
+							Заброньовано: <b>{{ demoStore.bookedBy }}</b> · {{ created() }} · Остання зміна: <b>{{ demoStore.lastChange().actor }}</b> · {{ demoStore.lastChange().at }}
+						</span>
+					</summary>
 					<ul>
 						@for (e of historyDesc(); track $index) {
 							<li><span>{{ e.at }}</span> <b>{{ e.actor }}</b>: {{ e.text }}</li>
 						}
 					</ul>
 				</details>
+			} @else if (created()) {
+				<p class="audit">Створено: {{ created() }}</p>
 			}
 
 

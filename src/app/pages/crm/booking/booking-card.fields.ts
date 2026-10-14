@@ -10,6 +10,10 @@ export interface FieldDef {
 	live?: boolean;
 	/** Spans the whole section width. */
 	wide?: boolean;
+	/** A money field outside a money section: hidden from roles without the guest-bill capability. */
+	finance?: boolean;
+	/** Takes a third of the row instead of half, so three short fields share one line. */
+	third?: boolean;
 	autocomplete?: string;
 }
 
@@ -92,20 +96,21 @@ export const COLUMNS: SectionDef[][] = [
 			id: 'stay',
 			title: 'Проживання',
 			fields: [
-				{ key: 'checkIn', label: 'Заїзд', kind: 'date' },
-				{ key: 'checkInTime', label: 'Час заїзду', kind: 'time' },
-				{ key: 'checkOut', label: 'Виїзд', kind: 'date' },
-				{ key: 'checkOutTime', label: 'Час виїзду', kind: 'time' },
-				{ key: 'nights', label: 'Ночей', kind: 'number' },
+				// Dates and nights in one row, the times right under them.
+				{ key: 'checkIn', label: 'Заїзд', kind: 'date', third: true },
+				{ key: 'checkOut', label: 'Виїзд', kind: 'date', third: true },
+				{ key: 'nights', label: 'Ночей', kind: 'number', third: true },
+				{ key: 'checkInTime', label: 'Час заїзду', kind: 'time', third: true },
+				{ key: 'checkOutTime', label: 'Час виїзду', kind: 'time', third: true },
+				{ key: 'extraGuests', label: 'Дод. місця', kind: 'number', third: true },
+				{ key: 'adults', label: 'Дорослих', kind: 'number', third: true },
+				{ key: 'children', label: 'Дітей', kind: 'number', third: true },
+				{ key: 'childrenPaid', label: 'Дітей з оплатою', kind: 'number', third: true },
 				{ key: 'roomId', label: 'Кімната', kind: 'select' },
 				{ key: 'accommodationType', label: 'Тип розміщення', kind: 'select', options: ACCOMMODATION },
-				{ key: 'adults', label: 'Дорослих', kind: 'number' },
-				{ key: 'children', label: 'Дітей', kind: 'number' },
-				{ key: 'childrenPaid', label: 'Дітей з оплатою', kind: 'number' },
-				{ key: 'extraGuests', label: 'Дод. місця', kind: 'number' },
-				{ key: 'byBed', label: 'По місцях', kind: 'check' },
-				{ key: 'bedNumber', label: 'Місце', kind: 'number' },
-				{ key: 'roomLocked', label: 'Номер закріплено за гостем', kind: 'check' },
+				{ key: 'byBed', label: 'По місцях', kind: 'check', third: true },
+				{ key: 'bedNumber', label: 'Місце', kind: 'number', third: true },
+				{ key: 'roomLocked', label: 'Номер закріплено за гостем', kind: 'check', third: true },
 				{ key: 'rateCategory', label: 'Категорія оплати', kind: 'select' },
 				{ key: 'roomProperties', label: 'Властивості кімнат', kind: 'select', options: ROOM_PROPERTIES, live: false },
 			],
@@ -153,9 +158,11 @@ export const COLUMNS: SectionDef[][] = [
 				{ key: 'companyOperator', label: 'Компанія-оператор', kind: 'text' },
 				{ key: 'companySource', label: 'Компанія-джерело', kind: 'text' },
 				{ key: 'contractTerms', label: 'Умова договору', kind: 'text' },
+				{ key: 'depositBalance', label: 'Баланс по депозиту, ₴', kind: 'money', finance: true },
 				{ key: 'externalNumber', label: 'Номер бронювання зовнішньої системи', kind: 'text', wide: true },
 				{ key: 'companySegment', label: 'Сегмент компанії', kind: 'select', options: COMPANY_SEGMENTS, live: false },
-				{ key: 'loyaltyCard', label: 'Карта лояльності', kind: 'text', live: false },
+				// Assigned automatically to the main guest; shows how many times they have stayed.
+				{ key: 'loyaltyCard', label: 'Карта лояльності', kind: 'readonly', live: false },
 				{ key: 'autoCharging', label: 'Автонарахування', kind: 'check', live: false },
 			],
 		},
@@ -170,17 +177,15 @@ export const COLUMNS: SectionDef[][] = [
 				{ key: 'mealPlan', label: 'Тип харчування', kind: 'select', options: MEALS },
 				{ key: 'paymentType', label: 'Тип оплати', kind: 'select', options: PAYMENT_TYPES },
 				{ key: 'payMethod', label: 'Спосіб оплати', kind: 'select', options: PAY_METHODS },
-				{ key: 'source', label: 'Джерело', kind: 'select', options: SOURCES },
-				{ key: 'visitPurpose', label: 'Мета візиту', kind: 'select', options: PURPOSES },
 				{ key: 'price', label: 'Ціна за ніч, ₴', kind: 'money' },
 				{ key: 'total', label: 'Разом за проживання', kind: 'readonly' },
 				{ key: 'services', label: 'Додаткові послуги', kind: 'readonly', live: false },
 				{ key: 'paid', label: 'Оплачено', kind: 'readonly' },
-				{ key: 'balance', label: 'Баланс', kind: 'readonly' },
-				{ key: 'depositBalance', label: 'Баланс по депозиту, ₴', kind: 'money' },
-				{ key: 'creditLimit', label: 'Кредитний ліміт, ₴', kind: 'money' },
-				{ key: 'creditRemainder', label: 'Залишок ліміту, ₴', kind: 'money' },
+				{ key: 'balance', label: 'Баланс', kind: 'readonly', wide: true },
 				{ key: 'priceFixation', label: 'Фіксація ціни', kind: 'select', options: PRICE_FIXATION, live: false },
+				// Where the guest came from and why: read after the money, so they sit last.
+				{ key: 'source', label: 'Джерело', kind: 'select', options: SOURCES },
+				{ key: 'visitPurpose', label: 'Мета візиту', kind: 'select', options: PURPOSES },
 			],
 		},
 		{
@@ -200,7 +205,10 @@ export function columnsFor(demo: boolean, showFinance: boolean): SectionDef[][] 
 	return COLUMNS.map((column) =>
 		column
 			.filter((section) => !section.finance || showFinance)
-			.map((section) => ({ ...section, fields: demo ? section.fields : section.fields.filter((f) => f.live !== false) }))
+			.map((section) => ({
+				...section,
+				fields: section.fields.filter((f) => (demo || f.live !== false) && (!f.finance || showFinance)),
+			}))
 			.filter((section) => section.fields.length),
 	).filter((column) => column.length);
 }
