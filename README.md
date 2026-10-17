@@ -102,6 +102,8 @@ dist/app/server
 
 Pages are **prerendered at build time** using Angular SSR.
 
+`npm run build:seo` runs the same build and also writes `sitemap.xml` and `robots.txt` into `dist/app/browser`. The GitHub Pages deploy uses `build:seo`; mobile app builds use plain `build`.
+
 ---
 
 # Running the SSR server (optional)

@@ -24,8 +24,8 @@ jobs:
             - name: Rebuild lightningcss
               run: npm rebuild lightningcss
 
-            - name: Build Angular app
-              run: npm run build
+            - name: Build Angular app with SEO files
+              run: npm run build:seo
 
             - name: Copy CNAME file
               run: cp CNAME dist/app/browser/
