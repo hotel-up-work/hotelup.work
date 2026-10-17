@@ -5,7 +5,7 @@ Every prerendered page uses a card through `data.meta.image` in `src/app/app.rou
 Hotel-specific `/proposal/:slug` pages share the proposal card. The default image
 and initial HTML metadata use the home card. Existing indexing rules still apply.
 The five client-rendered settings sections share the settings card. The panorama
-publisher has its own card. All cards use the current `src/assets/logo-mark.png`.
+publisher has its own card. All cards use the current `src/assets/logo_no_bg.png`.
 
 These are code-native branded graphics, rendered with Windows System.Drawing,
 not AI-generated photographs or screenshots of real hotel data. The palette follows

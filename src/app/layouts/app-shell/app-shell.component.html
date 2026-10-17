@@ -2,8 +2,8 @@
 
 <aside class="sidebar" id="sidebar" [class.open]="sidebarOpen()" [class.compact]="compact()" aria-label="Навігація готелю">
 	<a class="logo" routerLink="/dashboard" aria-label="Hotel Up Work, огляд готелю">
-		<img class="logo-mark" ngSrc="logo-mark.png" width="256" height="258" alt="" />
-		<img class="logo-text" ngSrc="logo.png" width="640" height="508" alt="Hotel Up Work" priority />
+		<img class="logo-mark" ngSrc="logo_no_bg.png" width="512" height="512" alt="" />
+		<img class="logo-text" ngSrc="logo_no_bg.png" width="512" height="512" alt="Hotel Up Work" priority />
 	</a>
 	<div class="hotel-section">
 		@if (hotels().length > 1) {
@@ -146,7 +146,7 @@
 <div class="workspace" [class.compact]="compact()">
 	<header class="topbar">
 		<a class="topbar-logo" routerLink="/dashboard" aria-label="Hotel Up Work, головна сторінка">
-			<img ngSrc="logo.png" width="640" height="508" alt="Hotel Up Work" />
+			<img ngSrc="logo_no_bg.png" width="512" height="512" alt="Hotel Up Work" />
 		</a>
 		<button
 			class="icon-button mobile-menu"

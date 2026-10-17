@@ -1,0 +1,76 @@
+{
+  "tool": "Built-in image_gen",
+  "prompt": "Symbol-only hospitality app logo. Bold minimal geometry, rounded precision, warm ochre gold #BF944B, transparent alpha background, clear at 24px on off-white #FAFAF8 and charcoal #282828. No text, letters, numbers, enclosing tile, gradients, texture, outlines, glow, shadows or 3D.",
+  "concepts": [
+    {
+      "id": "01",
+      "name": "Open welcome",
+      "concept": "A single bold rounded arch framing one offset open door leaf; asymmetrical welcoming entrance, broad negative space.",
+      "source": "C:\\Users\\crack\\.codex\\generated_images\\01a1492b-427f-73c0-9593-1b29c24cbad1\\exec-f82dd44c-9ad6-4196-90c2-c1587575dbb1.png",
+      "file": "01-open-welcome.png"
+    },
+    {
+      "id": "02",
+      "name": "Room key",
+      "concept": "An elegant abstract room key: circular bow with a square negative-space center, short sturdy stem and one broad tooth; balanced compact diagonal silhouette, no letters.",
+      "source": "C:\\Users\\crack\\.codex\\generated_images\\01a1492b-427f-73c0-9593-1b29c24cbad1\\exec-22c7d077-1eba-4afe-9759-d6933b92602b.png",
+      "file": "02-room-key.png"
+    },
+    {
+      "id": "03",
+      "name": "Connected rooms",
+      "concept": "Four rounded room tiles in a compact pinwheel, linked by a clear central negative-space courtyard. Architectural hospitality organization.",
+      "source": "C:\\Users\\crack\\.codex\\generated_images\\01a1492b-427f-73c0-9593-1b29c24cbad1\\exec-e7bddb7f-a19c-4830-a4d2-6f722766a588.png",
+      "file": "03-connected-rooms.png"
+    },
+    {
+      "id": "04",
+      "name": "Hospitality spark",
+      "concept": "A distinctive four-point hospitality star built from four soft geometric petals with a small diamond-shaped transparent center. Friendly precision and attentive service.",
+      "source": "C:\\Users\\crack\\.codex\\generated_images\\01a1492b-427f-73c0-9593-1b29c24cbad1\\exec-b04ac1c1-7dab-4350-ac45-0cf0923fe270.png",
+      "file": "04-hospitality-spark.png"
+    },
+    {
+      "id": "05",
+      "name": "Seamless stay",
+      "concept": "Two interlocking rounded loops forming a compact balanced knot, suggesting effortless connected hotel operations; clean over-under negative-space cuts, no infinity symbol.",
+      "source": "C:\\Users\\crack\\.codex\\generated_images\\01a1492b-427f-73c0-9593-1b29c24cbad1\\exec-dea7bec3-8d0a-4acf-a9d1-1064f9352b08.png",
+      "file": "05-seamless-stay.png"
+    },
+    {
+      "id": "06",
+      "name": "Shelter",
+      "concept": "A refined shelter emblem: a single sweeping rounded canopy above two balanced short pillars, with a broad welcoming open center. Distinctive low wide architectural silhouette, not a literal house or doorway arch.",
+      "source": "C:\\Users\\crack\\.codex\\generated_images\\01a1492b-427f-73c0-9593-1b29c24cbad1\\exec-c25bdf14-86fc-454a-b7f4-983cb41b7737.png",
+      "file": "06-shelter.png"
+    },
+    {
+      "id": "07",
+      "name": "Guest orbit",
+      "concept": "Three broad rounded capsule forms curving around a single circular central guest dot, a compact dynamic hospitality orbit. Simple, friendly, carefully spaced, no fine lines.",
+      "source": "C:\\Users\\crack\\.codex\\generated_images\\01a1492b-427f-73c0-9593-1b29c24cbad1\\exec-32cf7d98-d09c-4fd5-964b-23d10610ab2c.png",
+      "file": "07-guest-orbit.png"
+    },
+    {
+      "id": "08",
+      "name": "Courtyard compass",
+      "concept": "A geometric boutique-hotel courtyard emblem: four L-shaped corner forms arranged with rotational symmetry around a generous transparent square courtyard, compact square footprint.",
+      "source": "C:\\Users\\crack\\.codex\\generated_images\\01a1492b-427f-73c0-9593-1b29c24cbad1\\exec-e3a0528b-01cc-4700-963f-27f96bb80983.png",
+      "file": "08-courtyard-compass.png"
+    },
+    {
+      "id": "09",
+      "name": "Welcome wings",
+      "concept": "Two broad stylized wing or leaf forms opening upwards from one short central base, expressing welcoming care and growth; symmetrical abstract hospitality gesture, no bird details, no literal hands.",
+      "source": "C:\\Users\\crack\\.codex\\generated_images\\01a1492b-427f-73c0-9593-1b29c24cbad1\\exec-e5b21e64-6c90-4831-af2e-44c1bf2b38c5.png",
+      "file": "09-welcome-wings.png"
+    },
+    {
+      "id": "10",
+      "name": "Rising ribbon",
+      "concept": "A bold single folded ribbon with two broad ascending rounded steps, compact abstract architectural silhouette expressing smooth organized progress. No arrowhead, no letter shape, no chart axes.",
+      "source": "C:\\Users\\crack\\.codex\\generated_images\\01a1492b-427f-73c0-9593-1b29c24cbad1\\exec-dd16975e-eab8-4ce9-8515-ad12ec087557.png",
+      "file": "10-rising-ribbon.png"
+    }
+  ]
+}

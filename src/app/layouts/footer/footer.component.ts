@@ -25,7 +25,7 @@ export class FooterComponent {
 			path: '/',
 		},
 	]);
-	protected readonly companyImage = computed(() => this.company().image || 'logo.png');
+	protected readonly companyImage = computed(() => this.company().image || 'logo_no_bg.png');
 	protected readonly companyImageAlt = computed(() =>
 		this.company().name ? this.company().name : 'Зображення компанії',
 	);

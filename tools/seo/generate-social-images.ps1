@@ -4,7 +4,7 @@ Add-Type -AssemblyName System.Drawing
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $cards = Get-Content (Join-Path $PSScriptRoot 'social-images.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 $output = Join-Path $root 'src/assets/seo'
-$brandMark = [Drawing.Image]::FromFile((Join-Path $root 'src/assets/logo-mark.png'))
+$brandMark = [Drawing.Image]::FromFile((Join-Path $root 'src/assets/logo_no_bg.png'))
 [IO.Directory]::CreateDirectory($output) | Out-Null
 
 function Brush($color) { return [Drawing.SolidBrush]::new([Drawing.ColorTranslator]::FromHtml($color)) }
