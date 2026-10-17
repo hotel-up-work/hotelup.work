@@ -1,4 +1,4 @@
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, NgOptimizedImage } from '@angular/common';
 import { Component, computed, ElementRef, inject, input, signal, viewChild } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../feature/firebase/auth.service';
@@ -56,7 +56,7 @@ const HOTEL_SEARCH_MIN = 6;
 
 @Component({
 	selector: 'app-shell',
-	imports: [IconComponent, RouterLink],
+	imports: [IconComponent, NgOptimizedImage, RouterLink],
 	templateUrl: './app-shell.component.html',
 	styleUrl: './app-shell.component.scss',
 	host: {

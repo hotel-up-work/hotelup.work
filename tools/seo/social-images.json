@@ -26,6 +26,7 @@
   {"route":"new-booking", "slug":"new-booking", "title":"Нове бронювання", "subtitle":"Номер, дати, гість та оплата", "kind":"form"},
   {"route":"booking", "slug":"booking", "title":"Деталі бронювання", "subtitle":"Уся інформація про проживання в одній картці", "kind":"form"},
   {"route":"book", "slug":"book", "title":"Знайдіть вільний номер", "subtitle":"Доступність на потрібні дати", "kind":"calendar"},
+  {"route":"publish-panorama", "slug":"publish-panorama", "title":"360° панорами вашого готелю", "subtitle":"Віртуальний тур і публікація в Google Street View", "kind":"panorama"},
   {"route":"confirmation", "slug":"confirmation", "title":"Бронювання підтверджено", "subtitle":"Дані заїзду та інформація для гостя", "kind":"form"},
   {"route":"privacy", "slug":"privacy", "title":"Конфіденційність даних", "subtitle":"Як ми обробляємо та захищаємо ваші дані", "kind":"document"},
   {"route":"cookies", "slug":"cookies", "title":"Політика cookies", "subtitle":"Прозоро про використання файлів cookie", "kind":"document"}

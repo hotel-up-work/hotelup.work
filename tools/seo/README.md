@@ -1,9 +1,11 @@
 # Social images
 
-The 30 page-specific JPEG cards in `src/assets/seo/` are 1200 × 630 pixels.
+The 31 page-specific JPEG cards in `src/assets/seo/` are 1200 × 630 pixels.
 Every prerendered page uses a card through `data.meta.image` in `src/app/app.routes.ts`.
 Hotel-specific `/proposal/:slug` pages share the proposal card. The default image
 and initial HTML metadata use the home card. Existing indexing rules still apply.
+The five client-rendered settings sections share the settings card. The panorama
+publisher has its own card. All cards use the current `src/assets/logo-mark.png`.
 
 These are code-native branded graphics, rendered with Windows System.Drawing,
 not AI-generated photographs or screenshots of real hotel data. The palette follows
@@ -25,3 +27,6 @@ After `npm run build`, verify every card and hotel proposal's built metadata:
 ```sh
 node tools/seo/verify-social-images.mjs
 ```
+
+Verification also checks the route configuration (including shared settings metadata),
+so adding a page without registering its social card fails the check.

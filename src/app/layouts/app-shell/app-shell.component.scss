@@ -153,6 +153,7 @@ main {
 .logo {
 	display: flex;
 	align-items: center;
+	justify-content: center;
 	gap: 6px;
 	font-size: 20px;
 	white-space: nowrap;
@@ -166,12 +167,20 @@ main {
 	}
 }
 
+.logo-text {
+	display: block;
+	width: auto;
+	height: 76px;
+	object-fit: contain;
+}
+
 .logo-mark {
-	display: grid;
+	display: none;
 	place-items: center;
 	width: 32px;
 	height: 34px;
-	border: 1px solid var(--gold-border);
+	border: 0;
+	object-fit: contain;
 	font-size: 22px;
 	font-weight: 500;
 	margin-right: 5px;
@@ -737,6 +746,12 @@ main {
 
 .topbar-logo {
 	display: none;
+
+	img {
+		display: block;
+		width: 100%;
+		height: auto;
+	}
 }
 
 @media (min-width: 1500px) {
@@ -892,10 +907,10 @@ main {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 38px;
-		height: 38px;
+		width: 64px;
+		height: 51px;
 		flex: none;
-		border: 1px solid var(--gold-border);
+		border: 0;
 		border-radius: 7px;
 		color: var(--gold-text);
 		font-weight: 700;
@@ -1000,6 +1015,7 @@ main {
 		}
 
 		.logo-mark {
+			display: block;
 			margin-right: 0;
 		}
 

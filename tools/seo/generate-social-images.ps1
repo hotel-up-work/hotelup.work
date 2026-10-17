@@ -4,6 +4,7 @@ Add-Type -AssemblyName System.Drawing
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $cards = Get-Content (Join-Path $PSScriptRoot 'social-images.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 $output = Join-Path $root 'src/assets/seo'
+$brandMark = [Drawing.Image]::FromFile((Join-Path $root 'src/assets/logo-mark.png'))
 [IO.Directory]::CreateDirectory($output) | Out-Null
 
 function Brush($color) { return [Drawing.SolidBrush]::new([Drawing.ColorTranslator]::FromHtml($color)) }
@@ -44,8 +45,7 @@ foreach ($card in $cards) {
     $g.TextRenderingHint = [Drawing.Text.TextRenderingHint]::AntiAliasGridFit
     $g.Clear([Drawing.ColorTranslator]::FromHtml('#fafaf8'))
     Box 0 0 1200 9 '#c5a15a' 1
-    Box 56 55 42 42 '#161616' 12
-    Label 'H' 65 58 29 '#f4ebd9' $true
+    $g.DrawImage($brandMark, 56, 49, 48, 48)
     Label 'Hotel Upwork' 113 55 28 '#161616' $true
     Label 'СИСТЕМА УПРАВЛІННЯ ГОТЕЛЕМ' 58 149 14 '#987434' $true
 
@@ -72,6 +72,21 @@ foreach ($card in $cards) {
     Dot 662 171 8 '#c5a15a'; Dot 678 171 8 '#dedfe1'; Dot 694 171 8 '#dedfe1'
     Label 'HOTEL UPWORK' 959 167 12 '#707174' $true
     switch ($card.kind) {
+        'panorama' {
+            Label 'Віртуальний тур 360°' 666 202 24 '#161616' $true
+            Box 666 253 438 226 '#eef2f3' 12
+            Box 684 270 402 146 '#e7dfcf' 10
+            Box 707 287 110 112 '#fafaf8' 5
+            Box 834 287 110 112 '#fafaf8' 5
+            Box 965 322 99 77 '#c5a15a' 6
+            Box 699 393 377 14 '#d8c9aa' 5
+            Dot 742 343 28 '#c5a15a'
+            Dot 866 343 28 '#c5a15a'
+            Label '1' 751 347 16 '#ffffff' $true
+            Label '2' 875 347 16 '#ffffff' $true
+            Label '360°' 688 435 22 '#987434' $true
+            Label 'Google Street View' 819 438 19 '#707174'
+        }
         'calendar' {
             Label 'Бронювання' 666 202 24 '#161616' $true
             for ($col = 0; $col -lt 7; $col++) {
@@ -162,4 +177,5 @@ foreach ($card in $cards) {
     $final.Save((Join-Path $output ($card.slug + '.jpg')), $encoder, $parameters)
     $parameters.Dispose(); $fg.Dispose(); $final.Dispose(); $g.Dispose(); $bitmap.Dispose()
 }
+$brandMark.Dispose()
 Write-Output "Rendered $($cards.Count) social images to $output"

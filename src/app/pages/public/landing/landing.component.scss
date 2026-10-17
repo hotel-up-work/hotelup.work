@@ -115,6 +115,13 @@ header {
 	}
 }
 
+.brand-logo {
+	display: block;
+	width: auto;
+	height: 72px;
+	object-fit: contain;
+}
+
 .mark {
 	/* Optically centered against the "Hotel Upwork" title line only, not the
 	   shorter tagline below it — `.brand` is align-items: flex-start so this
@@ -2173,6 +2180,10 @@ dialog {
 }
 
 @media (max-width: 850px) {
+	.brand-logo {
+		height: 60px;
+	}
+
 	.tier-grid {
 		grid-template-columns: 1fr 1fr;
 	}

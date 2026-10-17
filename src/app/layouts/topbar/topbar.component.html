@@ -10,18 +10,13 @@
 			routerLink="/"
 		>
 			<img
-				class="h-10 w-auto"
-				[translate]="{ alt: 'Логотип проєкту' }"
+				class="h-14 w-auto"
+				alt="Hotel Up Work"
 				ngSrc="logo.png"
-				width="132"
-				height="40"
+				width="640"
+				height="508"
 				priority
 			/>
-			@if (company().name) {
-				<span class="hidden text-sm font-semibold tracking-[0.16em] text-[var(--c-text-strong)] sm:inline">
-					{{ company().name }}
-				</span>
-			}
 		</a>
 
 		<div class="flex items-center gap-2">

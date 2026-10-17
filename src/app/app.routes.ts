@@ -456,7 +456,7 @@ export const routes: Routes = [
 			meta: {
 				title: 'Панорами Street View · Hotel Upwork',
 				titleSuffix: '',
-				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/dashboard.jpg'),
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/publish-panorama.jpg'),
 				description: 'Hotel Upwork: 360° панорами готелю, тур між точками та публікація в Google Street View.',
 				robots: 'noindex, nofollow',
 			},

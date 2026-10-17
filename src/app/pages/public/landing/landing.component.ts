@@ -1,4 +1,4 @@
-import { DOCUMENT, isPlatformBrowser, NgTemplateOutlet } from '@angular/common';
+import { DOCUMENT, isPlatformBrowser, NgOptimizedImage, NgTemplateOutlet } from '@angular/common';
 import {
 	AfterViewInit,
 	Component,
@@ -56,7 +56,7 @@ const THEME_KEY = 'hotelup_theme';
 
 @Component({
 	selector: 'app-landing',
-	imports: [NgTemplateOutlet, RouterLink],
+	imports: [NgOptimizedImage, NgTemplateOutlet, RouterLink],
 	templateUrl: './landing.component.html',
 	styleUrl: './landing.component.scss',
 })
