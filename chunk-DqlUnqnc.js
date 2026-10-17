@@ -1,0 +1,1 @@
+import{i as U}from"./chunk-B12ugA-L.js";function c(e,r,t,n){return e.block&&t<=e.block.end&&n>e.block.start?!1:!r.some(o=>o.roomId===e.id&&U(o.status)&&t<o.checkOut&&n>o.checkIn)}function a(e,r){return Math.round((Date.parse(r+`T00:00:00Z`)-Date.parse(e+`T00:00:00Z`))/864e5)}export{c as n,a as t};
