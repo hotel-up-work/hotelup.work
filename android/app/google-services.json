@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "40129364672",
+    "project_id": "hotel-upwork",
+    "storage_bucket": "hotel-upwork.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:40129364672:android:ddf433b5a40c4c3ba36325",
+        "android_client_info": {
+          "package_name": "work.hotelup.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCYeq-yCn72_jkr0cKSjove6RJ9lNPA7cM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
