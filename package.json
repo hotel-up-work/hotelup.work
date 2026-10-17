@@ -47,6 +47,9 @@
 		"vitest": "4.1.11"
 	},
 	"overrides": {
-		"@grpc/grpc-js": "1.14.6"
+		"@grpc/grpc-js": "1.14.6",
+		"xcode": {
+			"uuid": "14.0.3"
+		}
 	}
 }
