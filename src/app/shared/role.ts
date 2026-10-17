@@ -75,8 +75,8 @@ export function getSessionRole(): Role | null {
 
 /** Detail views that are not pages of their own: they open for whoever can open the page they belong to. */
 const DETAIL_OF: Record<string, string> = { booking: 'calendar', 'new-booking': 'calendar', book: 'calendar', guest: 'guests' };
-/** Parts of the app shell (search, notifications, profile): every signed-in role and plan opens them. */
-const SHELL_PAGES = ['search', 'notifications', 'profile'];
+/** Parts of the app shell (search, notifications, profile) and the data agreement: every signed-in role and plan opens them. */
+const SHELL_PAGES = ['search', 'notifications', 'profile', 'contract'];
 
 /** The page whose access rules decide `path`, or null when nothing gates it. */
 export function gatePage(path: string): string | null {

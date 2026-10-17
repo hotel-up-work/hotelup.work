@@ -1,0 +1,49 @@
+<app-shell greetingTitle="Договір" greetingSubtitle="Grand Hotel · Кам'янець-Подільський">
+	<article class="contract">
+		<header class="contract-head">
+			<span class="pill">Проєкт · електронний договір</span>
+			<h1>Договір про обробку та захист даних</h1>
+			<p>Між Hotel Upwork і готелем Grand Hotel. Дані вашого готелю та ваших гостей належать вам і нікуди не передаються.</p>
+		</header>
+
+		<dl class="parties">
+			<div>
+				<dt>Обробник даних</dt>
+				<dd>Hotel Upwork</dd>
+			</div>
+			<div>
+				<dt>Власник даних</dt>
+				<dd>Grand Hotel, Кам'янець-Подільський</dd>
+			</div>
+		</dl>
+
+		<ol class="clauses">
+			@for (c of clauses; track c.title) {
+				<li>
+					<h2>{{ c.title }}</h2>
+					<ul>
+						@for (p of c.points; track p) {
+							<li>{{ p }}</li>
+						}
+					</ul>
+				</li>
+			}
+		</ol>
+
+		<footer class="sign">
+			<div>
+				<b>Підписання</b>
+				<p>
+					@if (isOwner) {
+						Електронне підписання зʼявиться незабаром.
+					} @else {
+						Договір підписує власник готелю. Ви можете ознайомитися з умовами.
+					}
+				</p>
+			</div>
+			@if (isOwner) {
+				<button type="button" class="button primary" disabled><app-icon name="lock" />Підписати електронно</button>
+			}
+		</footer>
+	</article>
+</app-shell>

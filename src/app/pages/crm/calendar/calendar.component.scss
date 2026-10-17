@@ -464,6 +464,7 @@ dialog {
 		font-size: 14px;
 		font-weight: 800;
 		min-width: 150px;
+		white-space: nowrap;
 		text-align: center;
 		letter-spacing: -0.2px;
 		text-transform: capitalize;
@@ -481,6 +482,7 @@ dialog {
 		padding: 8px 12px;
 		font-size: 11px;
 		font-weight: 600;
+		white-space: nowrap;
 		color: var(--muted);
 		background: var(--white);
 
@@ -684,6 +686,42 @@ dialog {
 	text-transform: uppercase;
 	grid-column: 1 / -1;
 	z-index: 4;
+}
+
+.cal-group-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	border: 0;
+	background: none;
+	padding: 0;
+	font: inherit;
+	letter-spacing: inherit;
+	text-transform: inherit;
+	color: inherit;
+	cursor: pointer;
+
+	app-icon {
+		width: 12px;
+		height: 12px;
+		transform: rotate(90deg);
+		transition: transform 0.15s;
+	}
+
+	&.collapsed app-icon {
+		transform: none;
+	}
+
+	&:focus-visible {
+		outline: 2px solid currentColor;
+		outline-offset: 2px;
+		border-radius: 2px;
+	}
+}
+
+.cal-group-count {
+	font-weight: 600;
+	color: var(--muted);
 }
 
 .cal-room-cell {
@@ -1061,6 +1099,7 @@ dialog {
 
 .cal-density {
 	margin-left: 4px;
+	white-space: nowrap;
 	padding: 8px 12px;
 	font-size: 11px;
 	font-weight: 600;
@@ -1457,7 +1496,7 @@ dialog {
 }
 
 // The topbar holds the whole calendar toolbar, so narrower desktops get icon-only buttons and a shorter search.
-@media (max-width: 1500px) {
+@media (max-width: 1750px) {
 	.cal-search input {
 		width: 170px;
 	}
@@ -1467,13 +1506,59 @@ dialog {
 	}
 }
 
-@media (max-width: 1200px) {
+// Month jumps are also in the date picker; dropping them keeps the left group clear of the actions.
+@media (max-width: 1400px) {
 	.cal-nav b {
 		min-width: 0;
 	}
 
+	.cal-month-jump {
+		display: none;
+	}
+}
+
+@media (max-width: 1300px) {
+	.cal-views-unit {
+		display: none;
+	}
+}
+
+@media (max-width: 1200px) {
+	// The compact toggle is the least used control: it gives way first on small desktops.
+	.cal-density {
+		display: none;
+	}
+
+
 	.cal-search input {
 		width: 130px;
+	}
+}
+
+@media (max-width: 1080px) {
+	.cal-search input {
+		width: 64px;
+	}
+
+	.cal-date {
+		display: none;
+	}
+
+	.cal-topbar-left,
+	.cal-toolbar-right {
+		gap: 6px;
+	}
+
+	.cal-nav {
+		gap: 2px;
+	}
+
+	.cal-views {
+		margin-left: 4px;
+
+		button {
+			padding: 8px 9px;
+		}
 	}
 }
 

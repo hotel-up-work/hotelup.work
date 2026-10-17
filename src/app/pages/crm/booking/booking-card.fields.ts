@@ -14,6 +14,8 @@ export interface FieldDef {
 	finance?: boolean;
 	/** Takes a third of the row instead of half, so three short fields share one line. */
 	third?: boolean;
+	/** Value drawn bold so it stands out: the guest's name and phone. */
+	strong?: boolean;
 	autocomplete?: string;
 }
 
@@ -131,9 +133,9 @@ export const COLUMNS: SectionDef[][] = [
 			id: 'guest',
 			title: 'Гість',
 			fields: [
-				{ key: 'firstName', label: 'Імʼя', kind: 'text', autocomplete: 'given-name' },
-				{ key: 'lastName', label: 'Прізвище', kind: 'text', autocomplete: 'family-name' },
-				{ key: 'phone', label: 'Телефон', kind: 'tel', autocomplete: 'tel' },
+				{ key: 'firstName', label: 'Імʼя', kind: 'text', strong: true, autocomplete: 'given-name' },
+				{ key: 'lastName', label: 'Прізвище', kind: 'text', strong: true, autocomplete: 'family-name' },
+				{ key: 'phone', label: 'Телефон', kind: 'tel', strong: true, autocomplete: 'tel' },
 				{ key: 'email', label: 'Електронна пошта', kind: 'email', autocomplete: 'email' },
 				{ key: 'citizenship', label: 'Громадянство', kind: 'select', options: CITIZENSHIP },
 				{ key: 'privilegeCategory', label: 'Категорія надбавки', kind: 'select', options: SURCHARGE },
@@ -158,9 +160,8 @@ export const COLUMNS: SectionDef[][] = [
 				{ key: 'companyOperator', label: 'Компанія-оператор', kind: 'text' },
 				{ key: 'companySource', label: 'Компанія-джерело', kind: 'text' },
 				{ key: 'contractTerms', label: 'Умова договору', kind: 'text' },
-				{ key: 'depositBalance', label: 'Баланс по депозиту, ₴', kind: 'money', finance: true },
-				{ key: 'externalNumber', label: 'Номер бронювання зовнішньої системи', kind: 'text', wide: true },
 				{ key: 'companySegment', label: 'Сегмент компанії', kind: 'select', options: COMPANY_SEGMENTS, live: false },
+				{ key: 'externalNumber', label: 'Номер бронювання зовнішньої системи', kind: 'text' },
 				// Assigned automatically to the main guest; shows how many times they have stayed.
 				{ key: 'loyaltyCard', label: 'Карта лояльності', kind: 'readonly', live: false },
 				{ key: 'autoCharging', label: 'Автонарахування', kind: 'check', live: false },
@@ -186,6 +187,7 @@ export const COLUMNS: SectionDef[][] = [
 				// Where the guest came from and why: read after the money, so they sit last.
 				{ key: 'source', label: 'Джерело', kind: 'select', options: SOURCES },
 				{ key: 'visitPurpose', label: 'Мета візиту', kind: 'select', options: PURPOSES },
+				{ key: 'depositBalance', label: 'Баланс по депозиту, ₴', kind: 'money' },
 			],
 		},
 		{

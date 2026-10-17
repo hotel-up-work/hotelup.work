@@ -549,6 +549,8 @@ export class CalendarComponent {
 	protected readonly search = signal('');
 	protected readonly statusFilter = signal(new Set<Status>(ALL_STATUSES));
 	protected readonly hiddenTypes = signal(new Set<string>());
+	/** Room types folded to their header row: their rooms and stays are not drawn. */
+	protected readonly collapsedTypes = signal(new Set<string>());
 	protected readonly filtersOpen = signal(false);
 	/** Legend panel left of the grid, opened from the topbar. Remembered per browser. */
 	protected readonly legendOpen = signal(readFlag(LEGEND_KEY));
@@ -647,13 +649,15 @@ export class CalendarComponent {
 	protected readonly visibleBookings = computed(() => this.bookings().filter((b) => this.statusFilter().has(b.status)));
 
 	protected readonly gridRows = computed(() => {
-		const rows: ({ kind: 'group'; label: string; row: number } | { kind: 'room'; room: Room; row: number })[] = [];
+		const rows: ({ kind: 'group'; label: string; row: number; collapsed: boolean; count: number } | { kind: 'room'; room: Room; row: number })[] = [];
+		const collapsed = this.collapsedTypes();
 		let row = 2;
 		for (const type of this.groupOrder()) {
 			const list = this.visibleRooms().filter((r) => r.type === type);
 			if (!list.length) continue;
-			rows.push({ kind: 'group', label: type, row });
+			rows.push({ kind: 'group', label: type, row, collapsed: collapsed.has(type), count: list.length });
 			row++;
+			if (collapsed.has(type)) continue;
 			for (const r of list) {
 				rows.push({ kind: 'room', room: r, row });
 				row++;
@@ -1012,6 +1016,14 @@ export class CalendarComponent {
 		this.statusFilter.update((set) => {
 			const next = new Set(set);
 			checked ? next.add(status) : next.delete(status);
+			return next;
+		});
+	}
+
+	protected toggleGroup(type: string): void {
+		this.collapsedTypes.update((set) => {
+			const next = new Set(set);
+			next.has(type) ? next.delete(type) : next.add(type);
 			return next;
 		});
 	}

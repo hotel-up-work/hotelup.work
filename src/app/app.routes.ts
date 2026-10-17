@@ -375,6 +375,20 @@ export const routes: Routes = [
 			import('./pages/crm/notifications/notifications.component').then((m) => m.NotificationsComponent),
 	},
 	{
+		path: 'contract',
+		canActivate: [roleGuard],
+		data: {
+			meta: {
+				title: 'Договір про захист даних · Hotel Upwork',
+				titleSuffix: '',
+				image: buildAbsoluteUrl(companyProfile.siteUrl, '/seo/settings.jpg'),
+				description: 'Hotel Upwork: договір з готелем про обробку, захист і конфіденційність даних.',
+				robots: 'noindex, nofollow',
+			},
+		},
+		loadComponent: () => import('./pages/crm/contract/contract.component').then((m) => m.ContractComponent),
+	},
+	{
 		path: 'profile',
 		canActivate: [roleGuard],
 		data: {

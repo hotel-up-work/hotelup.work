@@ -289,21 +289,6 @@ ul {
 	}
 }
 
-// The guest card is the one staff read most: its fields are drawn 1.2× larger.
-.card[data-section='guest'] {
-	--k: 1.2;
-	padding: 20px;
-
-	h2 {
-		font-size: 13px;
-		margin-bottom: 14px;
-	}
-
-	.fields {
-		gap: 12px 10px;
-	}
-}
-
 // Floating label: the control comes first in the markup and the label sits over it. It rests as the
 // placeholder while the field is empty and shrinks to the top edge once there is a value or focus.
 .field {
@@ -312,6 +297,10 @@ ul {
 
 	&.wide {
 		grid-column: 1 / -1;
+	}
+
+	&.strong input {
+		font-weight: 700;
 	}
 
 	input:not([type='checkbox']),
@@ -467,6 +456,22 @@ ul {
 }
 
 // Who booked / checked in / checked out: one compact line each.
+// Three short lines: the list sits beside the heading instead of under it.
+.card[data-section='manager'] {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 8px 16px;
+
+	h2 {
+		margin-bottom: 0;
+	}
+
+	.staff {
+		flex: 1 1 260px;
+	}
+}
+
 .staff {
 	display: grid;
 	gap: 4px;

@@ -367,6 +367,7 @@ Purpose: see room availability by date, manage bookings, move/extend stays, quic
 | ---------------------------------------------- | -------------------- |
 | Toolbar (date range, view length, search, filters) | Same as page |
 | Legend + main grid (rooms × dates)              | Same as page |
+| Room-type header rows: an arrow folds/unfolds that type's rooms (kept in memory for the visit; a folded type shows its room count) | Same as page |
 | Hover card on booking blocks: name, stage, number, adults/children; **check-in and check-out first and large** (weekday, date, "сьогодні/завтра/вчора", time: planned `checkInTime`/`checkOutTime`, else 14:00/11:00, a late check-out wins); room, nights, status, rate, meal plan, source, manager, company, phone, comment, marks | Same as page, **except** charged / paid / balance / deposit only with `guestBill` |
 | Room tooltip on the room cell (status, type and description, building, floor, places and extra places, beds, area, bathroom, balcony, view, amenities, guest now, next arrival, block) and a housekeeping status dot | Same as page, **except** room and extra-place prices only with `guestBill` |
 | Mobile day/3-day cards                          | Same as page |
@@ -436,7 +437,7 @@ write; roles per hotel are not built yet.
 
 #### Booking card: live and demo
 
-The card is one component (`src/app/pages/crm/booking/`) with two data modes. `/booking`, `/new-booking` and `/book` are detail views of the Calendar and `/guest` of Guests: they open for any role and plan that can open that page. `/search`, `/notifications` and `/profile` are shell features open to every role and plan (`DETAIL_OF` and `SHELL_PAGES` in `role.ts`). Every field and tab is declared once in `booking-card.fields.ts` with a `live` flag.
+The card is one component (`src/app/pages/crm/booking/`) with two data modes. `/booking`, `/new-booking` and `/book` are detail views of the Calendar and `/guest` of Guests: they open for any role and plan that can open that page. `/search`, `/notifications`, `/profile` and `/contract` are shell features open to every role and plan (`DETAIL_OF` and `SHELL_PAGES` in `role.ts`). Every field and tab is declared once in `booking-card.fields.ts` with a `live` flag.
 
 - **Live (real account):** shows only fields and tabs that are saved to the booking (`live: true`): the **Картка** tab with stay, notes, guest, terms and the money block. Unbuilt fields and tabs are **hidden**, not shown as disabled placeholders.
 - **Demo:** shows every field and tab, backed by one seeded booking kept in memory (reset on reload; the same demo hotel and guest as the other demos). Demo-only parts: the extra Картка fields (room properties, guarantee, transfer and decision date, documents, hotel inventory, extra characteristics, loyalty card (assigned automatically to the main guest and shown read-only with their visit count), auto-charging, company segment, price fixation, services total), the notes log with author and time, the audit line (booked / last changed, on the «Історія змін» row), and the tabs below. Seed people, numbers and amounts are invented.
@@ -796,6 +797,20 @@ upload), Security (numbering, legal/company data, data export, change history, d
 - Routing: `/settings` is the `AppSettingsComponent` layout (`src/app/layouts/app-settings/`) with one child route per section; all sections share `SettingsFormService` (draft, validation, autosave). The demo keeps a single `/settings` page.
 - Real-hotel Settings has no Save button: changes autosave ~0.8 s after the person stops typing (validation errors show inline and block the save).
 - Editing needs `editInventory` (Owner, Manager); anyone else sees the tabs read-only.
+
+### `contract` — Data protection agreement (demo only)
+
+Purpose: the electronic agreement between Hotel Upwork and the hotel on processing and protecting
+the hotel's data (guests, bookings, payments, staff): the data belongs to the hotel, is used only to
+run its account, and is not sold, shared with other hotels or used for advertising.
+
+| Section | Access rule |
+| --- | --- |
+| Agreement text (parties, subject, data, what we never do, security, staff access, export and deletion, incidents, term) | Shell page: every role and plan (`SHELL_PAGES`) |
+| "Підписати електронно" | Owner only; not functional yet (disabled, the page says signing is coming) |
+
+- Demo only: not in `LIVE_PAGES`, so a real account is redirected with `?soon=contract`.
+- Not linked from the navigation yet; opened by URL `/contract`.
 
 ## Implementation gaps — verify before marking resolved
 

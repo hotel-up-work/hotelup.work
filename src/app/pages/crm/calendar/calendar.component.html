@@ -12,19 +12,19 @@
 			<app-icon name="info" />
 		</button>
 		<div class="cal-nav cal-desktop">
-			<button class="icon-button" aria-label="Попередній місяць" title="Попередній місяць" (click)="prevMonth()"><app-icon name="double-left" /></button>
+			<button class="icon-button cal-month-jump" aria-label="Попередній місяць" title="Попередній місяць" (click)="prevMonth()"><app-icon name="double-left" /></button>
 			<button class="icon-button" aria-label="Попередній період" title="Попередній період" (click)="prevRange()"><app-icon name="left" /></button>
 			<b>{{ rangeLabel() }}</b>
 			<button class="icon-button" aria-label="Наступний період" title="Наступний період" (click)="nextRange()"><app-icon name="right" /></button>
-			<button class="icon-button" aria-label="Наступний місяць" title="Наступний місяць" (click)="nextMonth()"><app-icon name="double-right" /></button>
+			<button class="icon-button cal-month-jump" aria-label="Наступний місяць" title="Наступний місяць" (click)="nextMonth()"><app-icon name="double-right" /></button>
 			<label class="cal-date" title="Перейти до дати">
 				<app-icon name="calendar" />
 				<input type="date" aria-label="Перейти до дати" [value]="viewStart()" (change)="goToDate($any($event.target).value)" />
 			</label>
 			<div class="cal-views" role="group" aria-label="Кількість днів">
-				<button [class.active]="viewDays() === 7" (click)="setViewDays(7)">7 днів</button>
-				<button [class.active]="viewDays() === 14" (click)="setViewDays(14)">14 днів</button>
-				<button [class.active]="viewDays() === 30" (click)="setViewDays(30)">30 днів</button>
+				<button [class.active]="viewDays() === 7" (click)="setViewDays(7)" aria-label="7 днів">7<span class="cal-views-unit"> днів</span></button>
+				<button [class.active]="viewDays() === 14" (click)="setViewDays(14)" aria-label="14 днів">14<span class="cal-views-unit"> днів</span></button>
+				<button [class.active]="viewDays() === 30" (click)="setViewDays(30)" aria-label="30 днів">30<span class="cal-views-unit"> днів</span></button>
 			</div>
 			<button class="cal-density" [class.active]="compact()" [attr.aria-pressed]="compact()" (click)="toggleCompact()">Компактно</button>
 		</div>
@@ -185,7 +185,21 @@
 			}
 			@for (row of gridRows(); track row.row) {
 				@if (row.kind === 'group') {
-					<div class="cal-group-label" [style.grid-row]="row.row">{{ row.label }}</div>
+					<div class="cal-group-label" [style.grid-row]="row.row">
+						<button
+							type="button"
+							class="cal-group-toggle"
+							[class.collapsed]="row.collapsed"
+							[attr.aria-expanded]="!row.collapsed"
+							[attr.title]="row.collapsed ? 'Розгорнути номери' : 'Згорнути номери'"
+							(click)="toggleGroup(row.label)"
+						>
+							<app-icon name="right" />{{ row.label }}
+							@if (row.collapsed) {
+								<span class="cal-group-count">· {{ row.count }}</span>
+							}
+						</button>
+					</div>
 				} @else {
 					<div
 						class="cal-room-cell"
